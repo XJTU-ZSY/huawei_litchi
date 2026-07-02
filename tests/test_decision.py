@@ -419,7 +419,7 @@ class DecisionTest(unittest.TestCase):
             [{"action": "CLAIM_TASK", "taskId": "T02_012"}],
         )
 
-    def test_resource_required_task_does_not_bypass_current_process(self):
+    def test_claims_required_current_resource_before_process_when_safe(self):
         memory, context, engine = self.make_engine()
         nodes = [
             {"nodeId": "S01", "start": True},
@@ -439,9 +439,40 @@ class DecisionTest(unittest.TestCase):
 
         self.assertEqual(
             engine.decide(context, snapshot(memory, currentNodeId="S02", nodes=nodes, tasks=tasks)),
-            [{"action": "PROCESS", "targetNodeId": "S02"}],
+            [{"action": "CLAIM_RESOURCE", "targetNodeId": "S02", "resourceType": "FAST_HORSE"}],
         )
-        self.assertNotIn("CLAIM_RESOURCE", engine.last_reason)
+        self.assertIn("before process S02", engine.last_reason)
+
+    def test_required_current_resource_before_process_avoids_idle_opponent_contest(self):
+        memory, context, engine = self.make_engine()
+        nodes = [
+            {"nodeId": "S01", "start": True},
+            {"nodeId": "S02", "processType": "BOARD", "processRound": 3, "resourceStock": {"FAST_HORSE": 1}},
+            {"nodeId": "S14"},
+            {"nodeId": "S15", "terminal": True},
+        ]
+        tasks = [
+            {
+                "taskId": "T06_006",
+                "taskTemplateId": "T06",
+                "nodeId": "S02",
+                "score": 30,
+                "active": True,
+            }
+        ]
+
+        action = engine.decide(
+            context,
+            snapshot(
+                memory,
+                currentNodeId="S02",
+                nodes=nodes,
+                tasks=tasks,
+                opponent_overrides={"currentNodeId": "S02", "state": "IDLE"},
+            ),
+        )
+
+        self.assertNotEqual(action, [{"action": "CLAIM_RESOURCE", "targetNodeId": "S02", "resourceType": "FAST_HORSE"}])
 
     def test_yields_fixed_process_to_same_node_opponent_once(self):
         memory, context, engine = self.make_engine()

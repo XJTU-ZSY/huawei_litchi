@@ -87,6 +87,10 @@ class BaselineStrategy:
         if pre_process_task_action is not None:
             return pre_process_task_action
 
+        pre_process_resource_task_action = self._claim_required_resource_task_before_process(context, snapshot)
+        if pre_process_resource_task_action is not None:
+            return pre_process_resource_task_action
+
         if self._should_yield_drawn_process(context, snapshot):
             return None
 
@@ -180,6 +184,57 @@ class BaselineStrategy:
                 continue
             self.last_reason = f"claim current task {task.get('taskId')} before process {current}"
             return {"action": "CLAIM_TASK", "taskId": task["taskId"]}
+        return None
+
+    def _claim_required_resource_task_before_process(
+        self,
+        context: GameContext,
+        snapshot: GameSnapshot,
+    ) -> dict[str, Any] | None:
+        if snapshot.phase == "RUSH" or self._should_go_endgame(context, snapshot):
+            return None
+        current = snapshot.self_player.get("currentNodeId")
+        if not current or current in {context.gate_node_id, context.terminal_node_id}:
+            return None
+        if current in self.memory.completed_process_nodes or str(current) in self.memory.skipped_process_nodes:
+            return None
+
+        node = snapshot.nodes_by_id.get(str(current), {})
+        process_type = node.get("processType")
+        process_round = int(node.get("processRound") or 0)
+        if not process_type or process_round <= 0:
+            return None
+
+        for task in self._current_available_tasks(context, snapshot):
+            missing_resources = self._missing_task_resources(context, snapshot, task)
+            if not missing_resources:
+                continue
+            resource_rounds = self._remote_task_resource_rounds(context, snapshot, task, str(current))
+            if resource_rounds <= 0:
+                continue
+            if not self._can_finish_after_current_task_with_pending_process(
+                context,
+                snapshot,
+                task,
+                process_round + resource_rounds,
+            ):
+                self.last_reason = f"skip required-resource task {task.get('taskId')} before process due delivery budget"
+                continue
+            resource_action = self._claim_required_current_resource(
+                context,
+                snapshot,
+                current,
+                missing_resources,
+                task,
+            )
+            if resource_action is None:
+                continue
+            resource_type = str(resource_action.get("resourceType") or "")
+            if self._would_start_idle_resource_contest(snapshot, current, resource_type):
+                self.last_reason = f"skip required resource {resource_type} at {current}: opponent contest risk"
+                continue
+            self.last_reason = f"claim required resource {resource_type} for current task {task.get('taskId')} before process {current}"
+            return resource_action
         return None
 
     def _downstream_replacement_task_after_process(
@@ -954,6 +1009,25 @@ class BaselineStrategy:
         if str(opponent.get("state") or "IDLE") != "IDLE":
             return False
         return True
+
+    def _would_start_idle_resource_contest(
+        self,
+        snapshot: GameSnapshot,
+        current: Any,
+        resource_type: str,
+    ) -> bool:
+        if not current or not resource_type:
+            return False
+        node = snapshot.nodes_by_id.get(str(current), {})
+        stock = node.get("resourceStock") or {}
+        if int(stock.get(resource_type) or 0) > 1:
+            return False
+        opponent = snapshot.opponent_player or {}
+        if str(opponent.get("currentNodeId") or "") != str(current):
+            return False
+        if opponent.get("delivered") or str(opponent.get("state") or "") in {"DELIVERED", "RETIRED", "MOVING"}:
+            return False
+        return str(opponent.get("state") or "IDLE") == "IDLE"
 
     def _choose_destination(self, context: GameContext, snapshot: GameSnapshot) -> str | None:
         player = snapshot.self_player
