@@ -2,6 +2,20 @@
 
 ## P0 已启动
 
+### 000. 提交前质量门禁
+
+Priority: P0
+
+Expected behavior:
+- 一条命令运行单元测试、打包和提交 ZIP 结构检查。
+- 可选输入回放文件，检查被拒绝和非法动作数量。
+- 门禁失败时不允许提交策略改动。
+
+Validation:
+- `python -B tools/quality_gate.py`
+
+Status: done
+
 ### 001. 最小可运行 Python 客户端
 
 Priority: P0

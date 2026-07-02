@@ -47,3 +47,27 @@ P0 是比赛存活线：不掉线、每帧有 action 包、动作不冲突、能
 P1 是得分线：普通皇榜任务基础分尽量达到 90，合理拿资源，按时进入宫宴冲刺。
 
 P2 是对抗线：窗口出牌、设卡/破卡、强制通行、从对手回放学习策略。
+
+## 质量门禁
+
+每次代码变更后、提交前运行：
+
+```bash
+python -B tools/quality_gate.py
+```
+
+门禁会检查：
+
+- `start.sh` 是否保留比赛要求的 3 个参数入口。
+- 单元测试是否全部通过。
+- 参赛 ZIP 是否能生成。
+- ZIP 根目录是否直接包含 `start.sh`。
+- ZIP 是否只包含比赛运行需要的 `start.sh` 和 `litchi_bot/`，不包含测试、文档、skills、缓存或字节码。
+
+如果要把回放纳入回归：
+
+```bash
+python -B tools/quality_gate.py --replay replays/match_001.json --player-id 1001
+```
+
+默认要求被检查玩家的 `ACTION_REJECTED` 和 `INVALID_ACTION` 都为 0。必要时可用 `--max-rejected` 和 `--max-invalid` 为特定回放设置阈值。

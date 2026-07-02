@@ -8,7 +8,14 @@
 常用命令：
 
 ```bash
+python -B tools/quality_gate.py
 python -B -m unittest
 python -B tools/analyze_replay.py <replay-file> --player-id <playerId>
 python -B tools/package.py
+```
+
+提交代码前优先运行 `python -B tools/quality_gate.py`。如果要把某个回放加入门禁检查：
+
+```bash
+python -B tools/quality_gate.py --replay replays/match_001.json --player-id 1001
 ```
