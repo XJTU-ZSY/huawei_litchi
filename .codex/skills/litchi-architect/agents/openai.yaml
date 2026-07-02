@@ -1,0 +1,4 @@
+interface:
+  display_name: "Litchi Architect"
+  short_description: "Designs the Python bot architecture and safe iteration slices."
+  default_prompt: "Use $litchi-architect to design the next implementation slice for the Litchi bot."

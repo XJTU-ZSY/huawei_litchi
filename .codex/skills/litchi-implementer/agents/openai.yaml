@@ -1,0 +1,4 @@
+interface:
+  display_name: "Litchi Implementer"
+  short_description: "Implements focused Python slices for the Litchi competition bot."
+  default_prompt: "Use $litchi-implementer to implement this scoped Litchi bot requirement."

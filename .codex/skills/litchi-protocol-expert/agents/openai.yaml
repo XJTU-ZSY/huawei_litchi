@@ -1,0 +1,4 @@
+interface:
+  display_name: "Litchi Protocol Expert"
+  short_description: "Maps the task book and TCP protocol into exact client constraints."
+  default_prompt: "Use $litchi-protocol-expert to review the protocol correctness of this client change."

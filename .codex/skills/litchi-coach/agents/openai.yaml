@@ -1,0 +1,4 @@
+interface:
+  display_name: "Litchi Coach"
+  short_description: "Plans iterations and turns replay findings into focused bot improvements."
+  default_prompt: "Use $litchi-coach to plan the next focused iteration for the Litchi competition bot."

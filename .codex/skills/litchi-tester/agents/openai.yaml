@@ -1,0 +1,4 @@
+interface:
+  display_name: "Litchi Tester"
+  short_description: "Validates protocol, strategy safety, replays, and packaging."
+  default_prompt: "Use $litchi-tester to validate this Litchi bot change before submission."

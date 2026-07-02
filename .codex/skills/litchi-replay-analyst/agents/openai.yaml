@@ -1,0 +1,4 @@
+interface:
+  display_name: "Litchi Replay Analyst"
+  short_description: "Turns match replays into bugs, strategy upgrades, and regressions."
+  default_prompt: "Use $litchi-replay-analyst to analyze this Litchi match replay and propose fixes."
