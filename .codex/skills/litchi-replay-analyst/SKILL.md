@@ -39,6 +39,7 @@ When a task file appears under `.replay_watch/ai_tasks/`, treat it as a replay h
 4. Produce the standard replay report sections below.
 5. Hand the recommended cards to `$litchi-coach` for prioritization.
 6. Do not modify code unless the task explicitly asks for implementation.
+7. Append the analysis process, assumptions, and handoff summary to the referenced process log file before finishing.
 
 ## Report Format
 

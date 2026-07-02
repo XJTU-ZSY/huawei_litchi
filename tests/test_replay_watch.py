@@ -1,4 +1,6 @@
 import unittest
+import subprocess
+import sys
 from pathlib import Path
 
 from litchi_bot.replay_watch import build_replay_report, build_requirement_cards, build_skill_handoff_prompt, is_stable, ReplayCandidate
@@ -68,6 +70,7 @@ class ReplayWatchTest(unittest.TestCase):
         prompt = build_skill_handoff_prompt(
             replay_path=Path("replays/match_001.json"),
             machine_report_path=Path(".replay_watch/reports/match_001.md"),
+            process_log_path=Path(".replay_watch/process_logs/match_001.process.md"),
             player_id=1001,
         )
 
@@ -75,7 +78,22 @@ class ReplayWatchTest(unittest.TestCase):
         self.assertIn("$litchi-coach", prompt)
         self.assertIn("replays\\match_001.json", prompt.replace("/", "\\"))
         self.assertIn(".replay_watch\\reports\\match_001.md", prompt.replace("/", "\\"))
+        self.assertIn(".replay_watch\\process_logs\\match_001.process.md", prompt.replace("/", "\\"))
+        self.assertIn("quality gate", prompt)
+        self.assertIn("git commit", prompt)
         self.assertIn("不直接改代码", prompt)
+
+
+    def test_watch_replays_help_exposes_process_log_dir(self):
+        completed = subprocess.run(
+            [sys.executable, "-B", "tools/watch_replays.py", "--help"],
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertIn("--process-log-dir", completed.stdout)
 
 
 if __name__ == "__main__":

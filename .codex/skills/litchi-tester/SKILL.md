@@ -37,3 +37,5 @@ For P0 changes, require passing `python -m unittest`. For strategy changes, add 
 ## Review Output
 
 Report tests run, failures, uncovered risk, and the next regression fixture to add.
+
+When a process log path is provided, append the exact commands run, pass/fail status, and residual risk to that log.

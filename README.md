@@ -31,6 +31,7 @@ python -B tools/watch_replays.py replays --player-id 1001
 
 - `.replay_watch/reports/`：机器预分析报告
 - `.replay_watch/ai_tasks/`：给 `$litchi-replay-analyst` 和 `$litchi-coach` 使用的 AI handoff prompt
+- `.replay_watch/process_logs/`：每一轮从回放分析、需求卡、实现、测试到提交的过程日志
 
 你可以把 `.replay_watch/ai_tasks/*.prompt.md` 的内容交给 opencode/Codex，让 AI 按项目 skills 做深度分析和需求卡。
 
@@ -44,4 +45,10 @@ python -B tools/watch_replays.py replays --player-id 1001 --append-backlog
 
 ```bash
 python -B tools/watch_replays.py replays --player-id 1001 --ai-command-template "opencode run --prompt-file {task}"
+```
+
+手动追加过程日志：
+
+```bash
+python -B tools/process_log.py .replay_watch/process_logs/match_001.process.md --stage "Implementation" --message "Implemented task selector and ran quality gate."
 ```

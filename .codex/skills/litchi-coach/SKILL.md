@@ -34,6 +34,21 @@ When `$litchi-replay-analyst` or `.replay_watch/ai_tasks/*.prompt.md` provides a
 3. Prefer one high-confidence P0 card over multiple speculative strategy cards.
 4. If there are no P0 failures, pick the highest expected win-rate or score improvement.
 5. Keep implementation out of the intake response unless the user explicitly asks to proceed.
+6. Append prioritization rationale and final requirement cards to the referenced process log file.
+
+## Process Logging
+
+When a process log path is provided, append each major stage to it:
+
+- Replay analysis summary and assumptions.
+- Coach prioritization rationale.
+- Requirement cards.
+- Architecture decisions before implementation.
+- Code changes made.
+- Tests and quality gate results.
+- Git commit hash.
+
+Use `python -B tools/process_log.py <log-path> --stage "<stage>" --message "<summary>"` when a deterministic append is useful.
 
 ## Requirement Card
 

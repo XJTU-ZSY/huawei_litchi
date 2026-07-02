@@ -32,6 +32,22 @@ Validation:
 
 Status: done
 
+### 000B. 单轮流程日志
+
+Priority: P0
+
+Expected behavior:
+- 每一轮回放分析生成独立 process log。
+- 需求卡、实现计划、代码变更、测试结果、quality gate、git commit 都能追加到同一日志。
+- skill handoff prompt 明确要求 replay analyst、coach、implementer、tester 更新流程日志。
+
+Validation:
+- `python -B tools/watch_replays.py <folder> --player-id <playerId> --once`
+- `python -B tools/process_log.py <log> --stage Tests --message "..."`
+- `python -B tools/quality_gate.py`
+
+Status: done
+
 ### 001. 最小可运行 Python 客户端
 
 Priority: P0

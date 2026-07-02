@@ -86,7 +86,7 @@ python -B tools/watch_replays.py replays --player-id 1001
 2. 等文件稳定后生成机器预分析报告。
 3. 同时生成 `.replay_watch/ai_tasks/*.prompt.md`，该 prompt 明确要求使用 `$litchi-replay-analyst` 和 `$litchi-coach`。
 4. 将 prompt 交给 opencode/Codex 后，由 AI 读取原始回放和机器报告，补充策略判断并生成需求卡。
-5. 默认报告写入 `.replay_watch/reports/`，AI handoff prompt 写入 `.replay_watch/ai_tasks/`，处理状态写入 `.replay_watch/state.json`。
+5. 默认报告写入 `.replay_watch/reports/`，AI handoff prompt 写入 `.replay_watch/ai_tasks/`，流程日志写入 `.replay_watch/process_logs/`，处理状态写入 `.replay_watch/state.json`。
 6. 加 `--append-backlog` 时，脚本会将机器生成的初步需求卡追加到 `docs/backlog.md`；更推荐先让 AI 审核 prompt 后再写入 backlog。
 
 测试或手动批处理时只扫描一次：
@@ -102,3 +102,21 @@ python -B tools/watch_replays.py replays --player-id 1001 --ai-command-template 
 ```
 
 `--ai-command-template` 支持 `{task}`、`{replay}`、`{report}` 占位符。具体命令取决于本机 opencode CLI。
+
+## 过程记录
+
+每一轮回放分析、需求卡、实现、测试、提交都必须记录到同一个 process log 文件。
+
+watcher 会自动创建：
+
+```text
+.replay_watch/process_logs/<replay-name>.process.md
+```
+
+AI handoff prompt 会引用这个文件。后续如果用户要求实现代码，参与的 `$litchi-coach`、`$litchi-architect`、`$litchi-implementer`、`$litchi-tester` 都要把关键过程追加进去。
+
+手动追加：
+
+```bash
+python -B tools/process_log.py .replay_watch/process_logs/match_001.process.md --stage "Tests" --message "python -B tools/quality_gate.py passed."
+```

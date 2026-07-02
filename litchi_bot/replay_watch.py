@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Iterable
 
+from .process_log import append_process_event, create_process_log
 from .replay import analyze_messages, format_report, load_messages
 
 DEFAULT_EXTENSIONS = {".json", ".jsonl", ".log", ".txt", ".replay"}
@@ -221,6 +222,7 @@ def write_report(report_dir: Path, replay_path: Path, report: str) -> Path:
 def build_skill_handoff_prompt(
     replay_path: Path,
     machine_report_path: Path,
+    process_log_path: Path,
     player_id: int | str | None = None,
     append_backlog: bool = False,
 ) -> str:
@@ -241,6 +243,7 @@ def build_skill_handoff_prompt(
             "输入：",
             f"- 原始回放：`{replay_path}`",
             f"- 机器预分析报告：`{machine_report_path}`",
+            f"- 本轮流程日志：`{process_log_path}`",
             f"- {player_line}",
             "",
             "请按以下顺序执行：",
@@ -249,7 +252,8 @@ def build_skill_handoff_prompt(
             "3. 再交给 `$litchi-coach`，按 P0/P1/P2 排优先级。",
             "4. 生成 1-3 张可执行需求卡，每张卡必须包含 Evidence、Expected behavior、Forbidden behavior、Implementation owner、Validation。",
             "5. P0 问题优先于胜率优化；没有 P0 问题时，再选择最高预期收益的 P1/P2 卡。",
-            f"6. {backlog_instruction}",
+            "6. 把 replay analyst 分析过程、coach 排序理由、需求卡内容追加到本轮流程日志。",
+            f"7. {backlog_instruction}",
             "",
             "输出格式：",
             "```text",
@@ -264,6 +268,7 @@ def build_skill_handoff_prompt(
             "",
             "限制：",
             "- 本轮只做分析和需求卡，不直接改代码，除非用户明确要求实现。",
+            "- 如果后续用户要求实现代码，必须继续把架构决策、代码变更、测试结果、quality gate 结果和 git commit 写入同一个流程日志。",
             "- 如果证据不足，写明缺失字段或需要补充的回放/日志。",
             "- 需求卡的 Validation 优先使用 `python -B tools/quality_gate.py` 和具体回放回归。",
             "",
@@ -276,6 +281,24 @@ def write_ai_task(task_dir: Path, replay_path: Path, prompt: str) -> Path:
     output = task_dir / f"{_safe_name(replay_path.stem)}.prompt.md"
     output.write_text(prompt, encoding="utf-8")
     return output
+
+
+def process_log_path_for(log_dir: Path, replay_path: Path) -> Path:
+    return log_dir / f"{_safe_name(replay_path.stem)}.process.md"
+
+
+def start_replay_process_log(log_dir: Path, replay_path: Path, player_id: int | str | None = None) -> Path:
+    path = process_log_path_for(log_dir, replay_path)
+    create_process_log(
+        path,
+        f"Replay Iteration: {replay_path.name}",
+        {
+            "replay": replay_path,
+            "player_id": player_id if player_id is not None else "unknown",
+        },
+    )
+    append_process_event(path, "Replay detected", f"Watcher detected stable replay `{replay_path}`.")
+    return path
 
 
 def run_ai_command(command_template: str, task_path: Path, replay_path: Path, report_path: Path) -> subprocess.CompletedProcess[str]:

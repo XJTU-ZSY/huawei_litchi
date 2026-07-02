@@ -34,3 +34,4 @@ For strategy changes:
 - Do not guess unknown server fields destructively; preserve raw dictionaries.
 - Do not hardcode player side. Use `start.players[]`.
 - Do not hardcode route list. Use `start.edges[]` and current `inquire.edges[]`.
+- When a process log path is provided, append implementation plan, changed files, test results, and git commit hash to that log.
