@@ -132,6 +132,55 @@ class DecisionTest(unittest.TestCase):
         context = memory.apply_start(start)
         return memory, context, DecisionEngine(memory), start["nodes"]
 
+    def make_replay_split_engine(self):
+        start = {
+            "matchId": "replay-split",
+            "round": 1,
+            "durationRound": 600,
+            "players": [{"playerId": 1001, "teamId": "RED"}, {"playerId": 1002, "teamId": "BLUE"}],
+            "map": {"gameplay": {"roles": {"startNodeId": "S01", "gateNodeId": "S14", "terminalNodeIds": ["S15"]}}},
+            "nodes": [
+                {"nodeId": "S01", "start": True},
+                {"nodeId": "S02", "processType": "TRANSFER", "processRound": 4},
+                {"nodeId": "S03"},
+                {"nodeId": "S04", "processType": "BOARD", "processRound": 7, "resourceStock": {"SHORT_HORSE": 1}},
+                {"nodeId": "S05", "processType": "WATER_TRANSFER", "processRound": 6},
+                {"nodeId": "S07"},
+                {"nodeId": "S09"},
+                {"nodeId": "S10"},
+                {"nodeId": "S11"},
+                {"nodeId": "S12"},
+                {"nodeId": "S13"},
+                {"nodeId": "S14", "processType": "VERIFY", "processRound": 6},
+                {"nodeId": "S15", "terminal": True},
+            ],
+            "edges": [
+                {"edgeId": "E02", "fromNodeId": "S02", "toNodeId": "S03", "routeType": "ROAD", "distance": 25},
+                {"edgeId": "E11", "fromNodeId": "S02", "toNodeId": "S04", "routeType": "ROAD", "distance": 20},
+                {"edgeId": "E03", "fromNodeId": "S03", "toNodeId": "S07", "routeType": "ROAD", "distance": 54},
+                {"edgeId": "E12", "fromNodeId": "S04", "toNodeId": "S05", "routeType": "WATER", "distance": 44},
+                {"edgeId": "E19", "fromNodeId": "S05", "toNodeId": "S09", "routeType": "WATER", "distance": 48},
+                {"edgeId": "E04", "fromNodeId": "S07", "toNodeId": "S09", "routeType": "ROAD", "distance": 46},
+                {"edgeId": "E05", "fromNodeId": "S09", "toNodeId": "S10", "routeType": "ROAD", "distance": 40},
+                {"edgeId": "E06", "fromNodeId": "S10", "toNodeId": "S11", "routeType": "ROAD", "distance": 36},
+                {"edgeId": "E07", "fromNodeId": "S11", "toNodeId": "S12", "routeType": "ROAD", "distance": 20},
+                {"edgeId": "E08", "fromNodeId": "S12", "toNodeId": "S13", "routeType": "ROAD", "distance": 25},
+                {"edgeId": "E09", "fromNodeId": "S13", "toNodeId": "S14", "routeType": "ROAD", "distance": 18},
+                {"edgeId": "E10", "fromNodeId": "S14", "toNodeId": "S15", "routeType": "ROAD", "distance": 10},
+            ],
+            "taskTemplates": [
+                {
+                    "taskTemplateId": "T06",
+                    "processType": "HORSE_TRANSFER",
+                    "requiredResourceTypes": ["FAST_HORSE"],
+                }
+            ],
+        }
+        memory = GameMemory(1002)
+        context = memory.apply_start(start)
+        memory.completed_process_nodes.add("S02")
+        return memory, context, DecisionEngine(memory), start["nodes"]
+
     def test_delivered_returns_no_actions(self):
         memory, context, engine = self.make_engine()
         snap = snapshot(memory, state="DELIVERED", delivered=True)
@@ -724,6 +773,50 @@ class DecisionTest(unittest.TestCase):
 
         self.assertEqual(engine.decide(context, snap), [{"action": "MOVE", "targetNodeId": "S04"}])
         self.assertIn("toward S04", engine.last_reason)
+
+    def test_replay_split_prefers_s04_task_cluster_over_s03_single_task(self):
+        memory, context, engine, nodes = self.make_replay_split_engine()
+        tasks = [
+            {"taskId": "T01_001", "nodeId": "S03", "score": 30, "processRound": 3, "active": True},
+            {"taskId": "T02_002", "nodeId": "S07", "score": 30, "processRound": 4, "active": True},
+            {"taskId": "T06_007", "taskTemplateId": "T06", "nodeId": "S04", "score": 30, "processRound": 3, "active": True},
+            {"taskId": "T08_008", "nodeId": "S04", "score": 30, "processRound": 4, "active": True},
+            {"taskId": "T08_009", "nodeId": "S05", "score": 30, "processRound": 4, "active": True},
+        ]
+
+        snap = snapshot(
+            memory,
+            round_no=47,
+            playerId=1002,
+            teamId="BLUE",
+            currentNodeId="S02",
+            nodes=nodes,
+            tasks=tasks,
+            opponent_overrides={"playerId": 1001, "teamId": "RED", "currentNodeId": "S02", "state": "IDLE"},
+        )
+
+        self.assertEqual(engine.decide(context, snap), [{"action": "MOVE", "targetNodeId": "S04"}])
+        self.assertIn("toward S04", engine.last_reason)
+
+    def test_horse_transfer_task_accepts_short_horse_requirement_option(self):
+        memory, context, engine, nodes = self.make_replay_split_engine()
+        memory.completed_process_nodes.add("S04")
+        tasks = [
+            {"taskId": "T06_007", "taskTemplateId": "T06", "nodeId": "S04", "score": 30, "processRound": 3, "active": True}
+        ]
+
+        snap = snapshot(
+            memory,
+            playerId=1002,
+            teamId="BLUE",
+            currentNodeId="S04",
+            resources={"SHORT_HORSE": 1},
+            nodes=nodes,
+            tasks=tasks,
+            opponent_overrides={"playerId": 1001, "teamId": "RED", "currentNodeId": "S02", "state": "IDLE"},
+        )
+
+        self.assertEqual(engine.decide(context, snap), [{"action": "CLAIM_TASK", "taskId": "T06_007"}])
 
     def test_routes_to_task_node_when_required_resource_is_available_there(self):
         memory, context, engine, nodes = self.make_delivery_map_engine()

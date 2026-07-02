@@ -28,6 +28,7 @@ DEFAULT_GATE_VERIFY_ROUNDS = 6
 ENDGAME_TASK_SAFETY_MARGIN_ROUNDS = 10
 DELIVERY_CLOSURE_SAFETY_MARGIN_ROUNDS = 20
 TASK_SCORE_TARGET = 90
+TASK_CLUSTER_LOOKAHEAD_ROUNDS = 90
 
 
 class BaselineStrategy:
@@ -408,7 +409,8 @@ class BaselineStrategy:
             return True
         resources = player.get("resources") or {}
         for resource_type in self._task_required_resources(context, task):
-            if self._resource_count(resources, str(resource_type)) <= 0:
+            options = self._resource_options_for_requirement(context, task, str(resource_type))
+            if not any(self._resource_count(resources, option) > 0 for option in options):
                 return False
         return True
 
@@ -429,6 +431,28 @@ class BaselineStrategy:
             if str(template.get("taskTemplateId")) == str(template_id):
                 return list(template.get("requiredResourceTypes") or [])
         return []
+
+    def _resource_options_for_requirement(
+        self, context: GameContext, task: dict[str, Any], resource_type: str
+    ) -> tuple[str, ...]:
+        if resource_type == "FAST_HORSE" and self._is_horse_transfer_task(context, task):
+            return HORSE_RESOURCES
+        return (resource_type,)
+
+    def _is_horse_transfer_task(self, context: GameContext, task: dict[str, Any]) -> bool:
+        return self._task_process_type(context, task) == "HORSE_TRANSFER"
+
+    def _task_process_type(self, context: GameContext, task: dict[str, Any]) -> str:
+        process_type = task.get("processType")
+        if process_type:
+            return str(process_type).upper()
+        template_id = task.get("taskTemplateId")
+        if not template_id:
+            return ""
+        for template in context.raw_start.get("taskTemplates") or []:
+            if str(template.get("taskTemplateId")) == str(template_id):
+                return str(template.get("processType") or "").upper()
+        return ""
 
     @staticmethod
     def _current_edge_remaining_rounds(player: dict[str, Any]) -> int | None:
@@ -617,8 +641,61 @@ class BaselineStrategy:
         return target
 
     def _nearest_task_node(self, context: GameContext, snapshot: GameSnapshot) -> str | None:
-        task = self._nearest_task(context, snapshot)
-        return None if task is None else str(task.get("nodeId"))
+        current = str(snapshot.self_player.get("currentNodeId") or "")
+        if not current:
+            return None
+        blocked = self._blocked_nodes(context, snapshot)
+        best_node: str | None = None
+        best_key: tuple[int, int] | None = None
+
+        for task in sorted(snapshot.tasks, key=self._task_sort_key):
+            if not self._task_routeable_for_self(context, snapshot, task):
+                continue
+            if not self._has_endgame_slack_for_task(context, snapshot, task):
+                continue
+            node_id = str(task.get("nodeId") or "")
+            if not node_id or node_id in blocked:
+                continue
+            path = context.graph.shortest_path(current, node_id, blocked=blocked)
+            if not path:
+                continue
+            travel_rounds = self._path_rounds(context, snapshot, path, self.memory.completed_process_nodes)
+            if travel_rounds is None:
+                continue
+            cluster_score = self._task_cluster_score(context, snapshot, node_id, blocked)
+            if cluster_score <= 0:
+                continue
+            key = (cluster_score, -travel_rounds)
+            if best_key is None or key > best_key or (key == best_key and (best_node is None or node_id < best_node)):
+                best_key = key
+                best_node = node_id
+        return best_node
+
+    def _task_cluster_score(
+        self, context: GameContext, snapshot: GameSnapshot, anchor_node_id: str, blocked: set[str]
+    ) -> int:
+        score = 0
+        current = str(snapshot.self_player.get("currentNodeId") or "")
+        for task in sorted(snapshot.tasks, key=self._task_sort_key):
+            if not self._task_routeable_for_self(context, snapshot, task):
+                continue
+            if not self._has_endgame_slack_for_task(context, snapshot, task):
+                continue
+            node_id = str(task.get("nodeId") or "")
+            if not node_id or node_id in blocked:
+                continue
+            if node_id != anchor_node_id:
+                followup_blocked = set(blocked)
+                if current and current != anchor_node_id:
+                    followup_blocked.add(current)
+                path = context.graph.shortest_path(anchor_node_id, node_id, blocked=followup_blocked)
+                if not path:
+                    continue
+                travel_rounds = self._path_rounds(context, snapshot, path, self.memory.completed_process_nodes)
+                if travel_rounds is None or travel_rounds > TASK_CLUSTER_LOOKAHEAD_ROUNDS:
+                    continue
+            score += int(task.get("score") or 0)
+        return score
 
     def _nearest_task(self, context: GameContext, snapshot: GameSnapshot) -> dict[str, Any] | None:
         current = snapshot.self_player.get("currentNodeId")
@@ -699,13 +776,16 @@ class BaselineStrategy:
         player_resources = snapshot.self_player.get("resources") or {}
         missing = False
         for resource_type in self._task_required_resources(context, task):
-            resource_key = str(resource_type)
-            if self._resource_count(player_resources, resource_key) > 0:
+            options = self._resource_options_for_requirement(context, task, str(resource_type))
+            if any(self._resource_count(player_resources, option) > 0 for option in options):
                 continue
             missing = True
-            if (node_id, resource_key) in self.memory.contested_resources:
-                return False
-            if int(stock.get(resource_key) or 0) <= 0:
+            available_options = [
+                option
+                for option in options
+                if (node_id, option) not in self.memory.contested_resources and int(stock.get(option) or 0) > 0
+            ]
+            if not available_options:
                 return False
         return missing
 
@@ -716,9 +796,15 @@ class BaselineStrategy:
         player_resources = snapshot.self_player.get("resources") or {}
         total = 0
         for resource_type in self._task_required_resources(context, task):
-            resource_key = str(resource_type)
-            if self._resource_count(player_resources, resource_key) > 0:
+            options = self._resource_options_for_requirement(context, task, str(resource_type))
+            if any(self._resource_count(player_resources, option) > 0 for option in options):
                 continue
+            available_options = [
+                option
+                for option in options
+                if self._resource_count(snapshot.nodes_by_id.get(node_id, {}).get("resourceStock") or {}, option) > 0
+            ]
+            resource_key = available_options[0] if available_options else options[0]
             total += self._resource_claim_round(context, node_id, resource_key)
         return total
 
