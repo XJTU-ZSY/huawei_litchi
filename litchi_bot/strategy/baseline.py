@@ -110,6 +110,10 @@ class BaselineStrategy:
         if threshold_task_action is not None:
             return threshold_task_action
 
+        bonus_task_action = self._claim_current_bonus_task_before_dynamic_endgame(context, snapshot)
+        if bonus_task_action is not None:
+            return bonus_task_action
+
         if self._should_go_endgame(context, snapshot):
             horse_action = self._use_horse_if_beneficial(context, snapshot, include_current_edge=False)
             if horse_action is not None:
@@ -573,6 +577,32 @@ class BaselineStrategy:
             if not self._has_endgame_slack_for_task(context, snapshot, task):
                 continue
             self.last_reason = f"claim threshold task {task.get('taskId')} before dynamic endgame"
+            return {"action": "CLAIM_TASK", "taskId": task["taskId"]}
+        return None
+
+    def _claim_current_bonus_task_before_dynamic_endgame(
+        self, context: GameContext, snapshot: GameSnapshot
+    ) -> dict[str, Any] | None:
+        if snapshot.phase == "RUSH" or snapshot.round_no >= self._hard_endgame_round(context):
+            return None
+        if not self._delivery_closure_is_tight(context, snapshot):
+            return None
+        player = snapshot.self_player
+        if int(player.get("taskScore") or 0) < TASK_SCORE_TARGET:
+            return None
+        current = player.get("currentNodeId")
+        if not current:
+            return None
+        current_id = str(current)
+
+        for task in sorted(snapshot.tasks, key=self._task_sort_key):
+            if str(task.get("nodeId")) != current_id:
+                continue
+            if not self._task_available_for_self(context, task, player):
+                continue
+            if not self._has_endgame_slack_for_task(context, snapshot, task):
+                continue
+            self.last_reason = f"claim current bonus task {task.get('taskId')} before dynamic endgame"
             return {"action": "CLAIM_TASK", "taskId": task["taskId"]}
         return None
 
