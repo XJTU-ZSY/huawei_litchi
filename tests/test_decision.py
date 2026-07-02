@@ -483,6 +483,49 @@ class DecisionTest(unittest.TestCase):
             [{"action": "CLAIM_RESOURCE", "targetNodeId": "S02", "resourceType": "FAST_HORSE"}],
         )
 
+    def test_resource_contest_created_skips_node_resources(self):
+        memory, context, engine = self.make_engine()
+        nodes = [
+            {"nodeId": "S01", "start": True},
+            {"nodeId": "S02", "resourceStock": {"INTEL": 1}},
+            {"nodeId": "S14"},
+            {"nodeId": "S15", "terminal": True},
+        ]
+        contest_created = {
+            "round": 98,
+            "playerId": 1001,
+            "action": "CLAIM_RESOURCE",
+            "accepted": True,
+            "result": "ACCEPTED",
+            "message": "CONTEST_CREATED",
+        }
+
+        snap = snapshot(memory, currentNodeId="S02", nodes=nodes, action_results=[contest_created])
+
+        self.assertIn("S02", memory.contested_resource_nodes)
+        self.assertEqual(engine.decide(context, snap), [{"action": "MOVE", "targetNodeId": "S14"}])
+
+    def test_resource_contest_on_other_node_does_not_skip_current_resource(self):
+        memory, context, engine = self.make_engine()
+        nodes = [
+            {"nodeId": "S01", "start": True},
+            {"nodeId": "S02", "resourceStock": {"FAST_HORSE": 1}},
+            {"nodeId": "S14"},
+            {"nodeId": "S15", "terminal": True},
+        ]
+        other_node_contest = {
+            "type": "WINDOW_CONTEST_START",
+            "payload": {"contestType": "RESOURCE", "targetNodeId": "S03", "resourceType": "INTEL"},
+        }
+
+        snap = snapshot(memory, currentNodeId="S02", nodes=nodes, events=[other_node_contest])
+
+        self.assertNotIn("S02", memory.contested_resource_nodes)
+        self.assertEqual(
+            engine.decide(context, snap),
+            [{"action": "CLAIM_RESOURCE", "targetNodeId": "S02", "resourceType": "FAST_HORSE"}],
+        )
+
     def test_skips_resource_opponent_is_already_claiming(self):
         memory, context, engine = self.make_engine()
         nodes = [

@@ -48,6 +48,8 @@ class GameMemory:
     completed_process_nodes: set[str] = field(default_factory=set)
     process_idle_yield_counts: dict[str, int] = field(default_factory=dict)
     process_contest_counts: dict[str, int] = field(default_factory=dict)
+    contested_resource_nodes: set[str] = field(default_factory=set)
+    contested_resources: set[tuple[str, str]] = field(default_factory=set)
     completed_tasks: set[str] = field(default_factory=set)
     process_required_task_ids: set[str] = field(default_factory=set)
     process_required_task_nodes: set[str] = field(default_factory=set)
@@ -123,6 +125,8 @@ class GameMemory:
                 task_id = payload.get("taskId")
                 if task_id:
                     self.completed_tasks.add(str(task_id))
+            elif event_type == "WINDOW_CONTEST_START":
+                self._record_resource_contest(payload, current_node_id)
             elif event_type in {"ACTION_REJECTED", "INVALID_ACTION"}:
                 self.rejected_actions.append(event)
                 self._recover_from_rejection(payload, current_node_id)
@@ -132,8 +136,31 @@ class GameMemory:
             payload = result.get("payload") or result
             if payload.get("playerId") is not None and not same_player_id(payload.get("playerId"), self.player_id):
                 continue
+            self._record_resource_contest(payload, current_node_id)
             self._record_process_contest(payload, current_node_id)
             self._recover_from_rejection(payload, current_node_id)
+
+    def _record_resource_contest(self, payload: dict[str, Any], current_node_id: Any = None) -> None:
+        action = str(payload.get("action") or "").upper()
+        contest_type = str(payload.get("contestType") or "").upper()
+        result_text = f"{payload.get('result') or ''} {payload.get('message') or ''}".upper()
+        is_resource_contest = contest_type == "RESOURCE" or (
+            action == "CLAIM_RESOURCE" and "CONTEST_CREATED" in result_text
+        )
+        if not is_resource_contest:
+            return
+
+        node_id = payload.get("targetNodeId") or payload.get("nodeId") or current_node_id
+        if not node_id:
+            return
+        node_key = str(node_id)
+        if current_node_id is not None and node_key != str(current_node_id):
+            return
+        self.contested_resource_nodes.add(node_key)
+
+        resource_type = payload.get("resourceType")
+        if resource_type:
+            self.contested_resources.add((node_key, str(resource_type)))
 
     @staticmethod
     def _is_fixed_node_process_complete(payload: dict[str, Any]) -> bool:

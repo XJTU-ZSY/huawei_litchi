@@ -439,7 +439,12 @@ class BaselineStrategy:
         node = snapshot.nodes_by_id.get(str(current), {})
         stock = node.get("resourceStock") or {}
         contested = self._opponent_claiming_resources_at_current(snapshot, current)
+        if current is not None and str(current) in self.memory.contested_resource_nodes:
+            self.last_reason = f"skip previously contested resources at {current}"
+            return None
         for resource_type in RESOURCE_PRIORITY:
+            if current is not None and (str(current), resource_type) in self.memory.contested_resources:
+                continue
             if int(stock.get(resource_type) or 0) > 0:
                 if resource_type in contested:
                     continue
