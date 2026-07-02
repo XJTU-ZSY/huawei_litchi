@@ -115,6 +115,25 @@ class DecisionTest(unittest.TestCase):
         snap = snapshot(memory, phase="RUSH", currentNodeId="S14")
         self.assertEqual(engine.decide(context, snap), [{"action": "VERIFY_GATE"}])
 
+    def test_gate_verification_binds_break_order_when_bad_fruit_can_pay(self):
+        memory, context, engine = self.make_engine()
+        snap = snapshot(memory, phase="RUSH", currentNodeId="S14", badFruit=2, rushTacticUsedCount=0)
+        self.assertEqual(
+            engine.decide(context, snap),
+            [{"action": "VERIFY_GATE", "targetNodeId": "S14", "rushTactic": "BREAK_ORDER"}],
+        )
+        self.assertIn("BREAK_ORDER", engine.last_reason)
+
+    def test_gate_verification_does_not_bind_break_order_without_bad_fruit(self):
+        memory, context, engine = self.make_engine()
+        snap = snapshot(memory, phase="RUSH", currentNodeId="S14", badFruit=1, rushTacticUsedCount=0)
+        self.assertEqual(engine.decide(context, snap), [{"action": "VERIFY_GATE"}])
+
+    def test_gate_verification_does_not_bind_break_order_after_rush_tactic_used(self):
+        memory, context, engine = self.make_engine()
+        snap = snapshot(memory, phase="RUSH", currentNodeId="S14", badFruit=2, rushTacticUsedCount=1)
+        self.assertEqual(engine.decide(context, snap), [{"action": "VERIFY_GATE"}])
+
     def test_terminal_delivery_when_verified(self):
         memory, context, engine = self.make_engine()
         snap = snapshot(memory, currentNodeId="S15", verified=True)

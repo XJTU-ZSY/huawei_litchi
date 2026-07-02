@@ -29,6 +29,7 @@ EARLY_PROCESS_RACE_TASK_SCORE = 90
 TASK_GATED_PROCESS_TARGET_SCORE = 105
 ENDGAME_TASK_SAFETY_BUFFER_ROUNDS = 10
 DELIVERY_SUBMIT_BUFFER_ROUNDS = 2
+BREAK_ORDER_BAD_FRUIT_COST = 2
 
 
 class BaselineStrategy:
@@ -76,8 +77,7 @@ class BaselineStrategy:
             return self._move_toward(context, snapshot, context.gate_node_id)
 
         if current == context.gate_node_id and snapshot.phase == "RUSH" and not player.get("verified"):
-            self.last_reason = "rush gate verification"
-            return {"action": "VERIFY_GATE"}
+            return self._gate_verify_action(context, snapshot)
 
         if self._should_yield_drawn_process(context, snapshot):
             return None
@@ -130,6 +130,24 @@ class BaselineStrategy:
             self.last_reason = f"process node {current}"
             return {"action": "PROCESS", "targetNodeId": str(current)}
         return None
+
+    def _gate_verify_action(self, context: GameContext, snapshot: GameSnapshot) -> dict[str, Any]:
+        if self._should_bind_break_order_to_gate(snapshot):
+            self.last_reason = "rush gate verification with BREAK_ORDER"
+            return {
+                "action": "VERIFY_GATE",
+                "targetNodeId": context.gate_node_id,
+                "rushTactic": "BREAK_ORDER",
+            }
+        self.last_reason = "rush gate verification"
+        return {"action": "VERIFY_GATE"}
+
+    @staticmethod
+    def _should_bind_break_order_to_gate(snapshot: GameSnapshot) -> bool:
+        player = snapshot.self_player
+        if int(player.get("rushTacticUsedCount") or 0) > 0:
+            return False
+        return int(player.get("badFruit") or 0) >= BREAK_ORDER_BAD_FRUIT_COST
 
     def _should_yield_drawn_process(self, context: GameContext, snapshot: GameSnapshot) -> bool:
         current = snapshot.self_player.get("currentNodeId")
