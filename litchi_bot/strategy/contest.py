@@ -35,7 +35,9 @@ class WindowCardSelector:
         player = snapshot.self_player
         resources = player.get("resources") or {}
         contest_type = contest.get("contestType")
-        if player.get("guardActionPoint", 0) > 0 and contest_type in {"GATE", "TASK", "PASS", "OBSTACLE"}:
+        if contest_type == "TASK":
+            return self._choose_task_contest_card(context, snapshot, contest)
+        if player.get("guardActionPoint", 0) > 0 and contest_type in {"GATE", "PASS", "OBSTACLE"}:
             return "BING_ZHENG"
         if resources.get("PASS_TOKEN", 0) + resources.get("OFFICIAL_PERMIT", 0) > 0:
             return "YAN_DIE"
@@ -46,10 +48,39 @@ class WindowCardSelector:
             return "QIANG_XING"
         return self._fallback_non_horse_card(player)
 
+    def _choose_task_contest_card(
+        self,
+        context: GameContext,
+        snapshot: GameSnapshot,
+        contest: dict[str, Any],
+    ) -> str:
+        player = snapshot.self_player
+        resources = player.get("resources") or {}
+        has_speed = self._has_horse_speed_buff(player)
+        if has_speed:
+            return "QIANG_XING"
+        if self._horse_resource_count(resources) > 0 and not self._should_preserve_horse_for_task(
+            context,
+            snapshot,
+            contest,
+        ):
+            return "QIANG_XING"
+        if self._can_pay_xian_gong(player):
+            return "XIAN_GONG"
+        if player.get("guardActionPoint", 0) > 0:
+            return "BING_ZHENG"
+        if resources.get("PASS_TOKEN", 0) + resources.get("OFFICIAL_PERMIT", 0) > 0:
+            return "YAN_DIE"
+        return "ABSTAIN"
+
     def _fallback_non_horse_card(self, player: dict[str, Any]) -> str:
-        if float(player.get("freshness") or 0) >= 80 and int(player.get("goodFruit") or 0) > 30:
+        if self._can_pay_xian_gong(player):
             return "XIAN_GONG"
         return "ABSTAIN"
+
+    @staticmethod
+    def _can_pay_xian_gong(player: dict[str, Any]) -> bool:
+        return float(player.get("freshness") or 0) >= 80 and int(player.get("goodFruit") or 0) > 30
 
     def _should_preserve_horse_for_task(
         self,

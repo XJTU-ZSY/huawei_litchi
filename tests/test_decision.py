@@ -1297,10 +1297,23 @@ class DecisionTest(unittest.TestCase):
         )
         self.assertEqual(engine.decide(context, snap), [{"action": "MOVE", "targetNodeId": "S14"}])
 
-    def test_contesting_state_only_sends_window_card(self):
+    def test_contesting_state_only_sends_task_window_card(self):
         memory, context, engine = self.make_engine()
         contests = [{"contestId": "C1", "contestType": "TASK", "redPlayerId": 1001, "bluePlayerId": 2002, "roundIndex": 1}]
         snap = snapshot(memory, state="CONTESTING", currentNodeId="S02", contests=contests)
+        self.assertEqual(engine.decide(context, snap), [{"action": "WINDOW_CARD", "contestId": "C1", "card": "XIAN_GONG"}])
+
+    def test_task_window_falls_back_to_bing_zheng_when_xian_gong_is_not_safe(self):
+        memory, context, engine = self.make_engine()
+        contests = [{"contestId": "C1", "contestType": "TASK", "redPlayerId": 1001, "bluePlayerId": 2002, "roundIndex": 1}]
+        snap = snapshot(
+            memory,
+            state="CONTESTING",
+            currentNodeId="S02",
+            freshness=70,
+            goodFruit=30,
+            contests=contests,
+        )
         self.assertEqual(engine.decide(context, snap), [{"action": "WINDOW_CARD", "contestId": "C1", "card": "BING_ZHENG"}])
 
     def test_task_window_preserves_only_horse_resource_for_t06(self):
@@ -1329,7 +1342,7 @@ class DecisionTest(unittest.TestCase):
             memory,
             state="CONTESTING",
             currentNodeId="S09",
-            guardActionPoint=0,
+            guardActionPoint=4,
             resources={"FAST_HORSE": 1},
             tasks=tasks,
             contests=contests,
