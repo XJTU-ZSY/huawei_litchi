@@ -963,6 +963,103 @@ class DecisionTest(unittest.TestCase):
         )
         self.assertIn("before fixed process", engine.last_reason)
 
+    def test_process_node_contests_opponent_resource_unlock_before_fixed_process(self):
+        memory, context, engine, nodes = self.make_replay_split_engine()
+        tasks = [
+            {"taskId": "T06_007", "taskTemplateId": "T06", "nodeId": "S04", "score": 30, "processRound": 3, "active": True}
+        ]
+
+        snap = snapshot(
+            memory,
+            round_no=83,
+            playerId=1002,
+            teamId="BLUE",
+            currentNodeId="S04",
+            nodes=nodes,
+            tasks=tasks,
+            opponent_overrides={
+                "playerId": 1001,
+                "teamId": "RED",
+                "currentNodeId": "S04",
+                "state": "PROCESSING",
+                "currentProcess": {
+                    "action": "CLAIM_RESOURCE",
+                    "objectKey": "RESOURCE:S04:SHORT_HORSE",
+                    "targetNodeId": "S04",
+                    "resourceType": "SHORT_HORSE",
+                    "remainRound": 1,
+                },
+            },
+        )
+
+        self.assertEqual(
+            engine.decide(context, snap),
+            [{"action": "CLAIM_RESOURCE", "targetNodeId": "S04", "resourceType": "SHORT_HORSE"}],
+        )
+        self.assertIn("contest process-node resource SHORT_HORSE", engine.last_reason)
+
+    def test_process_node_does_not_repeat_contested_resource_unlock_before_fixed_process(self):
+        memory, context, engine, nodes = self.make_replay_split_engine()
+        memory.contested_resource_nodes.add("S04")
+        memory.contested_resources.add(("S04", "SHORT_HORSE"))
+        tasks = [
+            {"taskId": "T06_007", "taskTemplateId": "T06", "nodeId": "S04", "score": 30, "processRound": 3, "active": True}
+        ]
+
+        snap = snapshot(
+            memory,
+            round_no=84,
+            playerId=1002,
+            teamId="BLUE",
+            currentNodeId="S04",
+            nodes=nodes,
+            tasks=tasks,
+            opponent_overrides={
+                "playerId": 1001,
+                "teamId": "RED",
+                "currentNodeId": "S04",
+                "state": "PROCESSING",
+                "currentProcess": {
+                    "action": "CLAIM_RESOURCE",
+                    "objectKey": "RESOURCE:S04:SHORT_HORSE",
+                    "targetNodeId": "S04",
+                    "resourceType": "SHORT_HORSE",
+                },
+            },
+        )
+
+        self.assertEqual(engine.decide(context, snap), [{"action": "PROCESS", "targetNodeId": "S04"}])
+
+    def test_process_node_does_not_contest_low_value_resource_unlock_before_fixed_process(self):
+        memory, context, engine, nodes = self.make_replay_split_engine()
+        tasks = [
+            {"taskId": "T15_001", "taskTemplateId": "T06", "nodeId": "S04", "score": 15, "processRound": 3, "active": True}
+        ]
+
+        snap = snapshot(
+            memory,
+            round_no=83,
+            playerId=1002,
+            teamId="BLUE",
+            currentNodeId="S04",
+            nodes=nodes,
+            tasks=tasks,
+            opponent_overrides={
+                "playerId": 1001,
+                "teamId": "RED",
+                "currentNodeId": "S04",
+                "state": "PROCESSING",
+                "currentProcess": {
+                    "action": "CLAIM_RESOURCE",
+                    "objectKey": "RESOURCE:S04:SHORT_HORSE",
+                    "targetNodeId": "S04",
+                    "resourceType": "SHORT_HORSE",
+                },
+            },
+        )
+
+        self.assertEqual(engine.decide(context, snap), [{"action": "PROCESS", "targetNodeId": "S04"}])
+
     def test_process_node_claims_unlocked_current_task_before_fixed_process(self):
         memory, context, engine, nodes = self.make_replay_split_engine()
         tasks = [

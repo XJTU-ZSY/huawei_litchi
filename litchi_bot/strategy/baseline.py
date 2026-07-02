@@ -33,6 +33,7 @@ TASK_SCORE_TARGET = 90
 TASK_CLUSTER_LOOKAHEAD_ROUNDS = 90
 BONUS_TASK_MIN_SCORE = 30
 BONUS_TASK_MAX_DETOUR_ROUNDS = 60
+PROCESS_NODE_RESOURCE_CONTEST_MIN_TASK_SCORE = 30
 
 
 class BaselineStrategy:
@@ -233,8 +234,9 @@ class BaselineStrategy:
                 continue
             if self._task_available_for_self(context, task, snapshot.self_player):
                 continue
+            allow_contested = int(task.get("score") or 0) >= PROCESS_NODE_RESOURCE_CONTEST_MIN_TASK_SCORE
             resource_type = self._current_resource_option_for_task(
-                context, snapshot, current_id, task, stock, contested
+                context, snapshot, current_id, task, stock, contested, allow_contested=allow_contested
             )
             if resource_type is None:
                 continue
@@ -243,8 +245,9 @@ class BaselineStrategy:
                 context, snapshot, node, task, extra_rounds=claim_rounds
             ):
                 continue
+            verb = "contest" if resource_type in contested else "claim"
             self.last_reason = (
-                f"claim process-node resource {resource_type} for task {task.get('taskId')} before fixed process"
+                f"{verb} process-node resource {resource_type} for task {task.get('taskId')} before fixed process"
             )
             return {"action": "CLAIM_RESOURCE", "targetNodeId": current_id, "resourceType": resource_type}
         return None
@@ -257,6 +260,8 @@ class BaselineStrategy:
         task: dict[str, Any],
         stock: dict[str, Any],
         contested: set[str],
+        *,
+        allow_contested: bool = False,
     ) -> str | None:
         player_resources = snapshot.self_player.get("resources") or {}
         missing_claims: list[str] = []
@@ -264,17 +269,21 @@ class BaselineStrategy:
             options = self._resource_options_for_requirement(context, task, str(required))
             if any(self._resource_count(player_resources, option) > 0 for option in options):
                 continue
-            candidates = [
-                resource_type
-                for resource_type in RESOURCE_PRIORITY
-                if resource_type in options
-                and self._resource_count(stock, resource_type) > 0
-                and resource_type not in contested
-                and (current_id, resource_type) not in self.memory.contested_resources
-            ]
+            candidates: list[str] = []
+            for resource_type in RESOURCE_PRIORITY:
+                if resource_type not in options:
+                    continue
+                if self._resource_count(stock, resource_type) <= 0:
+                    continue
+                if (current_id, resource_type) in self.memory.contested_resources:
+                    continue
+                if resource_type in contested and not allow_contested:
+                    continue
+                candidates.append(resource_type)
             if not candidates:
                 return None
-            missing_claims.append(candidates[0])
+            uncontested = [resource_type for resource_type in candidates if resource_type not in contested]
+            missing_claims.append((uncontested or candidates)[0])
         return missing_claims[0] if missing_claims else None
 
     def _task_waiting_for_fixed_process(self, task: dict[str, Any], current_id: str) -> bool:
