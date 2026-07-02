@@ -31,7 +31,9 @@ def analyze_messages(messages: list[dict[str, Any]], player_id: int | str | None
     scores: dict[str, Any] = {}
     deliveries: dict[str, Any] = {}
     final_players: dict[str, Any] = {}
+    final_player_rounds: dict[str, Any] = {}
     latest_players: dict[str, Any] = {}
+    latest_player_rounds: dict[str, Any] = {}
 
     for message in messages:
         name = message.get("msg_name")
@@ -41,9 +43,12 @@ def analyze_messages(messages: list[dict[str, Any]], player_id: int | str | None
                 player_key = str(player.get("playerId"))
                 scores[player_key] = player.get("totalScore")
                 final_players[player_key] = player
+                final_player_rounds[player_key] = data.get("round")
         for player in data.get("players") or []:
             if player.get("playerId") is not None:
-                latest_players[str(player.get("playerId"))] = player
+                player_key = str(player.get("playerId"))
+                latest_players[player_key] = player
+                latest_player_rounds[player_key] = data.get("round")
         for event in data.get("events") or []:
             event_type = str(event.get("type"))
             payload = event.get("payload") or {}
@@ -63,6 +68,9 @@ def analyze_messages(messages: list[dict[str, Any]], player_id: int | str | None
                 for key in ("redCard", "blueCard"):
                     if payload.get(key):
                         window_cards[str(payload[key])] += 1
+
+    _infer_deliveries_from_players(deliveries, final_players, final_player_rounds, player_id, "finalPlayer")
+    _infer_deliveries_from_players(deliveries, latest_players, latest_player_rounds, player_id, "latestPlayer")
 
     return {
         "messageCount": len(messages),
@@ -145,6 +153,36 @@ def _walk_messages(value: Any) -> list[dict[str, Any]]:
 
 def _matches_player(payload: dict[str, Any], player_id: int | str | None) -> bool:
     return player_id is None or str(payload.get("playerId")) == str(player_id)
+
+
+def _infer_deliveries_from_players(
+    deliveries: dict[str, Any],
+    players: dict[str, dict[str, Any]],
+    player_rounds: dict[str, Any],
+    player_id: int | str | None,
+    source: str,
+) -> None:
+    for player_key, player in players.items():
+        if player_key in deliveries:
+            continue
+        if not _matches_player(player, player_id):
+            continue
+        if player.get("delivered") is not True:
+            continue
+        deliveries[player_key] = {
+            "round": _delivery_round(player, player_rounds.get(player_key)),
+            "goodFruit": player.get("goodFruit"),
+            "freshness": player.get("freshness"),
+            "source": source,
+            "inferred": True,
+        }
+
+
+def _delivery_round(player: dict[str, Any], fallback_round: Any = None) -> Any:
+    for key in ("deliveryRound", "deliveredRound", "deliverRound", "round"):
+        if player.get(key) is not None:
+            return player.get(key)
+    return fallback_round
 
 
 def _format_event(event: dict[str, Any]) -> str:
