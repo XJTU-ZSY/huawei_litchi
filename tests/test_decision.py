@@ -226,6 +226,51 @@ class DecisionTest(unittest.TestCase):
         self.assertEqual(engine.decide(context, snap), [])
         self.assertIn("wait for opponent 2002", engine.last_reason)
 
+    def test_competes_for_fixed_process_when_current_task_is_available(self):
+        memory, context, engine = self.make_engine()
+        nodes = [
+            {"nodeId": "S01", "start": True},
+            {"nodeId": "S02", "processType": "TRANSFER", "processRound": 4},
+            {"nodeId": "S14"},
+            {"nodeId": "S15", "terminal": True},
+        ]
+        tasks = [{"taskId": "T12_012", "nodeId": "S02", "score": 15, "active": True}]
+        snap = snapshot(
+            memory,
+            currentNodeId="S02",
+            taskScore=90,
+            nodes=nodes,
+            tasks=tasks,
+            opponent_overrides={"playerId": 2002, "currentNodeId": "S02", "state": "PROCESSING"},
+        )
+        self.assertEqual(engine.decide(context, snap), [{"action": "PROCESS", "targetNodeId": "S02"}])
+        self.assertIn("process node S02", engine.last_reason)
+
+    def test_yields_task_gated_process_after_stretch_task_score(self):
+        memory, context, engine = self.make_engine()
+        nodes = [
+            {"nodeId": "S01", "start": True},
+            {"nodeId": "S02", "processType": "TRANSFER", "processRound": 4},
+            {"nodeId": "S14"},
+            {"nodeId": "S15", "terminal": True},
+        ]
+        tasks = [
+            {"taskId": "T_DONE_1", "nodeId": "S01", "score": 30, "completed": True, "ownerPlayerId": 1001},
+            {"taskId": "T_DONE_2", "nodeId": "S01", "score": 30, "completed": True, "ownerPlayerId": 1001},
+            {"taskId": "T_DONE_3", "nodeId": "S01", "score": 30, "completed": True, "ownerPlayerId": 1001},
+            {"taskId": "T_DONE_4", "nodeId": "S01", "score": 15, "completed": True, "ownerPlayerId": 1001},
+            {"taskId": "T12_012", "nodeId": "S02", "score": 15, "active": True},
+        ]
+        snap = snapshot(
+            memory,
+            currentNodeId="S02",
+            nodes=nodes,
+            tasks=tasks,
+            opponent_overrides={"playerId": 2002, "currentNodeId": "S02", "state": "PROCESSING"},
+        )
+        self.assertEqual(engine.decide(context, snap), [])
+        self.assertIn("wait for opponent 2002", engine.last_reason)
+
     def test_does_not_yield_fixed_process_to_lower_id_opponent(self):
         memory, context, engine = self.make_engine()
         nodes = [

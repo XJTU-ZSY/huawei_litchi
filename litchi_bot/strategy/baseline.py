@@ -19,6 +19,7 @@ RESOURCE_PRIORITY = [
 LOW_VALUE_CONTEST_RESOURCES = {"OFFICIAL_PERMIT", "BOAT_RIGHT"}
 FIXED_PROCESS_BUSY_STATES = {"PROCESSING", "VERIFYING", "RESTING", "CONTESTING"}
 IDLE_PROCESS_YIELD_LIMIT = 1
+TASK_GATED_PROCESS_TARGET_SCORE = 105
 ENDGAME_TASK_SAFETY_BUFFER_ROUNDS = 10
 DELIVERY_SUBMIT_BUFFER_ROUNDS = 2
 
@@ -124,6 +125,10 @@ class BaselineStrategy:
             self._clear_process_yield(str(current))
             return False
 
+        if self._should_compete_for_task_gated_process(context, snapshot):
+            self._clear_process_yield(str(current))
+            return False
+
         opponent = snapshot.opponent_player or {}
         if str(opponent.get("currentNodeId") or "") != str(current):
             self._clear_process_yield(str(current))
@@ -151,6 +156,26 @@ class BaselineStrategy:
 
         self._clear_process_yield(current_key)
         return False
+
+    def _should_compete_for_task_gated_process(self, context: GameContext, snapshot: GameSnapshot) -> bool:
+        if self._ordinary_task_base_score(context, snapshot) >= TASK_GATED_PROCESS_TARGET_SCORE:
+            return False
+        for task in self._current_available_tasks(context, snapshot):
+            if not self._missing_task_resources(context, snapshot, task):
+                return True
+        return False
+
+    def _ordinary_task_base_score(self, context: GameContext, snapshot: GameSnapshot) -> int:
+        completed_score = 0
+        for task in snapshot.tasks:
+            if not task.get("completed"):
+                continue
+            if str(task.get("ownerPlayerId") or "") != str(context.player_id):
+                continue
+            completed_score += int(task.get("score") or 0)
+        if completed_score:
+            return completed_score
+        return int(snapshot.self_player.get("taskScore") or 0)
 
     def _clear_process_yield(self, node_id: str) -> None:
         if node_id:
