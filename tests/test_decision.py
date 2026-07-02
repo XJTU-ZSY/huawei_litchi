@@ -897,7 +897,7 @@ class DecisionTest(unittest.TestCase):
         self.assertEqual(engine.decide(context, snap), [{"action": "MOVE", "targetNodeId": "S09"}])
         self.assertIn("toward S09", engine.last_reason)
 
-    def test_detours_to_path_side_bonus_task_before_cluster_target(self):
+    def test_skips_costly_path_side_bonus_task_before_cluster_target(self):
         memory, context, engine, nodes = self.make_delivery_map_engine()
         memory.completed_process_nodes.add("S05")
         nodes = [dict(node) for node in nodes]
@@ -919,8 +919,10 @@ class DecisionTest(unittest.TestCase):
 
         snap = snapshot(memory, round_no=151, currentNodeId="S05", taskScore=60, nodes=nodes, tasks=tasks)
 
-        self.assertEqual(engine.decide(context, snap), [{"action": "MOVE", "targetNodeId": "S07"}])
-        self.assertIn("detour to bonus task node S07 before S09", engine.last_reason)
+        action = engine.decide(context, snap)
+        self.assertEqual(action, [{"action": "MOVE", "targetNodeId": "S09"}])
+        self.assertNotEqual(action, [{"action": "MOVE", "targetNodeId": "S07"}])
+        self.assertIn("toward S09", engine.last_reason)
 
     def test_routes_to_bonus_task_after_task_score_target_when_slack_allows(self):
         memory, context, engine, nodes = self.make_delivery_map_engine()
