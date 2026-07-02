@@ -97,6 +97,10 @@ class BaselineStrategy:
         if process_node_task_action is not None:
             return process_node_task_action
 
+        process_node_resource_action = self._claim_process_node_resource_before_process(context, snapshot)
+        if process_node_resource_action is not None:
+            return process_node_resource_action
+
         if self._should_yield_fixed_process(context, snapshot):
             return None
 
@@ -186,8 +190,6 @@ class BaselineStrategy:
         process_round = int(node.get("processRound") or 0)
         if not node.get("processType") or process_round <= 0:
             return None
-        if not self._opponent_can_contest_current_node_task(snapshot, current_id):
-            return None
 
         for task in sorted(snapshot.tasks, key=self._task_sort_key):
             if str(task.get("nodeId")) != current_id:
@@ -202,12 +204,78 @@ class BaselineStrategy:
             return {"action": "CLAIM_TASK", "taskId": task["taskId"]}
         return None
 
-    def _opponent_can_contest_current_node_task(self, snapshot: GameSnapshot, current_id: str) -> bool:
-        opponent = snapshot.opponent_player or {}
-        if str(opponent.get("currentNodeId") or "") != current_id:
-            return False
-        opponent_state = str(opponent.get("state") or "IDLE")
-        return not opponent.get("delivered") and opponent_state not in {"DELIVERED", "RETIRED", "MOVING"}
+    def _claim_process_node_resource_before_process(
+        self, context: GameContext, snapshot: GameSnapshot
+    ) -> dict[str, Any] | None:
+        current = snapshot.self_player.get("currentNodeId")
+        if not current:
+            return None
+        current_id = str(current)
+        if current_id in self.memory.completed_process_nodes:
+            return None
+        if current_id in {context.gate_node_id, context.terminal_node_id}:
+            return None
+        node = snapshot.nodes_by_id.get(current_id, {})
+        process_round = int(node.get("processRound") or 0)
+        if not node.get("processType") or process_round <= 0:
+            return None
+        if current_id in self.memory.contested_resource_nodes:
+            return None
+
+        stock = node.get("resourceStock") or {}
+        contested = self._opponent_claiming_resources_at_current(snapshot, current)
+        for task in sorted(snapshot.tasks, key=self._task_sort_key):
+            if str(task.get("nodeId")) != current_id:
+                continue
+            if self._task_waiting_for_fixed_process(task, current_id):
+                continue
+            if not self._task_available_for_self(context, task, snapshot.self_player, require_resources=False):
+                continue
+            if self._task_available_for_self(context, task, snapshot.self_player):
+                continue
+            resource_type = self._current_resource_option_for_task(
+                context, snapshot, current_id, task, stock, contested
+            )
+            if resource_type is None:
+                continue
+            claim_rounds = self._resource_claim_round(context, current_id, resource_type)
+            if not self._has_endgame_slack_for_process_node_task(
+                context, snapshot, node, task, extra_rounds=claim_rounds
+            ):
+                continue
+            self.last_reason = (
+                f"claim process-node resource {resource_type} for task {task.get('taskId')} before fixed process"
+            )
+            return {"action": "CLAIM_RESOURCE", "targetNodeId": current_id, "resourceType": resource_type}
+        return None
+
+    def _current_resource_option_for_task(
+        self,
+        context: GameContext,
+        snapshot: GameSnapshot,
+        current_id: str,
+        task: dict[str, Any],
+        stock: dict[str, Any],
+        contested: set[str],
+    ) -> str | None:
+        player_resources = snapshot.self_player.get("resources") or {}
+        missing_claims: list[str] = []
+        for required in self._task_required_resources(context, task):
+            options = self._resource_options_for_requirement(context, task, str(required))
+            if any(self._resource_count(player_resources, option) > 0 for option in options):
+                continue
+            candidates = [
+                resource_type
+                for resource_type in RESOURCE_PRIORITY
+                if resource_type in options
+                and self._resource_count(stock, resource_type) > 0
+                and resource_type not in contested
+                and (current_id, resource_type) not in self.memory.contested_resources
+            ]
+            if not candidates:
+                return None
+            missing_claims.append(candidates[0])
+        return missing_claims[0] if missing_claims else None
 
     def _task_waiting_for_fixed_process(self, task: dict[str, Any], current_id: str) -> bool:
         if current_id in self.memory.completed_process_nodes:
@@ -223,10 +291,12 @@ class BaselineStrategy:
         snapshot: GameSnapshot,
         node: dict[str, Any],
         task: dict[str, Any],
+        *,
+        extra_rounds: int = 0,
     ) -> bool:
         task_rounds = int(task.get("processRound") or 0)
         expire_round = int(task.get("expireRound") or 0)
-        if expire_round and snapshot.round_no + task_rounds > expire_round:
+        if expire_round and snapshot.round_no + extra_rounds + task_rounds > expire_round:
             return False
         if not self._should_go_endgame(context, snapshot):
             return True
@@ -243,7 +313,8 @@ class BaselineStrategy:
         if travel_to_gate is None or travel_to_terminal is None:
             return False
         required_rounds = (
-            task_rounds
+            extra_rounds
+            + task_rounds
             + fixed_process_rounds
             + travel_to_gate
             + self._gate_verify_rounds(context, snapshot)
