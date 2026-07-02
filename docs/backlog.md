@@ -48,6 +48,31 @@ Validation:
 
 Status: done
 
+### 000C. Replay manifest doneFile marker
+
+Priority: P0
+
+Evidence: replay optimization harness writes latest `*.manifest.json` in `replay_out_dir` with `clientA.doneFile` and `clientB.doneFile`.
+
+Expected behavior:
+- After replay-driven AI optimization succeeds, scan `replay_out_dir` for the latest `*.manifest.json`.
+- Do not derive a literal `<replay-stem>.replay.manifest.json`; the manifest follows the replay filename with `.jsonl` replaced by `.manifest.json`.
+- Create doneFile marker(s) in the replay directory using the `doneFile` values from `clientA` and `clientB`.
+
+Forbidden behavior:
+- Treating `*.manifest.json` as a replay input.
+- Writing doneFile paths outside `replay_out_dir`.
+- Marking done after a failed AI optimization command.
+
+Implementation owner: `$litchi-architect -> $litchi-implementer -> $litchi-tester`
+
+Validation:
+- `python -B -m unittest`
+- `python -B tools/quality_gate.py`
+- `python -B tools/mark_replay_done.py <replay_out_dir>`
+
+Status: done
+
 ### 001. 最小可运行 Python 客户端
 
 Priority: P0

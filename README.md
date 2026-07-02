@@ -47,6 +47,20 @@ python -B tools/watch_replays.py replays --player-id 1001 --append-backlog
 python -B tools/watch_replays.py replays --player-id 1001 --ai-command-template "opencode run --prompt-file {task}"
 ```
 
+当 `--ai-command-template` 成功返回后，watcher 会扫描回放目录中最新的 `*.manifest.json`，读取 `clientA.doneFile` / `clientB.doneFile`，并在回放目录创建对应 doneFile 标记。只标记单侧时可加：
+
+```bash
+python -B tools/watch_replays.py replays --player-id 1001 --ai-command-template "opencode run --prompt-file {task}" --done-client clientA
+```
+
+本地调试如果没有 manifest，可加 `--skip-done-file`。
+
+手动优化完代码后，也可以单独创建 doneFile：
+
+```bash
+python -B tools/mark_replay_done.py replays --client clientA
+```
+
 手动追加过程日志：
 
 ```bash

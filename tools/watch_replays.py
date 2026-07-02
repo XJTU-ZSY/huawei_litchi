@@ -14,6 +14,7 @@ from litchi_bot.replay_watch import (
     analyze_replay_file,
     append_cards_to_backlog,
     build_skill_handoff_prompt,
+    create_done_files_from_latest_manifest,
     build_requirement_cards,
     discover_replays,
     is_stable,
@@ -44,6 +45,8 @@ def main() -> int:
     )
     parser.add_argument("--append-backlog", action="store_true", help="Append generated requirement cards to docs/backlog.md")
     parser.add_argument("--backlog", default="docs/backlog.md", help="Backlog path used with --append-backlog")
+    parser.add_argument("--done-client", choices=("clientA", "clientB"), help="Only create the manifest doneFile for this client; default creates all declared doneFiles")
+    parser.add_argument("--skip-done-file", action="store_true", help="Do not create manifest doneFile markers after a successful AI command")
     parser.add_argument("--once", action="store_true", help="Scan once and exit; useful for tests or manual batches")
     parser.add_argument("--process-empty", action="store_true", help="Mark empty/unparsed replays as processed")
     args = parser.parse_args()
@@ -97,6 +100,19 @@ def main() -> int:
                     print(f"[ERROR] AI command failed with code {completed.returncode}: {task_path}", file=sys.stderr)
                     continue
                 append_process_event(process_log_path, "AI command completed", f"Command completed for `{task_path}`.")
+                if not args.skip_done_file:
+                    try:
+                        done_paths = create_done_files_from_latest_manifest(folder, args.done_client)
+                    except Exception as exc:
+                        append_process_event(process_log_path, "Done file failed", f"Could not create doneFile marker from latest manifest in `{folder}`: {exc}")
+                        print(f"[ERROR] failed to create doneFile marker from latest manifest: {exc}", file=sys.stderr)
+                        continue
+                    if done_paths:
+                        append_process_event(process_log_path, "Done file created", "Created doneFile marker(s): " + ", ".join(f"`{path}`" for path in done_paths))
+                    else:
+                        append_process_event(process_log_path, "Done file missing", f"No latest `*.manifest.json` or doneFile entry found in `{folder}`.")
+                        print(f"[ERROR] no latest *.manifest.json or doneFile entry found in {folder}", file=sys.stderr)
+                        continue
             if args.append_backlog:
                 append_cards_to_backlog(backlog_path, candidate.path, build_requirement_cards(candidate.path, summary, player_id))
                 append_process_event(process_log_path, "Backlog append", f"Appended machine-generated cards to `{backlog_path}`.")

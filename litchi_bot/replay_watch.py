@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import subprocess
 import time
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Iterable
@@ -11,6 +12,8 @@ from .process_log import append_process_event, create_process_log
 from .replay import analyze_messages, format_report, load_messages
 
 DEFAULT_EXTENSIONS = {".json", ".jsonl", ".log", ".txt", ".replay"}
+MANIFEST_SUFFIX = ".manifest.json"
+DONE_CLIENT_KEYS = ("clientA", "clientB")
 
 
 @dataclass(frozen=True)
@@ -30,6 +33,8 @@ def discover_replays(folder: Path, extensions: set[str] | None = None) -> list[R
         return []
     candidates: list[ReplayCandidate] = []
     for path in sorted(folder.rglob("*")):
+        if path.name.endswith(MANIFEST_SUFFIX):
+            continue
         if not path.is_file() or path.suffix.lower() not in extensions:
             continue
         stat = path.stat()
@@ -299,6 +304,54 @@ def start_replay_process_log(log_dir: Path, replay_path: Path, player_id: int | 
     )
     append_process_event(path, "Replay detected", f"Watcher detected stable replay `{replay_path}`.")
     return path
+
+
+def find_latest_manifest(replay_out_dir: Path) -> Path | None:
+    manifests = [path for path in replay_out_dir.glob(f"*{MANIFEST_SUFFIX}") if path.is_file()]
+    if not manifests:
+        return None
+    return max(manifests, key=lambda path: (path.stat().st_mtime_ns, path.name))
+
+
+def done_file_names_from_manifest_data(data: Mapping[str, Any], client: str | None = None) -> list[str]:
+    client_keys = (client,) if client else DONE_CLIENT_KEYS
+    names: list[str] = []
+    for key in client_keys:
+        value = data.get(key)
+        if not isinstance(value, Mapping):
+            continue
+        done_file = value.get("doneFile")
+        if isinstance(done_file, str) and done_file.strip():
+            names.append(done_file.strip())
+    return names
+
+
+def resolve_done_file_path(replay_out_dir: Path, done_file: str) -> Path:
+    relative_path = Path(done_file)
+    if not relative_path.name or relative_path.is_absolute() or ".." in relative_path.parts:
+        raise ValueError(f"doneFile must stay inside replay_out_dir: {done_file}")
+    return replay_out_dir / relative_path
+
+
+def create_done_files_from_latest_manifest(replay_out_dir: Path, client: str | None = None) -> list[Path]:
+    manifest_path = find_latest_manifest(replay_out_dir)
+    if manifest_path is None:
+        return []
+    data = json.loads(manifest_path.read_text(encoding="utf-8"))
+    if not isinstance(data, Mapping):
+        return []
+    created: list[Path] = []
+    seen: set[str] = set()
+    for done_file in done_file_names_from_manifest_data(data, client):
+        done_path = resolve_done_file_path(replay_out_dir, done_file)
+        key = str(done_path)
+        if key in seen:
+            continue
+        done_path.parent.mkdir(parents=True, exist_ok=True)
+        done_path.touch()
+        created.append(done_path)
+        seen.add(key)
+    return created
 
 
 def run_ai_command(command_template: str, task_path: Path, replay_path: Path, report_path: Path) -> subprocess.CompletedProcess[str]:

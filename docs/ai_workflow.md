@@ -103,6 +103,20 @@ python -B tools/watch_replays.py replays --player-id 1001 --ai-command-template 
 
 `--ai-command-template` 支持 `{task}`、`{replay}`、`{report}` 占位符。具体命令取决于本机 opencode CLI。
 
+AI 命令成功返回后，watcher 会扫描回放输出目录里的最新 `*.manifest.json`，不是按 `<replay-stem>.replay.manifest.json` 字面量推导。manifest 的文件名应跟 replay 文件同名，只是把 `.jsonl` 换成 `.manifest.json`。watcher 会读取其中的 `clientA.doneFile` 和 `clientB.doneFile`，在回放目录创建对应 doneFile 标记；如果只需要单侧，使用：
+
+```bash
+python -B tools/watch_replays.py replays --player-id 1001 --ai-command-template "opencode run --prompt-file {task}" --done-client clientA
+```
+
+本地调试如果没有 manifest，可加 `--skip-done-file`，否则 watcher 会把缺失 doneFile 视为本轮未完成并等待下一轮重试。
+
+手动完成一次代码优化后，可单独补发 doneFile：
+
+```bash
+python -B tools/mark_replay_done.py replays --client clientA
+```
+
 ## 过程记录
 
 每一轮回放分析、需求卡、实现、测试、提交都必须记录到同一个 process log 文件。
