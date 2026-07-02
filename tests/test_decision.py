@@ -707,6 +707,48 @@ class DecisionTest(unittest.TestCase):
         self.assertEqual(engine.decide(context, snap), [{"action": "MOVE", "targetNodeId": "S04"}])
         self.assertIn("toward S04", engine.last_reason)
 
+    def test_routes_to_task_node_when_required_resource_is_available_there(self):
+        memory, context, engine, nodes = self.make_delivery_map_engine()
+        nodes = [dict(node) for node in nodes]
+        for node in nodes:
+            if node["nodeId"] == "S09":
+                node["resourceStock"] = {"FAST_HORSE": 1}
+        tasks = [
+            {
+                "taskId": "T06_006",
+                "nodeId": "S09",
+                "score": 30,
+                "processRound": 3,
+                "active": True,
+                "requiredResourceTypes": ["FAST_HORSE"],
+            },
+            {"taskId": "T08_009", "nodeId": "S05", "score": 30, "processRound": 4, "active": True},
+        ]
+
+        snap = snapshot(memory, round_no=179, currentNodeId="S07", taskScore=60, nodes=nodes, tasks=tasks)
+
+        self.assertEqual(engine.decide(context, snap), [{"action": "MOVE", "targetNodeId": "S09"}])
+        self.assertIn("toward S09", engine.last_reason)
+
+    def test_does_not_route_to_resource_gated_task_when_unlock_resource_is_absent(self):
+        memory, context, engine, nodes = self.make_delivery_map_engine()
+        tasks = [
+            {
+                "taskId": "T06_006",
+                "nodeId": "S09",
+                "score": 30,
+                "processRound": 3,
+                "active": True,
+                "requiredResourceTypes": ["FAST_HORSE"],
+            },
+            {"taskId": "T08_009", "nodeId": "S05", "score": 30, "processRound": 4, "active": True},
+        ]
+
+        snap = snapshot(memory, round_no=179, currentNodeId="S07", taskScore=60, nodes=nodes, tasks=tasks)
+
+        self.assertEqual(engine.decide(context, snap), [{"action": "MOVE", "targetNodeId": "S05"}])
+        self.assertIn("toward S05", engine.last_reason)
+
     def test_skips_current_task_when_delivery_slack_is_insufficient(self):
         memory, context, engine, nodes = self.make_delivery_map_engine()
         memory.completed_process_nodes.add("S05")

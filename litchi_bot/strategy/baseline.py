@@ -592,7 +592,7 @@ class BaselineStrategy:
         best_path: list[str] = []
         best_task: dict[str, Any] | None = None
         for task in sorted(snapshot.tasks, key=self._task_sort_key):
-            if not self._task_available_for_self(context, task, snapshot.self_player):
+            if not self._task_routeable_for_self(context, snapshot, task):
                 continue
             node_id = str(task.get("nodeId") or "")
             if not node_id or node_id in blocked:
@@ -604,6 +604,15 @@ class BaselineStrategy:
                 best_path = path
                 best_task = task
         return best_task
+
+    def _task_routeable_for_self(
+        self, context: GameContext, snapshot: GameSnapshot, task: dict[str, Any]
+    ) -> bool:
+        if self._task_available_for_self(context, task, snapshot.self_player):
+            return True
+        if not self._task_available_for_self(context, task, snapshot.self_player, require_resources=False):
+            return False
+        return self._missing_task_resources_available_at_task_node(context, snapshot, task)
 
     def _has_endgame_slack_for_task(
         self, context: GameContext, snapshot: GameSnapshot, task: dict[str, Any]
@@ -623,8 +632,9 @@ class BaselineStrategy:
             return False
 
         task_rounds = int(task.get("processRound") or 0)
+        resource_rounds = self._missing_task_resource_claim_rounds(context, snapshot, task)
         expire_round = int(task.get("expireRound") or 0)
-        if expire_round and snapshot.round_no + travel_rounds + task_rounds > expire_round:
+        if expire_round and snapshot.round_no + travel_rounds + resource_rounds + task_rounds > expire_round:
             return False
 
         assumed_completed = set(self.memory.completed_process_nodes)
@@ -641,8 +651,50 @@ class BaselineStrategy:
             return False
 
         remaining_rounds = context.duration_round - snapshot.round_no
-        required_rounds = travel_rounds + task_rounds + closure_rounds
+        required_rounds = travel_rounds + resource_rounds + task_rounds + closure_rounds
         return remaining_rounds >= required_rounds + ENDGAME_TASK_SAFETY_MARGIN_ROUNDS
+
+    def _missing_task_resources_available_at_task_node(
+        self, context: GameContext, snapshot: GameSnapshot, task: dict[str, Any]
+    ) -> bool:
+        node_id = str(task.get("nodeId") or "")
+        if not node_id or node_id in self.memory.contested_resource_nodes:
+            return False
+        node = snapshot.nodes_by_id.get(node_id, {})
+        stock = node.get("resourceStock") or {}
+        player_resources = snapshot.self_player.get("resources") or {}
+        missing = False
+        for resource_type in self._task_required_resources(context, task):
+            resource_key = str(resource_type)
+            if self._resource_count(player_resources, resource_key) > 0:
+                continue
+            missing = True
+            if (node_id, resource_key) in self.memory.contested_resources:
+                return False
+            if int(stock.get(resource_key) or 0) <= 0:
+                return False
+        return missing
+
+    def _missing_task_resource_claim_rounds(
+        self, context: GameContext, snapshot: GameSnapshot, task: dict[str, Any]
+    ) -> int:
+        node_id = str(task.get("nodeId") or "")
+        player_resources = snapshot.self_player.get("resources") or {}
+        total = 0
+        for resource_type in self._task_required_resources(context, task):
+            resource_key = str(resource_type)
+            if self._resource_count(player_resources, resource_key) > 0:
+                continue
+            total += self._resource_claim_round(context, node_id, resource_key)
+        return total
+
+    @staticmethod
+    def _resource_claim_round(context: GameContext, node_id: str, resource_type: str) -> int:
+        gameplay = (context.raw_start.get("map") or {}).get("gameplay") or {}
+        for resource in list(context.raw_start.get("resources") or []) + list(gameplay.get("resources") or []):
+            if str(resource.get("nodeId")) == node_id and str(resource.get("resourceType")) == resource_type:
+                return int(resource.get("claimRound") or 0)
+        return 2
 
     def _move_toward(self, context: GameContext, snapshot: GameSnapshot, target: str) -> dict[str, Any] | None:
         current = snapshot.self_player.get("currentNodeId")
@@ -697,7 +749,12 @@ class BaselineStrategy:
         return False
 
     def _task_available_for_self(
-        self, context: GameContext, task: dict[str, Any], player: dict[str, Any] | None = None
+        self,
+        context: GameContext,
+        task: dict[str, Any],
+        player: dict[str, Any] | None = None,
+        *,
+        require_resources: bool = True,
     ) -> bool:
         if not task.get("taskId") or task.get("completed") or task.get("failed"):
             return False
@@ -711,7 +768,7 @@ class BaselineStrategy:
         protection = task.get("protectionPlayerId")
         if protection not in (None, 0, "0") and str(protection) != str(context.player_id):
             return False
-        if not self._task_requirements_met(context, task, player):
+        if require_resources and not self._task_requirements_met(context, task, player):
             return False
         return True
 
