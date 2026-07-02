@@ -683,6 +683,24 @@ class DecisionTest(unittest.TestCase):
         self.assertEqual(engine.decide(context, snap), [{"action": "MOVE", "targetNodeId": "S10"}])
         self.assertIn("move from S09 to S10 toward S14", engine.last_reason)
 
+    def test_current_threshold_task_preempts_dynamic_endgame_before_hard_lock(self):
+        memory, context, engine, nodes = self.make_delivery_map_engine()
+        tasks = [{"taskId": "T02_003", "nodeId": "S10", "score": 30, "processRound": 4, "active": True}]
+
+        snap = snapshot(memory, round_no=416, currentNodeId="S10", taskScore=60, nodes=nodes, tasks=tasks)
+
+        self.assertEqual(engine.decide(context, snap), [{"action": "CLAIM_TASK", "taskId": "T02_003"}])
+        self.assertIn("threshold task", engine.last_reason)
+
+    def test_current_threshold_task_does_not_override_hard_endgame_lock(self):
+        memory, context, engine, nodes = self.make_delivery_map_engine()
+        tasks = [{"taskId": "T02_003", "nodeId": "S10", "score": 30, "processRound": 4, "active": True}]
+
+        snap = snapshot(memory, round_no=430, currentNodeId="S10", taskScore=60, nodes=nodes, tasks=tasks)
+
+        self.assertEqual(engine.decide(context, snap), [{"action": "MOVE", "targetNodeId": "S11"}])
+        self.assertIn("toward S14", engine.last_reason)
+
     def test_skips_branch_task_when_delivery_slack_is_insufficient(self):
         memory, context, engine, nodes = self.make_delivery_map_engine()
         tasks = [

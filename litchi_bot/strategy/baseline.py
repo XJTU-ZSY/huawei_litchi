@@ -27,6 +27,7 @@ ROUND_MS = 1000
 DEFAULT_GATE_VERIFY_ROUNDS = 6
 ENDGAME_TASK_SAFETY_MARGIN_ROUNDS = 10
 DELIVERY_CLOSURE_SAFETY_MARGIN_ROUNDS = 20
+TASK_SCORE_TARGET = 90
 
 
 class BaselineStrategy:
@@ -102,6 +103,10 @@ class BaselineStrategy:
         ice_box_action = self._use_ice_box_if_beneficial(context, snapshot)
         if ice_box_action is not None:
             return ice_box_action
+
+        threshold_task_action = self._claim_current_threshold_task_before_dynamic_endgame(context, snapshot)
+        if threshold_task_action is not None:
+            return threshold_task_action
 
         if self._should_go_endgame(context, snapshot):
             horse_action = self._use_horse_if_beneficial(context, snapshot, include_current_edge=False)
@@ -517,6 +522,35 @@ class BaselineStrategy:
                 return {"action": "CLAIM_TASK", "taskId": task["taskId"]}
         return None
 
+    def _claim_current_threshold_task_before_dynamic_endgame(
+        self, context: GameContext, snapshot: GameSnapshot
+    ) -> dict[str, Any] | None:
+        if snapshot.phase == "RUSH" or snapshot.round_no >= self._hard_endgame_round(context):
+            return None
+        if not self._delivery_closure_is_tight(context, snapshot):
+            return None
+        player = snapshot.self_player
+        task_score = int(player.get("taskScore") or 0)
+        if task_score >= TASK_SCORE_TARGET:
+            return None
+        current = player.get("currentNodeId")
+        if not current:
+            return None
+        current_id = str(current)
+
+        for task in sorted(snapshot.tasks, key=self._task_sort_key):
+            if str(task.get("nodeId")) != current_id:
+                continue
+            if task_score + int(task.get("score") or 0) < TASK_SCORE_TARGET:
+                continue
+            if not self._task_available_for_self(context, task, player):
+                continue
+            if not self._has_endgame_slack_for_task(context, snapshot, task):
+                continue
+            self.last_reason = f"claim threshold task {task.get('taskId')} before dynamic endgame"
+            return {"action": "CLAIM_TASK", "taskId": task["taskId"]}
+        return None
+
     def _claim_current_resource(self, snapshot: GameSnapshot) -> dict[str, Any] | None:
         current = snapshot.self_player.get("currentNodeId")
         node = snapshot.nodes_by_id.get(str(current), {})
@@ -732,21 +766,27 @@ class BaselineStrategy:
         player = snapshot.self_player
         if snapshot.phase == "RUSH":
             return True
-        if snapshot.round_no >= min(430, context.duration_round - 120):
+        if snapshot.round_no >= self._hard_endgame_round(context):
             return True
-        current = str(player.get("currentNodeId") or "")
-        if current:
-            closure_rounds = self._estimated_delivery_closure_rounds(context, snapshot, current)
-            remaining_rounds = context.duration_round - snapshot.round_no
-            if closure_rounds is not None and (
-                remaining_rounds <= closure_rounds + DELIVERY_CLOSURE_SAFETY_MARGIN_ROUNDS
-            ):
-                return True
+        if self._delivery_closure_is_tight(context, snapshot):
+            return True
         if float(player.get("freshness") or 0) <= 20:
             return True
         if int(player.get("goodFruit") or 0) <= 5:
             return True
         return False
+
+    @staticmethod
+    def _hard_endgame_round(context: GameContext) -> int:
+        return min(430, context.duration_round - 120)
+
+    def _delivery_closure_is_tight(self, context: GameContext, snapshot: GameSnapshot) -> bool:
+        current = str(snapshot.self_player.get("currentNodeId") or "")
+        if not current:
+            return False
+        closure_rounds = self._estimated_delivery_closure_rounds(context, snapshot, current)
+        remaining_rounds = context.duration_round - snapshot.round_no
+        return closure_rounds is not None and remaining_rounds <= closure_rounds + DELIVERY_CLOSURE_SAFETY_MARGIN_ROUNDS
 
     def _task_available_for_self(
         self,
