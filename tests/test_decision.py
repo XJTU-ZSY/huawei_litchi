@@ -111,6 +111,64 @@ class DecisionTest(unittest.TestCase):
         snap = snapshot(memory, state="MOVING", currentNodeId="S01", nextNodeId="S02")
         self.assertEqual(engine.decide(context, snap), [{"action": "MOVE", "targetNodeId": "S02"}])
 
+    def test_uses_fast_horse_while_moving_with_long_travel_ahead(self):
+        memory, context, engine = self.make_engine()
+        snap = snapshot(
+            memory,
+            state="MOVING",
+            currentNodeId="S09",
+            nextNodeId="S10",
+            edgeProgressMs=1000,
+            edgeTotalMs=20000,
+            resources={"FAST_HORSE": 1},
+            taskScore=60,
+            tasks=[{"taskId": "T02_1", "nodeId": "S10", "score": 30, "active": True}],
+        )
+
+        self.assertEqual(engine.decide(context, snap), [{"action": "USE_RESOURCE", "resourceType": "FAST_HORSE"}])
+        self.assertIn("use FAST_HORSE", engine.last_reason)
+
+    def test_does_not_use_horse_when_speed_buff_is_active(self):
+        memory, context, engine = self.make_engine()
+        snap = snapshot(
+            memory,
+            state="MOVING",
+            currentNodeId="S09",
+            nextNodeId="S10",
+            edgeProgressMs=1000,
+            edgeTotalMs=20000,
+            resources={"FAST_HORSE": 1},
+            buffs=[{"type": "RUSH_SPEED"}],
+            taskScore=60,
+            tasks=[{"taskId": "T02_1", "nodeId": "S10", "score": 30, "active": True}],
+        )
+
+        self.assertEqual(engine.decide(context, snap), [{"action": "MOVE", "targetNodeId": "S10"}])
+
+    def test_does_not_spend_horse_en_route_to_horse_required_task(self):
+        memory, context, engine = self.make_engine()
+        snap = snapshot(
+            memory,
+            state="MOVING",
+            currentNodeId="S09",
+            nextNodeId="S10",
+            edgeProgressMs=1000,
+            edgeTotalMs=20000,
+            resources={"FAST_HORSE": 1},
+            taskScore=60,
+            tasks=[
+                {
+                    "taskId": "T06_1",
+                    "nodeId": "S10",
+                    "score": 30,
+                    "active": True,
+                    "requiredResourceTypes": ["FAST_HORSE"],
+                }
+            ],
+        )
+
+        self.assertEqual(engine.decide(context, snap), [{"action": "MOVE", "targetNodeId": "S10"}])
+
     def test_waiting_without_next_node_returns_no_action(self):
         memory, context, engine = self.make_engine()
         snap = snapshot(memory, state="WAITING", currentNodeId="S01", nextNodeId=None)

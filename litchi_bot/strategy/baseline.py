@@ -17,9 +17,12 @@ RESOURCE_PRIORITY = [
     "BOAT_RIGHT",
 ]
 
+HORSE_RESOURCES = ("FAST_HORSE", "SHORT_HORSE")
+SPEED_BUFF_TYPES = {"FAST_HORSE", "SHORT_HORSE", "RUSH_SPEED"}
 FIXED_PROCESS_BUSY_STATES = {"PROCESSING", "VERIFYING", "RESTING", "CONTESTING"}
 IDLE_PROCESS_YIELD_LIMIT = 1
 ICE_BOX_USE_FRESHNESS_LIMIT = 90.0
+MIN_HORSE_TRAVEL_ROUNDS = 8
 ROUND_MS = 1000
 DEFAULT_GATE_VERIFY_ROUNDS = 6
 ENDGAME_TASK_SAFETY_MARGIN_ROUNDS = 10
@@ -54,7 +57,18 @@ class BaselineStrategy:
             self.last_reason = f"state {state} should continue without main action"
             return None
 
-        if state in {"MOVING", "WAITING"}:
+        if state == "MOVING":
+            horse_action = self._use_horse_if_beneficial(context, snapshot, include_current_edge=True)
+            if horse_action is not None:
+                return horse_action
+            next_node = player.get("nextNodeId")
+            if next_node:
+                self.last_reason = f"continue moving to {next_node}"
+                return {"action": "MOVE", "targetNodeId": next_node}
+            self.last_reason = "moving without nextNodeId"
+            return None
+
+        if state == "WAITING":
             next_node = player.get("nextNodeId")
             if next_node:
                 self.last_reason = f"continue moving to {next_node}"
@@ -89,6 +103,9 @@ class BaselineStrategy:
             return ice_box_action
 
         if self._should_go_endgame(context, snapshot):
+            horse_action = self._use_horse_if_beneficial(context, snapshot, include_current_edge=False)
+            if horse_action is not None:
+                return horse_action
             target = context.terminal_node_id if player.get("verified") else context.gate_node_id
             self.last_reason = f"endgame lock target {target}"
             return self._move_toward(context, snapshot, target)
@@ -100,6 +117,10 @@ class BaselineStrategy:
         resource_action = self._claim_current_resource(snapshot)
         if resource_action is not None:
             return resource_action
+
+        horse_action = self._use_horse_if_beneficial(context, snapshot, include_current_edge=False)
+        if horse_action is not None:
+            return horse_action
 
         target = self._choose_destination(context, snapshot)
         if target:
@@ -233,6 +254,104 @@ class BaselineStrategy:
         self.last_reason = f"use ICE_BOX before endgame at freshness {freshness:g}"
         return {"action": "USE_RESOURCE", "resourceType": "ICE_BOX"}
 
+    def _use_horse_if_beneficial(
+        self, context: GameContext, snapshot: GameSnapshot, *, include_current_edge: bool
+    ) -> dict[str, Any] | None:
+        player = snapshot.self_player
+        current = str(player.get("currentNodeId") or "")
+        if not current or current in {context.gate_node_id, context.terminal_node_id}:
+            return None
+        resource_type = self._choose_horse_resource(player)
+        if resource_type is None:
+            return None
+        if self._has_speed_buff(player):
+            return None
+        if self._nearest_task_needs_horse_resource(context, snapshot):
+            return None
+        if not self._has_meaningful_horse_travel_ahead(context, snapshot, include_current_edge=include_current_edge):
+            return None
+        self.last_reason = f"use {resource_type} before long movement"
+        return {"action": "USE_RESOURCE", "resourceType": resource_type}
+
+    def _choose_horse_resource(self, player: dict[str, Any]) -> str | None:
+        resources = player.get("resources") or {}
+        for resource_type in HORSE_RESOURCES:
+            if self._resource_count(resources, resource_type) > 0:
+                return resource_type
+        return None
+
+    @staticmethod
+    def _resource_count(resources: dict[str, Any], resource_type: str) -> int:
+        try:
+            return int(resources.get(resource_type) or 0)
+        except (TypeError, ValueError):
+            return 0
+
+    def _has_speed_buff(self, player: dict[str, Any]) -> bool:
+        for buff in player.get("buffs") or []:
+            buff_type = str(buff.get("type") or buff.get("buffType") or "").upper()
+            if buff_type in SPEED_BUFF_TYPES:
+                return True
+        return False
+
+    def _has_meaningful_horse_travel_ahead(
+        self, context: GameContext, snapshot: GameSnapshot, *, include_current_edge: bool
+    ) -> bool:
+        player = snapshot.self_player
+        travel_rounds = 0
+        start_node = str(player.get("currentNodeId") or "")
+        if include_current_edge:
+            remaining = self._current_edge_remaining_rounds(player)
+            if remaining is not None:
+                travel_rounds += remaining
+            next_node = player.get("nextNodeId")
+            if next_node:
+                start_node = str(next_node)
+
+        target = self._horse_travel_target(context, snapshot)
+        if not start_node or not target:
+            return travel_rounds >= MIN_HORSE_TRAVEL_ROUNDS
+        if start_node != target:
+            estimated = self._estimated_travel_rounds(context, snapshot, start_node, target)
+            if estimated is not None:
+                travel_rounds += estimated
+        return travel_rounds >= MIN_HORSE_TRAVEL_ROUNDS
+
+    def _horse_travel_target(self, context: GameContext, snapshot: GameSnapshot) -> str | None:
+        player = snapshot.self_player
+        if self._should_go_endgame(context, snapshot) or int(player.get("taskScore") or 0) >= 90:
+            return context.terminal_node_id if player.get("verified") else context.gate_node_id
+        return self._nearest_task_node(context, snapshot) or context.gate_node_id
+
+    def _nearest_task_needs_horse_resource(self, context: GameContext, snapshot: GameSnapshot) -> bool:
+        player = snapshot.self_player
+        if self._should_go_endgame(context, snapshot) or int(player.get("taskScore") or 0) >= 90:
+            return False
+        task = self._nearest_task(context, snapshot)
+        return task is not None and self._task_requires_horse_resource(context, task)
+
+    def _task_requires_horse_resource(self, context: GameContext, task: dict[str, Any]) -> bool:
+        required = task.get("requiredResourceTypes") or self._task_template_required_resources(context, task)
+        return any(str(resource_type) in HORSE_RESOURCES for resource_type in required)
+
+    @staticmethod
+    def _task_template_required_resources(context: GameContext, task: dict[str, Any]) -> list[Any]:
+        template_id = task.get("taskTemplateId")
+        if not template_id:
+            return []
+        for template in context.raw_start.get("taskTemplates") or []:
+            if str(template.get("taskTemplateId")) == str(template_id):
+                return list(template.get("requiredResourceTypes") or [])
+        return []
+
+    @staticmethod
+    def _current_edge_remaining_rounds(player: dict[str, Any]) -> int | None:
+        total_ms = int(player.get("edgeTotalMs") or 0)
+        progress_ms = int(player.get("edgeProgressMs") or 0)
+        if total_ms <= 0:
+            return None
+        return max(0, ceil((total_ms - progress_ms) / ROUND_MS))
+
     def _should_yield_fixed_process(self, context: GameContext, snapshot: GameSnapshot) -> bool:
         current = snapshot.self_player.get("currentNodeId")
         node = snapshot.nodes_by_id.get(str(current), {})
@@ -362,9 +481,14 @@ class BaselineStrategy:
         return target
 
     def _nearest_task_node(self, context: GameContext, snapshot: GameSnapshot) -> str | None:
+        task = self._nearest_task(context, snapshot)
+        return None if task is None else str(task.get("nodeId"))
+
+    def _nearest_task(self, context: GameContext, snapshot: GameSnapshot) -> dict[str, Any] | None:
         current = snapshot.self_player.get("currentNodeId")
         blocked = self._blocked_nodes(context, snapshot)
         best_path: list[str] = []
+        best_task: dict[str, Any] | None = None
         for task in sorted(snapshot.tasks, key=self._task_sort_key):
             if not self._task_available_for_self(context, task):
                 continue
@@ -374,7 +498,8 @@ class BaselineStrategy:
             path = context.graph.shortest_path(str(current), node_id, blocked=blocked)
             if path and (not best_path or len(path) < len(best_path)):
                 best_path = path
-        return best_path[-1] if best_path else None
+                best_task = task
+        return best_task
 
     def _move_toward(self, context: GameContext, snapshot: GameSnapshot, target: str) -> dict[str, Any] | None:
         current = snapshot.self_player.get("currentNodeId")
