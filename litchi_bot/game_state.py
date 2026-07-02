@@ -49,7 +49,9 @@ class GameMemory:
     skipped_process_nodes: set[str] = field(default_factory=set)
     active_process_contests: dict[str, str] = field(default_factory=dict)
     active_resource_contests: dict[str, str] = field(default_factory=dict)
+    active_task_contests: dict[str, str] = field(default_factory=dict)
     skipped_resource_claims: set[str] = field(default_factory=set)
+    skipped_task_claims: set[str] = field(default_factory=set)
     drawn_process_yield_counts: dict[str, int] = field(default_factory=dict)
     process_idle_yield_counts: dict[str, int] = field(default_factory=dict)
     completed_tasks: set[str] = field(default_factory=set)
@@ -128,6 +130,7 @@ class GameMemory:
                 task_id = payload.get("taskId")
                 if task_id:
                     self.completed_tasks.add(str(task_id))
+                    self.skipped_task_claims.discard(str(task_id))
             elif event_type in {"ACTION_REJECTED", "INVALID_ACTION"}:
                 self.rejected_actions.append(event)
                 self._recover_from_rejection(payload, current_node_id)
@@ -151,6 +154,10 @@ class GameMemory:
             return
         object_key = str(payload.get("objectKey") or "")
         contest_type = str(payload.get("contestType") or "").upper()
+        task_id = self.task_id_from_object(object_key, payload.get("taskId"))
+        if task_id and (object_key.startswith("TASK:") or contest_type == "TASK"):
+            self.active_task_contests[str(contest_id)] = task_id
+            return
         resource_key = self.resource_claim_key_from_object(object_key, payload.get("targetNodeId"), payload.get("resourceType"))
         if resource_key and (object_key.startswith("RESOURCE:") or contest_type == "RESOURCE"):
             self.active_resource_contests[str(contest_id)] = resource_key
@@ -164,6 +171,9 @@ class GameMemory:
         if not contest_id:
             return
         is_draw = event_type == "WINDOW_CONTEST_DRAW" or str(payload.get("winnerTeamId") or "").upper() == "DRAW"
+        task_id = self.active_task_contests.pop(str(contest_id), None)
+        if is_draw and task_id:
+            self.skipped_task_claims.add(task_id)
         node_id = self.active_process_contests.pop(str(contest_id), None)
         if is_draw and node_id:
             self.skipped_process_nodes.add(node_id)
@@ -206,6 +216,17 @@ class GameMemory:
                 return cls.resource_claim_key(parts[1], parts[2])
         if fallback_node_id and fallback_resource_type:
             return cls.resource_claim_key(fallback_node_id, fallback_resource_type)
+        return None
+
+    @staticmethod
+    def task_id_from_object(object_key: Any, fallback_task_id: Any = None) -> str | None:
+        if fallback_task_id:
+            return str(fallback_task_id)
+        text = str(object_key or "")
+        if text.startswith("TASK:"):
+            parts = text.split(":")
+            if len(parts) >= 2 and parts[1]:
+                return parts[1]
         return None
 
     @staticmethod

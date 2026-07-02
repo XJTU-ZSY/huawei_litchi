@@ -584,6 +584,71 @@ class DecisionTest(unittest.TestCase):
         )
         self.assertIn("claim resource PASS_TOKEN", engine.last_reason)
 
+    def test_drawn_task_contest_skips_same_task_for_same_node_opponent(self):
+        memory, context, engine = self.make_engine()
+        tasks = [
+            {"taskId": "T02_003", "nodeId": "S02", "score": 30, "active": True},
+            {"taskId": "T11_011", "nodeId": "S02", "score": 30, "active": True},
+        ]
+        contest_start = {
+            "type": "WINDOW_CONTEST_START",
+            "payload": {
+                "contestId": "C1",
+                "contestType": "TASK",
+                "targetNodeId": "S02",
+                "taskId": "T02_003",
+                "objectKey": "TASK:T02_003",
+            },
+        }
+        contest_end = {
+            "type": "WINDOW_CONTEST_END",
+            "payload": {"contestId": "C1", "winnerTeamId": "DRAW"},
+        }
+
+        snapshot(memory, state="CONTESTING", currentNodeId="S02", tasks=tasks, events=[contest_start])
+        snapshot(memory, state="RESTING", currentNodeId="S02", tasks=tasks, events=[contest_end])
+        snap = snapshot(
+            memory,
+            currentNodeId="S02",
+            tasks=tasks,
+            opponent_overrides={"currentNodeId": "S02", "state": "IDLE"},
+        )
+
+        self.assertIn("T02_003", memory.skipped_task_claims)
+        self.assertNotIn("S02", memory.skipped_process_nodes)
+        self.assertEqual(engine.decide(context, snap), [{"action": "CLAIM_TASK", "taskId": "T11_011"}])
+        self.assertNotEqual(engine.last_reason, "claim current task T02_003")
+
+    def test_drawn_task_contest_moves_on_when_no_alternate_current_task(self):
+        memory, context, engine = self.make_engine()
+        tasks = [{"taskId": "T02_003", "nodeId": "S02", "score": 30, "active": True}]
+        memory.skipped_task_claims.add("T02_003")
+
+        snap = snapshot(
+            memory,
+            currentNodeId="S02",
+            tasks=tasks,
+            opponent_overrides={"currentNodeId": "S02", "state": "IDLE"},
+        )
+
+        self.assertEqual(engine.decide(context, snap), [{"action": "MOVE", "targetNodeId": "S14"}])
+        self.assertIn("move from S02 to S14", engine.last_reason)
+
+    def test_drawn_task_contest_allows_retry_after_opponent_leaves(self):
+        memory, context, engine = self.make_engine()
+        tasks = [{"taskId": "T02_003", "nodeId": "S02", "score": 30, "active": True}]
+        memory.skipped_task_claims.add("T02_003")
+
+        snap = snapshot(
+            memory,
+            currentNodeId="S02",
+            tasks=tasks,
+            opponent_overrides={"currentNodeId": "S02", "state": "MOVING", "nextNodeId": "S14"},
+        )
+
+        self.assertEqual(engine.decide(context, snap), [{"action": "CLAIM_TASK", "taskId": "T02_003"}])
+        self.assertNotIn("T02_003", memory.skipped_task_claims)
+
     def test_claim_current_resource_by_priority(self):
         memory, context, engine = self.make_engine()
         nodes = [

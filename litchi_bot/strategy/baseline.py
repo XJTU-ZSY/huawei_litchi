@@ -374,11 +374,37 @@ class BaselineStrategy:
         current = snapshot.self_player.get("currentNodeId")
         if not current:
             return []
-        return [
-            task
-            for task in sorted(snapshot.tasks, key=self._task_sort_key)
-            if str(task.get("nodeId")) == str(current) and self._task_available_for_self(context, task)
-        ]
+        tasks: list[dict[str, Any]] = []
+        for task in sorted(snapshot.tasks, key=self._task_sort_key):
+            if str(task.get("nodeId")) != str(current):
+                continue
+            if not self._task_available_for_self(context, task):
+                continue
+            if self._task_claim_skipped(snapshot, task):
+                continue
+            tasks.append(task)
+        return tasks
+
+    def _task_claim_skipped(self, snapshot: GameSnapshot, task: dict[str, Any]) -> bool:
+        task_id = str(task.get("taskId") or "")
+        if not task_id or task_id not in self.memory.skipped_task_claims:
+            return False
+
+        current = str(snapshot.self_player.get("currentNodeId") or "")
+        opponent = snapshot.opponent_player or {}
+        opponent_state = str(opponent.get("state") or "IDLE")
+        opponent_same_node = str(opponent.get("currentNodeId") or "") == current
+        opponent_still_competing = (
+            opponent_same_node
+            and not opponent.get("delivered")
+            and opponent_state not in {"DELIVERED", "RETIRED", "MOVING"}
+        )
+        if opponent_still_competing:
+            self.last_reason = f"skip drawn task {task_id} while opponent remains at {current}"
+            return True
+
+        self.memory.skipped_task_claims.discard(task_id)
+        return False
 
     def _can_finish_after_current_task(
         self,
@@ -638,6 +664,8 @@ class BaselineStrategy:
         best_path: list[str] = []
         for task in sorted(snapshot.tasks, key=self._task_sort_key):
             if not self._task_available_for_self(context, task):
+                continue
+            if self._task_claim_skipped(snapshot, task):
                 continue
             if not self._task_route_viable(context, snapshot, task):
                 continue
