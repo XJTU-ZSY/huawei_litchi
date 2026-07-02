@@ -292,8 +292,6 @@ class BaselineStrategy:
         if snapshot.phase == "RUSH":
             return None
         player = snapshot.self_player
-        if int(player.get("taskScore") or 0) >= 90:
-            return None
         if float(player.get("freshness") or 0) <= 20 or int(player.get("goodFruit") or 0) <= 5:
             return None
 

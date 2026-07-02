@@ -589,6 +589,30 @@ class DecisionTest(unittest.TestCase):
         snap = snapshot(memory, currentNodeId="S13", taskScore=75, nodes=nodes, tasks=tasks, round_no=560)
         self.assertEqual(engine.decide(context, snap), [{"action": "CLAIM_TASK", "taskId": "T13_013"}])
 
+    def test_endgame_claims_safe_current_task_after_base_threshold(self):
+        memory, context, engine = self.make_engine()
+        nodes = [
+            {"nodeId": "S01", "start": True},
+            {"nodeId": "S13"},
+            {"nodeId": "S14", "processRound": 6},
+            {"nodeId": "S15", "terminal": True},
+        ]
+        tasks = [{"taskId": "T13_013", "nodeId": "S13", "score": 15, "processRound": 5, "active": True}]
+        snap = snapshot(memory, currentNodeId="S13", taskScore=120, nodes=nodes, tasks=tasks, round_no=560)
+        self.assertEqual(engine.decide(context, snap), [{"action": "CLAIM_TASK", "taskId": "T13_013"}])
+
+    def test_endgame_above_threshold_skips_current_task_when_delivery_budget_is_too_small(self):
+        memory, context, engine = self.make_engine()
+        nodes = [
+            {"nodeId": "S01", "start": True},
+            {"nodeId": "S13"},
+            {"nodeId": "S14", "processRound": 6},
+            {"nodeId": "S15", "terminal": True},
+        ]
+        tasks = [{"taskId": "T13_013", "nodeId": "S13", "score": 15, "processRound": 5, "active": True}]
+        snap = snapshot(memory, currentNodeId="S13", taskScore=120, nodes=nodes, tasks=tasks, round_no=580)
+        self.assertEqual(engine.decide(context, snap), [{"action": "MOVE", "targetNodeId": "S14"}])
+
     def test_endgame_skips_current_task_when_delivery_budget_is_too_small(self):
         memory, context, engine = self.make_engine()
         nodes = [
