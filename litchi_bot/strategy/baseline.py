@@ -68,6 +68,11 @@ class BaselineStrategy:
             self.last_reason = "rush gate verification"
             return {"action": "VERIFY_GATE"}
 
+        if self._should_go_endgame(context, snapshot):
+            target = context.terminal_node_id if player.get("verified") else context.gate_node_id
+            self.last_reason = f"endgame lock target {target}"
+            return self._move_toward(context, snapshot, target)
+
         if self._should_yield_fixed_process(context, snapshot):
             return None
 

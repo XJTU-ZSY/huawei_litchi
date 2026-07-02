@@ -13,6 +13,8 @@ START = {
     "nodes": [
         {"nodeId": "S01", "start": True},
         {"nodeId": "S02"},
+        {"nodeId": "S09"},
+        {"nodeId": "S10"},
         {"nodeId": "S14"},
         {"nodeId": "S15", "terminal": True},
     ],
@@ -20,6 +22,8 @@ START = {
         {"edgeId": "E1", "fromNodeId": "S01", "toNodeId": "S02", "routeType": "ROAD", "distance": 1},
         {"edgeId": "E2", "fromNodeId": "S02", "toNodeId": "S14", "routeType": "ROAD", "distance": 1},
         {"edgeId": "E3", "fromNodeId": "S14", "toNodeId": "S15", "routeType": "ROAD", "distance": 1},
+        {"edgeId": "E4", "fromNodeId": "S09", "toNodeId": "S10", "routeType": "ROAD", "distance": 1},
+        {"edgeId": "E5", "fromNodeId": "S10", "toNodeId": "S14", "routeType": "ROAD", "distance": 1},
     ],
 }
 
@@ -34,6 +38,7 @@ def snapshot(
     events=None,
     action_results=None,
     opponent_overrides=None,
+    round_no=10,
     **player_overrides,
 ):
     base_player = {
@@ -58,7 +63,7 @@ def snapshot(
     return memory.apply_inquire(
         {
             "matchId": "m1",
-            "round": 10,
+            "round": round_no,
             "phase": phase,
             "players": [base_player, opponent],
             "nodes": nodes or START["nodes"],
@@ -260,6 +265,21 @@ class DecisionTest(unittest.TestCase):
             engine.decide(context, snap),
             [{"action": "CLAIM_RESOURCE", "targetNodeId": "S02", "resourceType": "FAST_HORSE"}],
         )
+
+    def test_endgame_preempts_optional_task_and_resource(self):
+        memory, context, engine = self.make_engine()
+        nodes = [
+            {"nodeId": "S01", "start": True},
+            {"nodeId": "S09", "resourceStock": {"OFFICIAL_PERMIT": 1}},
+            {"nodeId": "S10"},
+            {"nodeId": "S14"},
+            {"nodeId": "S15", "terminal": True},
+        ]
+        tasks = [{"taskId": "T02_3", "nodeId": "S09", "score": 30, "active": True}]
+        snap = snapshot(memory, round_no=430, currentNodeId="S09", taskScore=60, nodes=nodes, tasks=tasks)
+
+        self.assertEqual(engine.decide(context, snap), [{"action": "MOVE", "targetNodeId": "S10"}])
+        self.assertIn("move from S09 to S10 toward S14", engine.last_reason)
 
     def test_contesting_state_only_sends_window_card(self):
         memory, context, engine = self.make_engine()
