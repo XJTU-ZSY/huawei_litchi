@@ -26,6 +26,7 @@ ICE_BOX_USE_FRESHNESS_LIMIT = 90.0
 MIN_HORSE_TRAVEL_ROUNDS = 8
 ROUND_MS = 1000
 DEFAULT_GATE_VERIFY_ROUNDS = 6
+BREAK_ORDER_BAD_FRUIT_COST = 2
 ENDGAME_TASK_SAFETY_MARGIN_ROUNDS = 10
 DELIVERY_CLOSURE_SAFETY_MARGIN_ROUNDS = 20
 TASK_SCORE_TARGET = 90
@@ -90,8 +91,7 @@ class BaselineStrategy:
             return self._move_toward(context, snapshot, context.gate_node_id)
 
         if current == context.gate_node_id and snapshot.phase == "RUSH" and not player.get("verified"):
-            self.last_reason = "rush gate verification"
-            return {"action": "VERIFY_GATE"}
+            return self._verify_gate_action(context, snapshot)
 
         process_node_task_action = self._claim_process_node_task_before_process(context, snapshot)
         if process_node_task_action is not None:
@@ -153,6 +153,23 @@ class BaselineStrategy:
             self.last_reason = f"process node {current}"
             return {"action": "PROCESS", "targetNodeId": str(current)}
         return None
+
+    def _verify_gate_action(self, context: GameContext, snapshot: GameSnapshot) -> dict[str, Any]:
+        if self._can_bind_break_order_to_verify(snapshot):
+            self.last_reason = "rush gate verification with BREAK_ORDER"
+            return {
+                "action": "VERIFY_GATE",
+                "targetNodeId": context.gate_node_id,
+                "rushTactic": "BREAK_ORDER",
+            }
+        self.last_reason = "rush gate verification"
+        return {"action": "VERIFY_GATE"}
+
+    def _can_bind_break_order_to_verify(self, snapshot: GameSnapshot) -> bool:
+        player = snapshot.self_player
+        if int(player.get("rushTacticUsedCount") or 0) > 0:
+            return False
+        return int(player.get("badFruit") or 0) >= BREAK_ORDER_BAD_FRUIT_COST
 
     def _claim_process_node_task_before_process(
         self, context: GameContext, snapshot: GameSnapshot
