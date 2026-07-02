@@ -617,6 +617,44 @@ class DecisionTest(unittest.TestCase):
             [{"action": "CLAIM_RESOURCE", "targetNodeId": "S02", "resourceType": "FAST_HORSE"}],
         )
 
+    def test_skips_low_utility_resource_when_task_tempo_exists(self):
+        memory, context, engine, nodes = self.make_delivery_map_engine()
+        nodes = [dict(node) for node in nodes]
+        for node in nodes:
+            if node["nodeId"] == "S10":
+                node["resourceStock"] = {"INTEL": 1}
+        tasks = [{"taskId": "T12_012", "nodeId": "S11", "score": 15, "processRound": 5, "active": True}]
+
+        snap = snapshot(memory, round_no=280, currentNodeId="S10", taskScore=80, nodes=nodes, tasks=tasks)
+
+        self.assertEqual(engine.decide(context, snap), [{"action": "MOVE", "targetNodeId": "S11"}])
+        self.assertIn("toward S11", engine.last_reason)
+
+    def test_claims_utility_resource_when_it_unlocks_available_task(self):
+        memory, context, engine = self.make_engine()
+        nodes = [
+            {"nodeId": "S01", "start": True},
+            {"nodeId": "S02", "resourceStock": {"PASS_TOKEN": 1}},
+            {"nodeId": "S14"},
+            {"nodeId": "S15", "terminal": True},
+        ]
+        tasks = [
+            {
+                "taskId": "T99_001",
+                "nodeId": "S02",
+                "score": 30,
+                "active": True,
+                "requiredResourceTypes": ["PASS_TOKEN"],
+            }
+        ]
+
+        snap = snapshot(memory, currentNodeId="S02", taskScore=60, nodes=nodes, tasks=tasks)
+
+        self.assertEqual(
+            engine.decide(context, snap),
+            [{"action": "CLAIM_RESOURCE", "targetNodeId": "S02", "resourceType": "PASS_TOKEN"}],
+        )
+
     def test_resource_contest_created_skips_node_resources(self):
         memory, context, engine = self.make_engine()
         nodes = [

@@ -18,6 +18,7 @@ RESOURCE_PRIORITY = [
 ]
 
 HORSE_RESOURCES = ("FAST_HORSE", "SHORT_HORSE")
+ALWAYS_CLAIM_RESOURCE_TYPES = set(HORSE_RESOURCES) | {"ICE_BOX"}
 SPEED_BUFF_TYPES = {"FAST_HORSE", "SHORT_HORSE", "RUSH_SPEED"}
 FIXED_PROCESS_BUSY_STATES = {"PROCESSING", "VERIFYING", "RESTING", "CONTESTING"}
 IDLE_PROCESS_YIELD_LIMIT = 1
@@ -121,7 +122,7 @@ class BaselineStrategy:
         if task_action is not None:
             return task_action
 
-        resource_action = self._claim_current_resource(snapshot)
+        resource_action = self._claim_current_resource(context, snapshot)
         if resource_action is not None:
             return resource_action
 
@@ -575,25 +576,68 @@ class BaselineStrategy:
             return {"action": "CLAIM_TASK", "taskId": task["taskId"]}
         return None
 
-    def _claim_current_resource(self, snapshot: GameSnapshot) -> dict[str, Any] | None:
+    def _claim_current_resource(self, context: GameContext, snapshot: GameSnapshot) -> dict[str, Any] | None:
         current = snapshot.self_player.get("currentNodeId")
-        node = snapshot.nodes_by_id.get(str(current), {})
+        current_id = "" if current is None else str(current)
+        node = snapshot.nodes_by_id.get(current_id, {})
         stock = node.get("resourceStock") or {}
         contested = self._opponent_claiming_resources_at_current(snapshot, current)
-        if current is not None and str(current) in self.memory.contested_resource_nodes:
+        if current_id and current_id in self.memory.contested_resource_nodes:
             self.last_reason = f"skip previously contested resources at {current}"
             return None
         for resource_type in RESOURCE_PRIORITY:
-            if current is not None and (str(current), resource_type) in self.memory.contested_resources:
+            if current_id and (current_id, resource_type) in self.memory.contested_resources:
                 continue
             if int(stock.get(resource_type) or 0) > 0:
                 if resource_type in contested:
                     continue
+                if not self._resource_has_score_or_tempo_value(context, snapshot, current_id, resource_type):
+                    continue
                 self.last_reason = f"claim resource {resource_type} at {current}"
-                return {"action": "CLAIM_RESOURCE", "targetNodeId": str(current), "resourceType": resource_type}
+                return {"action": "CLAIM_RESOURCE", "targetNodeId": current_id, "resourceType": resource_type}
         if contested:
             self.last_reason = f"skip contested resources at {current}: {','.join(sorted(contested))}"
         return None
+
+    def _resource_has_score_or_tempo_value(
+        self, context: GameContext, snapshot: GameSnapshot, current: str, resource_type: str
+    ) -> bool:
+        if resource_type in ALWAYS_CLAIM_RESOURCE_TYPES:
+            return True
+        return self._resource_unlocks_available_task(context, snapshot, current, resource_type)
+
+    def _resource_unlocks_available_task(
+        self, context: GameContext, snapshot: GameSnapshot, current: str, resource_type: str
+    ) -> bool:
+        if not current:
+            return False
+        player = snapshot.self_player
+        resources = player.get("resources") or {}
+        blocked = self._blocked_nodes(context, snapshot)
+        for task in sorted(snapshot.tasks, key=self._task_sort_key):
+            if not self._task_available_for_self(context, task, player, require_resources=False):
+                continue
+            if self._task_available_for_self(context, task, player):
+                continue
+            if not self._task_missing_resource_options_include(context, task, resources, resource_type):
+                continue
+            node_id = str(task.get("nodeId") or "")
+            if not node_id:
+                continue
+            if node_id == current or context.graph.shortest_path(current, node_id, blocked=blocked):
+                return True
+        return False
+
+    def _task_missing_resource_options_include(
+        self, context: GameContext, task: dict[str, Any], resources: dict[str, Any], resource_type: str
+    ) -> bool:
+        for required in self._task_required_resources(context, task):
+            options = self._resource_options_for_requirement(context, task, str(required))
+            if any(self._resource_count(resources, option) > 0 for option in options):
+                continue
+            if resource_type in options:
+                return True
+        return False
 
     def _opponent_claiming_resources_at_current(self, snapshot: GameSnapshot, current: Any) -> set[str]:
         if current is None:
