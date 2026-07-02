@@ -16,6 +16,10 @@ RESOURCE_PRIORITY = [
     "BOAT_RIGHT",
 ]
 
+HORSE_RESOURCE_PRIORITY = ["FAST_HORSE", "SHORT_HORSE"]
+HORSE_RESOURCE_TYPES = set(HORSE_RESOURCE_PRIORITY)
+HORSE_TRANSFER_TEMPLATE_IDS = {"T06"}
+HORSE_TRANSFER_PROCESS_TYPES = {"HORSE_TRANSFER"}
 LOW_VALUE_CONTEST_RESOURCES = {"OFFICIAL_PERMIT", "BOAT_RIGHT"}
 FIXED_PROCESS_BUSY_STATES = {"PROCESSING", "VERIFYING", "RESTING", "CONTESTING"}
 IDLE_PROCESS_YIELD_LIMIT = 1
@@ -87,6 +91,10 @@ class BaselineStrategy:
             target = context.terminal_node_id if player.get("verified") else context.gate_node_id
             self.last_reason = f"prioritize endgame target {target}"
             return self._move_toward(context, snapshot, target)
+
+        route_resource_action = self._claim_route_enabling_resource_before_task(context, snapshot)
+        if route_resource_action is not None:
+            return route_resource_action
 
         task_action = self._claim_current_task(context, snapshot)
         if task_action is not None:
@@ -208,7 +216,13 @@ class BaselineStrategy:
             missing_resources = self._missing_task_resources(context, snapshot, task)
             if missing_resources:
                 if allow_required_resource:
-                    resource_action = self._claim_required_current_resource(snapshot, current, missing_resources, task)
+                    resource_action = self._claim_required_current_resource(
+                        context,
+                        snapshot,
+                        current,
+                        missing_resources,
+                        task,
+                    )
                     if resource_action is not None:
                         return resource_action
                 self.last_reason = (
@@ -244,6 +258,64 @@ class BaselineStrategy:
             self.last_reason = f"skip endgame task {task.get('taskId')} due delivery budget"
             return None
         return self._claim_current_task(context, snapshot, allow_required_resource=False)
+
+    def _claim_route_enabling_resource_before_task(
+        self,
+        context: GameContext,
+        snapshot: GameSnapshot,
+    ) -> dict[str, Any] | None:
+        player = snapshot.self_player
+        current = player.get("currentNodeId")
+        if snapshot.phase == "RUSH" or not current:
+            return None
+        if int(player.get("taskScore") or 0) >= 90:
+            return None
+        if self._has_any_resource(player, HORSE_RESOURCE_TYPES):
+            return None
+
+        resource_type = self._available_current_horse_resource(snapshot, current)
+        if resource_type is None:
+            return None
+
+        target_task = self._nearest_horse_transfer_task(context, snapshot)
+        if target_task is None or str(target_task.get("nodeId") or "") == str(current):
+            return None
+
+        current_task_score = max(
+            (int(task.get("score") or 0) for task in self._current_available_tasks(context, snapshot)),
+            default=0,
+        )
+        target_score = int(target_task.get("score") or 0)
+        if current_task_score > target_score:
+            return None
+
+        self.last_reason = f"claim route-enabling {resource_type} for task {target_task.get('taskId')}"
+        return {"action": "CLAIM_RESOURCE", "targetNodeId": str(current), "resourceType": resource_type}
+
+    def _nearest_horse_transfer_task(self, context: GameContext, snapshot: GameSnapshot) -> dict[str, Any] | None:
+        current = str(snapshot.self_player.get("currentNodeId") or "")
+        if not current:
+            return None
+        blocked = self._blocked_nodes(context, snapshot)
+        best_task: dict[str, Any] | None = None
+        best_rounds: int | None = None
+        for task in sorted(snapshot.tasks, key=self._task_sort_key):
+            if not self._task_available_for_self(context, task):
+                continue
+            if not self._task_accepts_horse_resource(context, task):
+                continue
+            node_id = str(task.get("nodeId") or "")
+            if not node_id or node_id == current or node_id in blocked:
+                continue
+            rounds = self._shortest_rounds(context, current, node_id, blocked)
+            if rounds is None:
+                rounds = self._shortest_rounds(context, current, node_id, set())
+            if rounds is None:
+                continue
+            if best_rounds is None or rounds < best_rounds:
+                best_task = task
+                best_rounds = rounds
+        return best_task
 
     def _current_available_tasks(self, context: GameContext, snapshot: GameSnapshot) -> list[dict[str, Any]]:
         current = snapshot.self_player.get("currentNodeId")
@@ -311,6 +383,7 @@ class BaselineStrategy:
 
     def _claim_required_current_resource(
         self,
+        context: GameContext,
         snapshot: GameSnapshot,
         current: Any,
         missing_resources: list[str],
@@ -318,6 +391,16 @@ class BaselineStrategy:
     ) -> dict[str, Any] | None:
         node = snapshot.nodes_by_id.get(str(current), {})
         stock = node.get("resourceStock") or {}
+        if self._task_accepts_horse_resource(context, task) and any(
+            resource_type in HORSE_RESOURCE_TYPES for resource_type in missing_resources
+        ):
+            resource_type = self._available_current_horse_resource(snapshot, current)
+            if resource_type is not None:
+                self.last_reason = (
+                    f"claim required horse resource {resource_type} for task {task.get('taskId')} at {current}"
+                )
+                return {"action": "CLAIM_RESOURCE", "targetNodeId": str(current), "resourceType": resource_type}
+
         for resource_type in self._sort_resource_types(missing_resources):
             if int(stock.get(resource_type) or 0) <= 0:
                 continue
@@ -337,7 +420,18 @@ class BaselineStrategy:
         if not required:
             return []
         resources = snapshot.self_player.get("resources") or {}
-        return [resource_type for resource_type in required if int(resources.get(resource_type) or 0) <= 0]
+        missing: list[str] = []
+        accepts_horse = self._task_accepts_horse_resource(context, task)
+        for resource_type in required:
+            if accepts_horse and resource_type in HORSE_RESOURCE_TYPES:
+                if self._has_any_resource(snapshot.self_player, HORSE_RESOURCE_TYPES):
+                    continue
+                if not any(existing in HORSE_RESOURCE_TYPES for existing in missing):
+                    missing.append(resource_type)
+                continue
+            if int(resources.get(resource_type) or 0) <= 0:
+                missing.append(resource_type)
+        return missing
 
     def _task_required_resources(self, context: GameContext, task: dict[str, Any]) -> list[str]:
         direct = self._coerce_resource_types(task.get("requiredResourceTypes"))
@@ -361,6 +455,21 @@ class BaselineStrategy:
                 if str(template.get("taskTemplateId") or "") == template_id:
                     return template
         return None
+
+    def _task_accepts_horse_resource(self, context: GameContext, task: dict[str, Any]) -> bool:
+        template_id = str(task.get("taskTemplateId") or "")
+        process_type = str(task.get("processType") or "")
+        if template_id in HORSE_TRANSFER_TEMPLATE_IDS or process_type in HORSE_TRANSFER_PROCESS_TYPES:
+            return True
+        if not template_id:
+            return False
+        template = self._task_template(context, template_id)
+        if template is None:
+            return False
+        return (
+            str(template.get("taskTemplateId") or "") in HORSE_TRANSFER_TEMPLATE_IDS
+            or str(template.get("processType") or "") in HORSE_TRANSFER_PROCESS_TYPES
+        )
 
     @staticmethod
     def _coerce_resource_types(value: Any) -> list[str]:
@@ -395,6 +504,22 @@ class BaselineStrategy:
         if skipped:
             self.last_reason = "skip resource " + ",".join(skipped)
         return None
+
+    def _available_current_horse_resource(self, snapshot: GameSnapshot, current: Any) -> str | None:
+        node = snapshot.nodes_by_id.get(str(current), {})
+        stock = node.get("resourceStock") or {}
+        for resource_type in HORSE_RESOURCE_PRIORITY:
+            if int(stock.get(resource_type) or 0) <= 0:
+                continue
+            if self._opponent_processing_resource(snapshot, current, resource_type):
+                continue
+            return resource_type
+        return None
+
+    @staticmethod
+    def _has_any_resource(player: dict[str, Any], resource_types: set[str]) -> bool:
+        resources = player.get("resources") or {}
+        return any(int(resources.get(resource_type) or 0) > 0 for resource_type in resource_types)
 
     def _opponent_processing_resource(self, snapshot: GameSnapshot, current: Any, resource_type: str) -> bool:
         opponent = snapshot.opponent_player or {}
@@ -467,6 +592,10 @@ class BaselineStrategy:
         if node is None:
             return True
         stock = node.get("resourceStock") or {}
+        if self._task_accepts_horse_resource(context, task) and any(
+            resource_type in HORSE_RESOURCE_TYPES for resource_type in missing_resources
+        ):
+            return any(int(stock.get(resource_type) or 0) > 0 for resource_type in HORSE_RESOURCE_PRIORITY)
         return any(int(stock.get(resource_type) or 0) > 0 for resource_type in missing_resources)
 
     def _move_toward(self, context: GameContext, snapshot: GameSnapshot, target: str) -> dict[str, Any] | None:

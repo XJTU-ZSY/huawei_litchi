@@ -13,6 +13,8 @@ START = {
     "nodes": [
         {"nodeId": "S01", "start": True},
         {"nodeId": "S02"},
+        {"nodeId": "S07"},
+        {"nodeId": "S09"},
         {"nodeId": "S13"},
         {"nodeId": "S14"},
         {"nodeId": "S15", "terminal": True},
@@ -22,6 +24,7 @@ START = {
         {"edgeId": "E2", "fromNodeId": "S02", "toNodeId": "S14", "routeType": "ROAD", "distance": 1},
         {"edgeId": "E3", "fromNodeId": "S14", "toNodeId": "S15", "routeType": "ROAD", "distance": 1},
         {"edgeId": "E4", "fromNodeId": "S13", "toNodeId": "S14", "routeType": "ROAD", "distance": 1},
+        {"edgeId": "E5", "fromNodeId": "S07", "toNodeId": "S09", "routeType": "ROAD", "distance": 1},
     ],
     "taskTemplates": [{"taskTemplateId": "T06", "requiredResourceTypes": ["FAST_HORSE"]}],
 }
@@ -148,7 +151,75 @@ class DecisionTest(unittest.TestCase):
             engine.decide(context, snapshot(memory, currentNodeId="S02", nodes=nodes, tasks=tasks)),
             [{"action": "CLAIM_RESOURCE", "targetNodeId": "S02", "resourceType": "FAST_HORSE"}],
         )
-        self.assertIn("claim required resource FAST_HORSE", engine.last_reason)
+        self.assertIn("claim required horse resource FAST_HORSE", engine.last_reason)
+
+    def test_short_horse_satisfies_horse_transfer_task(self):
+        memory, context, engine = self.make_engine()
+        tasks = [
+            {
+                "taskId": "T06_006",
+                "taskTemplateId": "T06",
+                "nodeId": "S02",
+                "score": 30,
+                "active": True,
+            }
+        ]
+
+        self.assertEqual(
+            engine.decide(context, snapshot(memory, currentNodeId="S02", resources={"SHORT_HORSE": 1}, tasks=tasks)),
+            [{"action": "CLAIM_TASK", "taskId": "T06_006"}],
+        )
+        self.assertIn("claim current task T06_006", engine.last_reason)
+
+    def test_claims_short_horse_for_horse_transfer_when_fast_horse_unavailable(self):
+        memory, context, engine = self.make_engine()
+        nodes = [
+            {"nodeId": "S01", "start": True},
+            {"nodeId": "S02", "resourceStock": {"SHORT_HORSE": 1}},
+            {"nodeId": "S14"},
+            {"nodeId": "S15", "terminal": True},
+        ]
+        tasks = [
+            {
+                "taskId": "T06_006",
+                "taskTemplateId": "T06",
+                "nodeId": "S02",
+                "score": 30,
+                "active": True,
+            }
+        ]
+
+        self.assertEqual(
+            engine.decide(context, snapshot(memory, currentNodeId="S02", nodes=nodes, tasks=tasks)),
+            [{"action": "CLAIM_RESOURCE", "targetNodeId": "S02", "resourceType": "SHORT_HORSE"}],
+        )
+        self.assertIn("claim required horse resource SHORT_HORSE", engine.last_reason)
+
+    def test_claims_route_enabling_horse_before_equal_current_task(self):
+        memory, context, engine = self.make_engine()
+        nodes = [
+            {"nodeId": "S07", "resourceStock": {"SHORT_HORSE": 1}},
+            {"nodeId": "S09"},
+            {"nodeId": "S14"},
+            {"nodeId": "S15", "terminal": True},
+        ]
+        tasks = [
+            {"taskId": "T02_002", "nodeId": "S07", "score": 30, "active": True},
+            {
+                "taskId": "T06_006",
+                "taskTemplateId": "T06",
+                "nodeId": "S09",
+                "processType": "HORSE_TRANSFER",
+                "score": 30,
+                "active": True,
+            },
+        ]
+
+        self.assertEqual(
+            engine.decide(context, snapshot(memory, currentNodeId="S07", taskScore=30, nodes=nodes, tasks=tasks)),
+            [{"action": "CLAIM_RESOURCE", "targetNodeId": "S07", "resourceType": "SHORT_HORSE"}],
+        )
+        self.assertIn("claim route-enabling SHORT_HORSE", engine.last_reason)
 
     def test_skips_current_task_when_required_resource_unavailable(self):
         memory, context, engine = self.make_engine()
