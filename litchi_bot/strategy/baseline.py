@@ -628,6 +628,9 @@ class BaselineStrategy:
                 if self._low_yield_resource_after_base_score(context, snapshot, resource_type):
                     skipped.append(f"{resource_type}:base-task-score")
                     continue
+                if self._low_yield_resource_blocks_task_race(context, snapshot, resource_type):
+                    skipped.append(f"{resource_type}:task-race")
+                    continue
                 if self._resource_claim_skipped(current, resource_type):
                     skipped.append(f"{resource_type}:drawn-contest")
                     continue
@@ -652,6 +655,40 @@ class BaselineStrategy:
         if resource_type not in LOW_YIELD_OPTIONAL_RESOURCES:
             return False
         return self._ordinary_task_base_score(context, snapshot) >= BASE_TASK_RESOURCE_SCORE
+
+    def _low_yield_resource_blocks_task_race(
+        self,
+        context: GameContext,
+        snapshot: GameSnapshot,
+        resource_type: str,
+    ) -> bool:
+        if resource_type not in LOW_YIELD_OPTIONAL_RESOURCES:
+            return False
+        if self._ordinary_task_base_score(context, snapshot) >= BASE_TASK_RESOURCE_SCORE:
+            return False
+        current = str(snapshot.self_player.get("currentNodeId") or "")
+        if not current:
+            return False
+
+        blocked = self._blocked_nodes(context, snapshot)
+        for task in sorted(snapshot.tasks, key=self._task_sort_key):
+            if not self._task_available_for_self(context, task):
+                continue
+            if self._task_claim_skipped(snapshot, task):
+                continue
+            if not self._task_route_viable(context, snapshot, task):
+                continue
+            node_id = str(task.get("nodeId") or "")
+            if not node_id or node_id == current or node_id in blocked:
+                continue
+            rounds = self._shortest_rounds(context, current, node_id, blocked)
+            if rounds is None:
+                rounds = self._shortest_rounds(context, current, node_id, set())
+            if rounds is None:
+                continue
+            if self._can_finish_after_remote_task(context, snapshot, task, node_id, rounds):
+                return True
+        return False
 
     def _available_current_horse_resource(self, snapshot: GameSnapshot, current: Any) -> str | None:
         node = snapshot.nodes_by_id.get(str(current), {})

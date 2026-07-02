@@ -753,6 +753,36 @@ class DecisionTest(unittest.TestCase):
             [{"action": "CLAIM_RESOURCE", "targetNodeId": "S02", "resourceType": "INTEL"}],
         )
 
+    def test_skips_low_yield_resource_when_reachable_task_remains_before_base_score(self):
+        start = {
+            "matchId": "m1",
+            "round": 1,
+            "durationRound": 600,
+            "players": [{"playerId": 1001, "teamId": "RED"}, {"playerId": 2002, "teamId": "BLUE"}],
+            "map": {"gameplay": {"roles": {"startNodeId": "S01", "gateNodeId": "S14", "terminalNodeIds": ["S15"]}}},
+            "nodes": [
+                {"nodeId": "S01", "start": True},
+                {"nodeId": "S02", "resourceStock": {"INTEL": 1}},
+                {"nodeId": "S03"},
+                {"nodeId": "S14", "processRound": 6},
+                {"nodeId": "S15", "terminal": True},
+            ],
+            "edges": [
+                {"edgeId": "E1", "fromNodeId": "S02", "toNodeId": "S03", "routeType": "ROAD", "distance": 1},
+                {"edgeId": "E2", "fromNodeId": "S03", "toNodeId": "S14", "routeType": "ROAD", "distance": 1},
+                {"edgeId": "E3", "fromNodeId": "S14", "toNodeId": "S15", "routeType": "ROAD", "distance": 1},
+            ],
+        }
+        memory = GameMemory(1001)
+        context = memory.apply_start(start)
+        engine = DecisionEngine(memory)
+        tasks = [{"taskId": "T02_002", "nodeId": "S03", "score": 30, "processRound": 4, "active": True}]
+
+        self.assertEqual(
+            engine.decide(context, snapshot(memory, currentNodeId="S02", taskScore=60, nodes=start["nodes"], tasks=tasks)),
+            [{"action": "MOVE", "targetNodeId": "S03"}],
+        )
+
     def test_skips_optional_resource_after_base_task_score(self):
         memory, context, engine = self.make_engine()
         nodes = [
