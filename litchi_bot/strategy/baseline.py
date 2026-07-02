@@ -173,11 +173,14 @@ class BaselineStrategy:
             self._clear_process_yield(str(current))
             return False
 
-        if self._ordinary_task_base_score(context, snapshot) < EARLY_PROCESS_RACE_TASK_SCORE:
+        base_task_score = self._ordinary_task_base_score(context, snapshot)
+        compete_for_current_task = self._should_compete_for_task_gated_process(context, snapshot)
+        early_desync = base_task_score < EARLY_PROCESS_RACE_TASK_SCORE and not compete_for_current_task
+        if base_task_score < EARLY_PROCESS_RACE_TASK_SCORE and compete_for_current_task:
             self._clear_process_yield(str(current))
             return False
 
-        if self._should_compete_for_task_gated_process(context, snapshot):
+        if base_task_score >= EARLY_PROCESS_RACE_TASK_SCORE and compete_for_current_task:
             self._clear_process_yield(str(current))
             return False
 
@@ -203,6 +206,9 @@ class BaselineStrategy:
             return False
 
         if opponent_state in FIXED_PROCESS_BUSY_STATES:
+            if early_desync:
+                self._clear_process_yield(current_key)
+                return False
             self.last_reason = f"wait for opponent {opponent.get('playerId')} at process node {current}"
             return True
 
