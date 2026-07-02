@@ -43,6 +43,10 @@ class WindowCardSelector:
         contest_type = str(contest.get("contestType") or "").upper()
         affordable = self._affordable_cards(player)
 
+        low_value_card = self._low_value_process_card(context, contest, affordable)
+        if low_value_card is not None:
+            return low_value_card
+
         counter = self._counter_latest_opponent_card(context, contest, affordable)
         if counter is not None:
             return counter
@@ -59,6 +63,51 @@ class WindowCardSelector:
         if "XIAN_GONG" in affordable:
             return "XIAN_GONG"
         return "ABSTAIN"
+
+    def _low_value_process_card(
+        self, context: GameContext, contest: dict[str, Any], affordable: set[str]
+    ) -> str | None:
+        if not self._is_fixed_process_contest(context, contest):
+            return None
+        opponent_card = self._latest_opponent_card(context, contest)
+        if opponent_card == "ABSTAIN" and self._self_is_ahead(context, contest):
+            return "ABSTAIN"
+        if opponent_card == "XIAN_GONG" and "QIANG_XING" not in affordable and self._should_defer_process_after_draw(
+            context
+        ):
+            return "ABSTAIN"
+        return None
+
+    def _is_fixed_process_contest(self, context: GameContext, contest: dict[str, Any]) -> bool:
+        if str(contest.get("objectKey") or "").startswith("PROCESS:"):
+            return True
+        source_actions = contest.get("sourceActionTypes") or {}
+        if not isinstance(source_actions, dict):
+            return False
+        return str(source_actions.get(str(context.player_id)) or "").upper() == "PROCESS"
+
+    def _self_is_ahead(self, context: GameContext, contest: dict[str, Any]) -> bool:
+        team_id = str(context.team_id or "").upper()
+        red_point = int(contest.get("redPoint") or 0)
+        blue_point = int(contest.get("bluePoint") or 0)
+        if team_id == "RED":
+            return red_point > blue_point
+        if team_id == "BLUE":
+            return blue_point > red_point
+        return False
+
+    def _should_defer_process_after_draw(self, context: GameContext) -> bool:
+        opponent_id = context.opponent_player_id
+        if opponent_id is None:
+            return False
+        return self._player_tie_key(context.player_id) > self._player_tie_key(opponent_id)
+
+    @staticmethod
+    def _player_tie_key(player_id: Any) -> tuple[int, int | str]:
+        text = str(player_id)
+        if text.isdigit():
+            return (0, int(text))
+        return (1, text)
 
     def _counter_latest_opponent_card(
         self, context: GameContext, contest: dict[str, Any], affordable: set[str]
