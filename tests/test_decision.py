@@ -221,6 +221,43 @@ class DecisionTest(unittest.TestCase):
         )
         self.assertIn("claim route-enabling SHORT_HORSE", engine.last_reason)
 
+    def test_task_destination_uses_movement_rounds_not_hop_count(self):
+        start = {
+            "matchId": "m1",
+            "round": 1,
+            "durationRound": 600,
+            "players": [{"playerId": 1001, "teamId": "RED"}, {"playerId": 2002, "teamId": "BLUE"}],
+            "map": {"gameplay": {"roles": {"startNodeId": "S01", "gateNodeId": "S14", "terminalNodeIds": ["S15"]}}},
+            "nodes": [
+                {"nodeId": "S02"},
+                {"nodeId": "S03"},
+                {"nodeId": "S04"},
+                {"nodeId": "S07"},
+                {"nodeId": "S14"},
+                {"nodeId": "S15", "terminal": True},
+            ],
+            "edges": [
+                {"edgeId": "E1", "fromNodeId": "S03", "toNodeId": "S07", "routeType": "ROAD", "distance": 54},
+                {"edgeId": "E2", "fromNodeId": "S03", "toNodeId": "S02", "routeType": "ROAD", "distance": 25},
+                {"edgeId": "E3", "fromNodeId": "S02", "toNodeId": "S04", "routeType": "ROAD", "distance": 20},
+                {"edgeId": "E4", "fromNodeId": "S04", "toNodeId": "S14", "routeType": "ROAD", "distance": 1},
+                {"edgeId": "E5", "fromNodeId": "S14", "toNodeId": "S15", "routeType": "ROAD", "distance": 1},
+            ],
+        }
+        memory = GameMemory(1001)
+        context = memory.apply_start(start)
+        engine = DecisionEngine(memory)
+        tasks = [
+            {"taskId": "T02_002", "nodeId": "S07", "score": 30, "active": True},
+            {"taskId": "T08_008", "nodeId": "S04", "score": 30, "active": True},
+        ]
+
+        self.assertEqual(
+            engine.decide(context, snapshot(memory, currentNodeId="S03", nodes=start["nodes"], tasks=tasks)),
+            [{"action": "MOVE", "targetNodeId": "S02"}],
+        )
+        self.assertIn("toward S04", engine.last_reason)
+
     def test_skips_current_task_when_required_resource_unavailable(self):
         memory, context, engine = self.make_engine()
         nodes = [

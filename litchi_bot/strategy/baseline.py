@@ -661,7 +661,8 @@ class BaselineStrategy:
     def _nearest_task_node(self, context: GameContext, snapshot: GameSnapshot) -> str | None:
         current = snapshot.self_player.get("currentNodeId")
         blocked = self._blocked_nodes(context, snapshot)
-        best_path: list[str] = []
+        best_node_id: str | None = None
+        best_rounds: int | None = None
         for task in sorted(snapshot.tasks, key=self._task_sort_key):
             if not self._task_available_for_self(context, task):
                 continue
@@ -673,9 +674,15 @@ class BaselineStrategy:
             if not node_id or node_id in blocked:
                 continue
             path = context.graph.shortest_path(str(current), node_id, blocked=blocked)
-            if path and (not best_path or len(path) < len(best_path)):
-                best_path = path
-        return best_path[-1] if best_path else None
+            if not path:
+                continue
+            rounds = context.graph.path_movement_rounds(path)
+            if rounds is None:
+                continue
+            if best_rounds is None or rounds < best_rounds:
+                best_node_id = node_id
+                best_rounds = rounds
+        return best_node_id
 
     def _task_route_viable(self, context: GameContext, snapshot: GameSnapshot, task: dict[str, Any]) -> bool:
         missing_resources = self._missing_task_resources(context, snapshot, task)
