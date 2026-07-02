@@ -53,6 +53,7 @@ class GameMemory:
     skipped_resource_claims: set[str] = field(default_factory=set)
     skipped_task_claims: set[str] = field(default_factory=set)
     drawn_process_yield_counts: dict[str, int] = field(default_factory=dict)
+    drawn_process_retry_counts: dict[str, int] = field(default_factory=dict)
     process_idle_yield_counts: dict[str, int] = field(default_factory=dict)
     completed_tasks: set[str] = field(default_factory=set)
     rejected_actions: list[dict[str, Any]] = field(default_factory=list)
@@ -128,6 +129,7 @@ class GameMemory:
                     self.completed_process_nodes.add(str(node_id))
                     self.skipped_process_nodes.discard(str(node_id))
                     self.drawn_process_yield_counts.pop(str(node_id), None)
+                    self.drawn_process_retry_counts.pop(str(node_id), None)
             elif event_type == "TASK_COMPLETE":
                 task_id = payload.get("taskId")
                 if task_id:
@@ -152,6 +154,7 @@ class GameMemory:
         self.completed_process_nodes.discard(node_key)
         self.skipped_process_nodes.discard(node_key)
         self.drawn_process_yield_counts.pop(node_key, None)
+        self.drawn_process_retry_counts.pop(node_key, None)
         self.process_idle_yield_counts.pop(node_key, None)
 
     @staticmethod
@@ -213,6 +216,7 @@ class GameMemory:
             self.completed_process_nodes.discard(str(node_id))
             self.skipped_process_nodes.discard(str(node_id))
             self.drawn_process_yield_counts.pop(str(node_id), None)
+            self.drawn_process_retry_counts.pop(str(node_id), None)
 
     @classmethod
     def resource_claim_key_from_object(

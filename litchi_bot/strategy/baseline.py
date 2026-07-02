@@ -25,6 +25,7 @@ LOW_YIELD_OPTIONAL_RESOURCES = {"INTEL", "PASS_TOKEN", "OFFICIAL_PERMIT", "BOAT_
 BASE_TASK_RESOURCE_SCORE = 90
 FIXED_PROCESS_BUSY_STATES = {"PROCESSING", "VERIFYING", "RESTING", "CONTESTING"}
 IDLE_PROCESS_YIELD_LIMIT = 1
+DRAWN_PROCESS_PRESSURE_RETRY_LIMIT = 1
 EARLY_PROCESS_RACE_TASK_SCORE = 90
 DOWNSTREAM_RACE_MIN_TASK_SCORE = 30
 DOWNSTREAM_RACE_MAX_TRAVEL_ROUNDS = 80
@@ -172,6 +173,11 @@ class BaselineStrategy:
             and not opponent.get("delivered")
             and self._loses_process_tie(context.player_id, opponent.get("playerId"))
         ):
+            if self._should_retry_drawn_process_before_yield(context, snapshot, current_key):
+                retries = self.memory.drawn_process_retry_counts.get(current_key, 0)
+                self.memory.drawn_process_retry_counts[current_key] = retries + 1
+                self._clear_drawn_process(current_key)
+                return False
             yielded = self.memory.drawn_process_yield_counts.get(current_key, 0)
             if yielded < 1:
                 self.memory.drawn_process_yield_counts[current_key] = yielded + 1
@@ -180,6 +186,20 @@ class BaselineStrategy:
 
         self._clear_drawn_process(current_key)
         return False
+
+    def _should_retry_drawn_process_before_yield(
+        self,
+        context: GameContext,
+        snapshot: GameSnapshot,
+        current_key: str,
+    ) -> bool:
+        if self.memory.drawn_process_retry_counts.get(current_key, 0) >= DRAWN_PROCESS_PRESSURE_RETRY_LIMIT:
+            return False
+        if self._ordinary_task_base_score(context, snapshot) >= EARLY_PROCESS_RACE_TASK_SCORE:
+            return False
+        if self._should_compete_for_task_gated_process(context, snapshot):
+            return True
+        return self._has_reachable_high_value_task_after_process(context, snapshot)
 
     def _should_yield_fixed_process(self, context: GameContext, snapshot: GameSnapshot) -> bool:
         current = snapshot.self_player.get("currentNodeId")

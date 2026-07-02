@@ -588,6 +588,84 @@ class DecisionTest(unittest.TestCase):
         self.assertEqual(engine.decide(context, retry), [{"action": "PROCESS", "targetNodeId": "S02"}])
         self.assertNotIn("S02", memory.skipped_process_nodes)
 
+    def test_drawn_fixed_process_retries_before_yield_when_downstream_task_pressure(self):
+        start = {
+            "matchId": "m1",
+            "round": 1,
+            "durationRound": 600,
+            "players": [{"playerId": 1001, "teamId": "RED"}, {"playerId": 2002, "teamId": "BLUE"}],
+            "map": {"gameplay": {"roles": {"startNodeId": "S01", "gateNodeId": "S14", "terminalNodeIds": ["S15"]}}},
+            "nodes": [
+                {"nodeId": "S01", "start": True},
+                {"nodeId": "S02", "processType": "TRANSFER", "processRound": 4},
+                {"nodeId": "S04"},
+                {"nodeId": "S14", "processRound": 6},
+                {"nodeId": "S15", "terminal": True},
+            ],
+            "edges": [
+                {"edgeId": "E1", "fromNodeId": "S02", "toNodeId": "S04", "routeType": "ROAD", "distance": 20},
+                {"edgeId": "E2", "fromNodeId": "S04", "toNodeId": "S14", "routeType": "ROAD", "distance": 1},
+                {"edgeId": "E3", "fromNodeId": "S14", "toNodeId": "S15", "routeType": "ROAD", "distance": 1},
+            ],
+        }
+        memory = GameMemory(1001)
+        context = memory.apply_start(start)
+        engine = DecisionEngine(memory)
+        tasks = [{"taskId": "T08_008", "nodeId": "S04", "score": 30, "processRound": 4, "active": True}]
+        contest_start = {
+            "type": "WINDOW_CONTEST_START",
+            "payload": {"contestId": "C1", "objectKey": "PROCESS:S02:TRANSFER", "targetNodeId": "S02"},
+        }
+        contest_end = {
+            "type": "WINDOW_CONTEST_END",
+            "payload": {"contestId": "C1", "winnerTeamId": "DRAW"},
+        }
+        rest_complete = {
+            "type": "PROCESS_COMPLETE",
+            "payload": {"playerId": 1001, "targetNodeId": "S02", "action": "REST", "objectKey": "REST:C1:RED"},
+        }
+
+        snapshot(memory, state="CONTESTING", currentNodeId="S02", nodes=start["nodes"], tasks=tasks, events=[contest_start])
+        snapshot(memory, state="RESTING", currentNodeId="S02", nodes=start["nodes"], tasks=tasks, events=[contest_end])
+        snap = snapshot(
+            memory,
+            currentNodeId="S02",
+            nodes=start["nodes"],
+            tasks=tasks,
+            events=[rest_complete],
+            opponent_overrides={"currentNodeId": "S02", "state": "IDLE"},
+            round_no=49,
+        )
+
+        self.assertEqual(engine.decide(context, snap), [{"action": "PROCESS", "targetNodeId": "S02"}])
+        self.assertEqual(memory.drawn_process_retry_counts["S02"], 1)
+        self.assertNotIn("S02", memory.skipped_process_nodes)
+
+    def test_drawn_fixed_process_yields_after_pressure_retry_limit(self):
+        memory, context, engine = self.make_engine()
+        nodes = [
+            {"nodeId": "S01", "start": True},
+            {"nodeId": "S02", "processType": "TRANSFER", "processRound": 4},
+            {"nodeId": "S04"},
+            {"nodeId": "S14"},
+            {"nodeId": "S15", "terminal": True},
+        ]
+        tasks = [{"taskId": "T08_008", "nodeId": "S04", "score": 30, "processRound": 4, "active": True}]
+        memory.skipped_process_nodes.add("S02")
+        memory.drawn_process_retry_counts["S02"] = 1
+
+        snap = snapshot(
+            memory,
+            currentNodeId="S02",
+            nodes=nodes,
+            tasks=tasks,
+            opponent_overrides={"currentNodeId": "S02", "state": "IDLE"},
+            round_no=56,
+        )
+
+        self.assertEqual(engine.decide(context, snap), [])
+        self.assertIn("yield drawn process node S02", engine.last_reason)
+
     def test_process_completion_marks_fixed_node_done(self):
         memory, context, engine = self.make_engine()
         nodes = [
