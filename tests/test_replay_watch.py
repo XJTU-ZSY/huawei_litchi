@@ -203,6 +203,20 @@ class ReplayWatchTest(unittest.TestCase):
         self.assertIn("不直接改代码", prompt)
 
 
+    def test_skill_handoff_prompt_can_request_implementation(self):
+        prompt = build_skill_handoff_prompt(
+            replay_path=Path("replays/match_001.json"),
+            machine_report_path=Path(".replay_watch/reports/match_001.md"),
+            process_log_path=Path(".replay_watch/process_logs/match_001.process.md"),
+            player_id=1001,
+            auto_implement=True,
+        )
+
+        self.assertIn("Auto-implement mode is ON", prompt)
+        self.assertIn("$litchi-implementer", prompt)
+        self.assertIn("$litchi-tester", prompt)
+        self.assertIn("git commit", prompt)
+
     def test_watch_replays_help_exposes_process_log_dir(self):
         completed = subprocess.run(
             [sys.executable, "-B", "tools/watch_replays.py", "--help"],
@@ -213,6 +227,7 @@ class ReplayWatchTest(unittest.TestCase):
 
         self.assertEqual(completed.returncode, 0, completed.stderr)
         self.assertIn("--process-log-dir", completed.stdout)
+        self.assertIn("--auto-implement", completed.stdout)
         self.assertIn("--done-client", completed.stdout)
         self.assertIn("--skip-done-file", completed.stdout)
 

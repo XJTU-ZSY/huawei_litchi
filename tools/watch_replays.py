@@ -45,6 +45,7 @@ def main() -> int:
     )
     parser.add_argument("--append-backlog", action="store_true", help="Append generated requirement cards to docs/backlog.md")
     parser.add_argument("--backlog", default="docs/backlog.md", help="Backlog path used with --append-backlog")
+    parser.add_argument("--auto-implement", action="store_true", help="Ask the AI handoff to continue from cards into implementation, tests, quality gate, and git commit")
     parser.add_argument("--done-client", choices=("clientA", "clientB"), help="Only create the manifest doneFile for this client; default creates all declared doneFiles")
     parser.add_argument("--skip-done-file", action="store_true", help="Do not create manifest doneFile markers after a successful AI command")
     parser.add_argument("--once", action="store_true", help="Scan once and exit; useful for tests or manual batches")
@@ -86,7 +87,7 @@ def main() -> int:
             )
             task_path = None
             if not args.no_ai_task:
-                prompt = build_skill_handoff_prompt(candidate.path, report_path, process_log_path, player_id, args.append_backlog)
+                prompt = build_skill_handoff_prompt(candidate.path, report_path, process_log_path, player_id, args.append_backlog, args.auto_implement)
                 task_path = write_ai_task(ai_task_dir, candidate.path, prompt)
                 append_process_event(process_log_path, "AI handoff prompt", f"Generated skill handoff prompt `{task_path}`.")
             if args.ai_command_template and task_path is not None:

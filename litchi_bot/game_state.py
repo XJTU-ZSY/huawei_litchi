@@ -79,9 +79,10 @@ class GameMemory:
     def apply_inquire(self, data: dict[str, Any]) -> GameSnapshot:
         if self.context is None:
             raise ValueError("cannot apply inquire before start")
-        self._record_events(data.get("events") or [])
         players = data.get("players") or []
         self_player = next((p for p in players if same_player_id(p.get("playerId"), self.player_id)), {})
+        self._record_events(data.get("events") or [], current_node_id=self_player.get("currentNodeId"))
+        self._record_action_results(data.get("actionResults") or [], current_node_id=self_player.get("currentNodeId"))
         opponent = next((p for p in players if not same_player_id(p.get("playerId"), self.player_id)), None)
         nodes = data.get("nodes") or []
         edges = data.get("edges")
@@ -101,7 +102,7 @@ class GameMemory:
             raw=data,
         )
 
-    def _record_events(self, events: list[dict[str, Any]]) -> None:
+    def _record_events(self, events: list[dict[str, Any]], current_node_id: Any = None) -> None:
         for event in events:
             payload = event.get("payload") or {}
             if payload.get("playerId") is not None and not same_player_id(payload.get("playerId"), self.player_id):
@@ -109,7 +110,7 @@ class GameMemory:
             event_type = event.get("type")
             if event_type == "PROCESS_COMPLETE":
                 node_id = payload.get("targetNodeId") or payload.get("nodeId")
-                if node_id:
+                if node_id and self._is_fixed_node_process_complete(payload):
                     self.completed_process_nodes.add(str(node_id))
             elif event_type == "TASK_COMPLETE":
                 task_id = payload.get("taskId")
@@ -117,6 +118,27 @@ class GameMemory:
                     self.completed_tasks.add(str(task_id))
             elif event_type in {"ACTION_REJECTED", "INVALID_ACTION"}:
                 self.rejected_actions.append(event)
+                self._recover_from_rejection(payload, current_node_id)
+
+    def _record_action_results(self, action_results: list[dict[str, Any]], current_node_id: Any = None) -> None:
+        for result in action_results:
+            payload = result.get("payload") or result
+            if payload.get("playerId") is not None and not same_player_id(payload.get("playerId"), self.player_id):
+                continue
+            self._recover_from_rejection(payload, current_node_id)
+
+    @staticmethod
+    def _is_fixed_node_process_complete(payload: dict[str, Any]) -> bool:
+        action = str(payload.get("action") or "").upper()
+        object_key = str(payload.get("objectKey") or "")
+        return action == "PROCESS" or object_key.startswith("PROCESS:")
+
+    def _recover_from_rejection(self, payload: dict[str, Any], current_node_id: Any = None) -> None:
+        if str(payload.get("errorCode") or "").upper() != "PROCESS_REQUIRED":
+            return
+        node_id = payload.get("targetNodeId") or payload.get("currentNodeId") or payload.get("nodeId") or current_node_id
+        if node_id:
+            self.completed_process_nodes.discard(str(node_id))
 
     @staticmethod
     def _find_start_node(nodes: list[dict[str, Any]]) -> str | None:

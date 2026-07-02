@@ -44,13 +44,15 @@ python -B tools/watch_replays.py replays --player-id 1001 --append-backlog
 如果要让 watcher 在生成 prompt 后自动调用 AI，推荐使用项目内 wrapper：
 
 ```bash
-python -B tools/watch_replays.py replays --player-id 1001 --ai-command-template "python -B tools/run_ai_task.py --prompt-file {task}"
+python -B tools/watch_replays.py replays --player-id 1001 --ai-command-template "python -B tools/run_ai_task.py --prompt-file {task}" --auto-implement
 ```
+
+不加 `--auto-implement` 时，AI 只做回放分析、教练排序和需求卡，不会改代码。
 
 当 `--ai-command-template` 成功返回后，watcher 会扫描回放目录中最新的 `*.manifest.json`，读取 `clientA.doneFile` / `clientB.doneFile`，并在回放目录创建对应 doneFile 标记。只标记单侧时可加：
 
 ```bash
-python -B tools/watch_replays.py replays --player-id 1001 --ai-command-template "python -B tools/run_ai_task.py --prompt-file {task}" --done-client clientA
+python -B tools/watch_replays.py replays --player-id 1001 --ai-command-template "python -B tools/run_ai_task.py --prompt-file {task}" --auto-implement --done-client clientA
 ```
 
 本地调试如果没有 manifest，可加 `--skip-done-file`。

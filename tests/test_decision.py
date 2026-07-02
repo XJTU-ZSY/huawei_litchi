@@ -24,7 +24,7 @@ START = {
 }
 
 
-def snapshot(memory, *, phase="NORMAL", nodes=None, tasks=None, contests=None, **player_overrides):
+def snapshot(memory, *, phase="NORMAL", nodes=None, tasks=None, contests=None, events=None, action_results=None, **player_overrides):
     base_player = {
         "playerId": 1001,
         "teamId": "RED",
@@ -50,8 +50,8 @@ def snapshot(memory, *, phase="NORMAL", nodes=None, tasks=None, contests=None, *
             "nodes": nodes or START["nodes"],
             "tasks": tasks or [],
             "contests": contests or [],
-            "events": [],
-            "actionResults": [],
+            "events": events or [],
+            "actionResults": action_results or [],
         }
     )
 
@@ -118,6 +118,61 @@ class DecisionTest(unittest.TestCase):
             {"nodeId": "S15", "terminal": True},
         ]
         snap = snapshot(memory, currentNodeId="S02", nodes=nodes)
+        self.assertEqual(engine.decide(context, snap), [{"action": "PROCESS", "targetNodeId": "S02"}])
+
+    def test_rest_completion_does_not_complete_fixed_node_process(self):
+        memory, context, engine = self.make_engine()
+        nodes = [
+            {"nodeId": "S01", "start": True},
+            {"nodeId": "S02", "processType": "TRANSFER", "processRound": 4},
+            {"nodeId": "S14"},
+            {"nodeId": "S15", "terminal": True},
+        ]
+        rest_complete = {
+            "type": "PROCESS_COMPLETE",
+            "payload": {"playerId": 1001, "targetNodeId": "S02", "action": "REST", "objectKey": "REST:C_0001:RED"},
+        }
+
+        snap = snapshot(memory, currentNodeId="S02", nodes=nodes, events=[rest_complete])
+
+        self.assertNotIn("S02", memory.completed_process_nodes)
+        self.assertEqual(engine.decide(context, snap), [{"action": "PROCESS", "targetNodeId": "S02"}])
+
+    def test_process_completion_marks_fixed_node_done(self):
+        memory, context, engine = self.make_engine()
+        nodes = [
+            {"nodeId": "S01", "start": True},
+            {"nodeId": "S02", "processType": "TRANSFER", "processRound": 4},
+            {"nodeId": "S14"},
+            {"nodeId": "S15", "terminal": True},
+        ]
+        process_complete = {
+            "type": "PROCESS_COMPLETE",
+            "payload": {"playerId": 1001, "targetNodeId": "S02", "action": "PROCESS", "objectKey": "PROCESS:S02:TRANSFER"},
+        }
+
+        snap = snapshot(memory, currentNodeId="S02", nodes=nodes, events=[process_complete])
+
+        self.assertIn("S02", memory.completed_process_nodes)
+        self.assertEqual(engine.decide(context, snap), [{"action": "MOVE", "targetNodeId": "S14"}])
+
+    def test_process_required_rejection_retries_process(self):
+        memory, context, engine = self.make_engine()
+        memory.completed_process_nodes.add("S02")
+        nodes = [
+            {"nodeId": "S01", "start": True},
+            {"nodeId": "S02", "processType": "TRANSFER", "processRound": 4},
+            {"nodeId": "S14"},
+            {"nodeId": "S15", "terminal": True},
+        ]
+        rejected_move = {
+            "type": "ACTION_REJECTED",
+            "payload": {"playerId": 1001, "action": "MOVE", "errorCode": "PROCESS_REQUIRED"},
+        }
+
+        snap = snapshot(memory, currentNodeId="S02", nodes=nodes, events=[rejected_move])
+
+        self.assertNotIn("S02", memory.completed_process_nodes)
         self.assertEqual(engine.decide(context, snap), [{"action": "PROCESS", "targetNodeId": "S02"}])
 
     def test_claim_current_resource_by_priority(self):

@@ -98,15 +98,15 @@ python -B tools/watch_replays.py replays --player-id 1001 --once
 如果要让 watcher 自动调用 AI 处理 prompt，推荐使用项目内 wrapper：
 
 ```bash
-python -B tools/watch_replays.py replays --player-id 1001 --ai-command-template "python -B tools/run_ai_task.py --prompt-file {task}"
+python -B tools/watch_replays.py replays --player-id 1001 --ai-command-template "python -B tools/run_ai_task.py --prompt-file {task}" --auto-implement
 ```
 
-`--ai-command-template` 支持 `{task}`、`{replay}`、`{report}` 占位符。推荐使用 `tools/run_ai_task.py`，它会优先调用 opencode，找不到时自动使用 Codex CLI。
+`--ai-command-template` 支持 `{task}`、`{replay}`、`{report}` 占位符。推荐使用 `tools/run_ai_task.py`，它会优先调用 opencode，找不到时自动使用 Codex CLI。不加 `--auto-implement` 时，AI 只做回放分析、教练排序和需求卡，不会改代码。
 
 AI 命令成功返回后，watcher 会扫描回放输出目录里的最新 `*.manifest.json`，不是按 `<replay-stem>.replay.manifest.json` 字面量推导。manifest 的文件名应跟 replay 文件同名，只是把 `.jsonl` 换成 `.manifest.json`。watcher 会读取其中的 `clientA.doneFile` 和 `clientB.doneFile`，在回放目录创建对应 doneFile 标记；如果只需要单侧，使用：
 
 ```bash
-python -B tools/watch_replays.py replays --player-id 1001 --ai-command-template "python -B tools/run_ai_task.py --prompt-file {task}" --done-client clientA
+python -B tools/watch_replays.py replays --player-id 1001 --ai-command-template "python -B tools/run_ai_task.py --prompt-file {task}" --auto-implement --done-client clientA
 ```
 
 本地调试如果没有 manifest，可加 `--skip-done-file`，否则 watcher 会把缺失 doneFile 视为本轮未完成并等待下一轮重试。

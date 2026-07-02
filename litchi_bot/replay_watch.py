@@ -230,12 +230,23 @@ def build_skill_handoff_prompt(
     process_log_path: Path,
     player_id: int | str | None = None,
     append_backlog: bool = False,
+    auto_implement: bool = False,
 ) -> str:
     player_line = f"我方 playerId 是 `{player_id}`。" if player_id is not None else "请先从回放中识别我方 playerId；如果无法识别，明确说明。"
     backlog_instruction = (
         "请把最终需求卡追加到 `docs/backlog.md`。"
         if append_backlog
         else "请先输出需求卡草案，不要直接修改 `docs/backlog.md`，除非用户确认。"
+    )
+    implementation_instruction = (
+        "Auto-implement mode is ON: after replay analysis and coach prioritization, route the top card through `$litchi-protocol-expert`, `$litchi-architect`, `$litchi-implementer`, and `$litchi-tester`; make the scoped code change, add/update tests, run `python -B tools/quality_gate.py`, git commit the change, and append architecture decisions, changed files, tests, quality gate result, and commit hash to the process log."
+        if auto_implement
+        else "Auto-implement mode is OFF: stop after replay analysis, coach prioritization, and requirement cards; do not edit code in this AI task."
+    )
+    analysis_limit_instruction = (
+        "本轮允许在需求卡确定后继续实现、测试、质量门禁和 git commit，因为 watcher 启用了 auto-implement。"
+        if auto_implement
+        else "本轮只做分析和需求卡，不直接改代码，除非用户明确要求实现。"
     )
     return "\n".join(
         [
@@ -259,6 +270,7 @@ def build_skill_handoff_prompt(
             "5. P0 问题优先于胜率优化；没有 P0 问题时，再选择最高预期收益的 P1/P2 卡。",
             "6. 把 replay analyst 分析过程、coach 排序理由、需求卡内容追加到本轮流程日志。",
             f"7. {backlog_instruction}",
+            f"8. {implementation_instruction}",
             "",
             "输出格式：",
             "```text",
@@ -272,7 +284,7 @@ def build_skill_handoff_prompt(
             "```",
             "",
             "限制：",
-            "- 本轮只做分析和需求卡，不直接改代码，除非用户明确要求实现。",
+            f"- {analysis_limit_instruction}",
             "- 如果后续用户要求实现代码，必须继续把架构决策、代码变更、测试结果、quality gate 结果和 git commit 写入同一个流程日志。",
             "- 如果证据不足，写明缺失字段或需要补充的回放/日志。",
             "- 需求卡的 Validation 优先使用 `python -B tools/quality_gate.py` 和具体回放回归。",
