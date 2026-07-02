@@ -46,6 +46,8 @@ class GameMemory:
     player_id: int | str
     context: GameContext | None = None
     completed_process_nodes: set[str] = field(default_factory=set)
+    skipped_process_nodes: set[str] = field(default_factory=set)
+    active_process_contests: dict[str, str] = field(default_factory=dict)
     process_idle_yield_counts: dict[str, int] = field(default_factory=dict)
     completed_tasks: set[str] = field(default_factory=set)
     rejected_actions: list[dict[str, Any]] = field(default_factory=list)
@@ -109,10 +111,15 @@ class GameMemory:
             if payload.get("playerId") is not None and not same_player_id(payload.get("playerId"), self.player_id):
                 continue
             event_type = event.get("type")
-            if event_type == "PROCESS_COMPLETE":
+            if event_type == "WINDOW_CONTEST_START":
+                self._record_process_contest_start(payload)
+            elif event_type in {"WINDOW_CONTEST_END", "WINDOW_CONTEST_DRAW"}:
+                self._record_process_contest_result(event_type, payload)
+            elif event_type == "PROCESS_COMPLETE":
                 node_id = payload.get("targetNodeId") or payload.get("nodeId")
                 if node_id and self._is_fixed_node_process_complete(payload):
                     self.completed_process_nodes.add(str(node_id))
+                    self.skipped_process_nodes.discard(str(node_id))
             elif event_type == "TASK_COMPLETE":
                 task_id = payload.get("taskId")
                 if task_id:
@@ -134,12 +141,39 @@ class GameMemory:
         object_key = str(payload.get("objectKey") or "")
         return action == "PROCESS" or object_key.startswith("PROCESS:")
 
+    def _record_process_contest_start(self, payload: dict[str, Any]) -> None:
+        contest_id = payload.get("contestId")
+        node_id = self._process_node_from_object_key(payload.get("objectKey"), payload.get("targetNodeId"))
+        if contest_id and node_id:
+            self.active_process_contests[str(contest_id)] = node_id
+
+    def _record_process_contest_result(self, event_type: Any, payload: dict[str, Any]) -> None:
+        contest_id = payload.get("contestId")
+        if not contest_id:
+            return
+        is_draw = event_type == "WINDOW_CONTEST_DRAW" or str(payload.get("winnerTeamId") or "").upper() == "DRAW"
+        node_id = self.active_process_contests.pop(str(contest_id), None)
+        if is_draw and node_id:
+            self.skipped_process_nodes.add(node_id)
+
+    @staticmethod
+    def _process_node_from_object_key(object_key: Any, fallback_node_id: Any = None) -> str | None:
+        text = str(object_key or "")
+        if text.startswith("PROCESS:"):
+            parts = text.split(":")
+            if len(parts) >= 2 and parts[1]:
+                return parts[1]
+        if fallback_node_id:
+            return str(fallback_node_id)
+        return None
+
     def _recover_from_rejection(self, payload: dict[str, Any], current_node_id: Any = None) -> None:
         if str(payload.get("errorCode") or "").upper() != "PROCESS_REQUIRED":
             return
         node_id = payload.get("targetNodeId") or payload.get("currentNodeId") or payload.get("nodeId") or current_node_id
         if node_id:
             self.completed_process_nodes.discard(str(node_id))
+            self.skipped_process_nodes.discard(str(node_id))
 
     @staticmethod
     def _find_start_node(nodes: list[dict[str, Any]]) -> str | None:

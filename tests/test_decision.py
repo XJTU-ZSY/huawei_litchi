@@ -417,6 +417,35 @@ class DecisionTest(unittest.TestCase):
         self.assertNotIn("S02", memory.completed_process_nodes)
         self.assertEqual(engine.decide(context, snap), [{"action": "PROCESS", "targetNodeId": "S02"}])
 
+    def test_drawn_fixed_process_contest_skips_repeating_process(self):
+        memory, context, engine = self.make_engine()
+        nodes = [
+            {"nodeId": "S01", "start": True},
+            {"nodeId": "S02", "processType": "TRANSFER", "processRound": 4},
+            {"nodeId": "S14"},
+            {"nodeId": "S15", "terminal": True},
+        ]
+        contest_start = {
+            "type": "WINDOW_CONTEST_START",
+            "payload": {"contestId": "C1", "objectKey": "PROCESS:S02:TRANSFER", "targetNodeId": "S02"},
+        }
+        contest_end = {
+            "type": "WINDOW_CONTEST_END",
+            "payload": {"contestId": "C1", "winnerTeamId": "DRAW"},
+        }
+        rest_complete = {
+            "type": "PROCESS_COMPLETE",
+            "payload": {"playerId": 1001, "targetNodeId": "S02", "action": "REST", "objectKey": "REST:C1:RED"},
+        }
+
+        snapshot(memory, state="CONTESTING", currentNodeId="S02", nodes=nodes, events=[contest_start], round_no=44)
+        snapshot(memory, state="RESTING", currentNodeId="S02", nodes=nodes, events=[contest_end], round_no=47)
+        snap = snapshot(memory, currentNodeId="S02", nodes=nodes, events=[rest_complete], round_no=49)
+
+        self.assertIn("S02", memory.skipped_process_nodes)
+        self.assertNotIn("S02", memory.completed_process_nodes)
+        self.assertEqual(engine.decide(context, snap), [{"action": "MOVE", "targetNodeId": "S14"}])
+
     def test_process_completion_marks_fixed_node_done(self):
         memory, context, engine = self.make_engine()
         nodes = [
@@ -438,6 +467,7 @@ class DecisionTest(unittest.TestCase):
     def test_process_required_rejection_retries_process(self):
         memory, context, engine = self.make_engine()
         memory.completed_process_nodes.add("S02")
+        memory.skipped_process_nodes.add("S02")
         nodes = [
             {"nodeId": "S01", "start": True},
             {"nodeId": "S02", "processType": "TRANSFER", "processRound": 4},
@@ -452,6 +482,7 @@ class DecisionTest(unittest.TestCase):
         snap = snapshot(memory, currentNodeId="S02", nodes=nodes, events=[rejected_move])
 
         self.assertNotIn("S02", memory.completed_process_nodes)
+        self.assertNotIn("S02", memory.skipped_process_nodes)
         self.assertEqual(engine.decide(context, snap), [{"action": "PROCESS", "targetNodeId": "S02"}])
 
     def test_claim_current_resource_by_priority(self):

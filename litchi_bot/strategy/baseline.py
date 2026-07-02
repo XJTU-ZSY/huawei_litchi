@@ -116,6 +116,9 @@ class BaselineStrategy:
         node = snapshot.nodes_by_id.get(str(current), {})
         if not current or current in self.memory.completed_process_nodes:
             return None
+        if str(current) in self.memory.skipped_process_nodes:
+            self.last_reason = f"skip drawn process node {current}"
+            return None
         process_type = node.get("processType")
         process_round = int(node.get("processRound") or 0)
         if process_type and process_round > 0 and current not in {context.gate_node_id, context.terminal_node_id}:
@@ -127,6 +130,9 @@ class BaselineStrategy:
         current = snapshot.self_player.get("currentNodeId")
         node = snapshot.nodes_by_id.get(str(current), {})
         if not current or current in self.memory.completed_process_nodes:
+            return False
+        if str(current) in self.memory.skipped_process_nodes:
+            self._clear_process_yield(str(current))
             return False
         process_type = node.get("processType")
         process_round = int(node.get("processRound") or 0)
