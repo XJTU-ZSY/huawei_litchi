@@ -28,6 +28,17 @@ class GraphTest(unittest.TestCase):
         )
         self.assertEqual(graph.shortest_path("S01", "S03", blocked={"S02"}), [])
 
+    def test_path_cost_sums_edge_movement_costs(self):
+        graph = RouteGraph.from_raw_edges(
+            [
+                {"edgeId": "E1", "fromNodeId": "S01", "toNodeId": "S02", "routeType": "ROAD", "distance": 2},
+                {"edgeId": "E2", "fromNodeId": "S02", "toNodeId": "S03", "routeType": "BRANCH", "distance": 3},
+            ]
+        )
+
+        self.assertEqual(graph.path_cost(["S01", "S02", "S03"]), 7410)
+        self.assertIsNone(graph.path_cost(["S01", "S04"]))
+
 
 if __name__ == "__main__":
     unittest.main()

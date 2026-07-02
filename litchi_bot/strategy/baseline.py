@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from math import ceil
 from typing import Any
 
 from ..game_state import GameContext, GameMemory, GameSnapshot
@@ -19,6 +20,9 @@ RESOURCE_PRIORITY = [
 FIXED_PROCESS_BUSY_STATES = {"PROCESSING", "VERIFYING", "RESTING", "CONTESTING"}
 IDLE_PROCESS_YIELD_LIMIT = 1
 ICE_BOX_USE_FRESHNESS_LIMIT = 90.0
+ROUND_MS = 1000
+DEFAULT_GATE_VERIFY_ROUNDS = 6
+ENDGAME_TASK_SAFETY_MARGIN_ROUNDS = 10
 
 
 class BaselineStrategy:
@@ -69,6 +73,10 @@ class BaselineStrategy:
             self.last_reason = "rush gate verification"
             return {"action": "VERIFY_GATE"}
 
+        process_node_task_action = self._claim_process_node_task_before_process(context, snapshot)
+        if process_node_task_action is not None:
+            return process_node_task_action
+
         if self._should_yield_fixed_process(context, snapshot):
             return None
 
@@ -110,6 +118,102 @@ class BaselineStrategy:
             self.last_reason = f"process node {current}"
             return {"action": "PROCESS", "targetNodeId": str(current)}
         return None
+
+    def _claim_process_node_task_before_process(
+        self, context: GameContext, snapshot: GameSnapshot
+    ) -> dict[str, Any] | None:
+        current = snapshot.self_player.get("currentNodeId")
+        if not current:
+            return None
+        current_id = str(current)
+        if current_id in self.memory.completed_process_nodes:
+            return None
+        if current_id in {context.gate_node_id, context.terminal_node_id}:
+            return None
+        node = snapshot.nodes_by_id.get(current_id, {})
+        process_round = int(node.get("processRound") or 0)
+        if not node.get("processType") or process_round <= 0:
+            return None
+        if not self._opponent_can_contest_current_node_task(snapshot, current_id):
+            return None
+
+        for task in sorted(snapshot.tasks, key=self._task_sort_key):
+            if str(task.get("nodeId")) != current_id:
+                continue
+            if not self._task_available_for_self(context, task):
+                continue
+            if self._task_waiting_for_fixed_process(task, current_id):
+                continue
+            if not self._has_endgame_slack_for_process_node_task(context, snapshot, node, task):
+                continue
+            self.last_reason = f"claim process-node task {task.get('taskId')} before fixed process"
+            return {"action": "CLAIM_TASK", "taskId": task["taskId"]}
+        return None
+
+    def _opponent_can_contest_current_node_task(self, snapshot: GameSnapshot, current_id: str) -> bool:
+        opponent = snapshot.opponent_player or {}
+        if str(opponent.get("currentNodeId") or "") != current_id:
+            return False
+        opponent_state = str(opponent.get("state") or "IDLE")
+        return not opponent.get("delivered") and opponent_state not in {"DELIVERED", "RETIRED", "MOVING"}
+
+    def _task_waiting_for_fixed_process(self, task: dict[str, Any], current_id: str) -> bool:
+        if current_id in self.memory.completed_process_nodes:
+            return False
+        task_id = str(task.get("taskId") or "")
+        if task_id and task_id in self.memory.process_required_task_ids:
+            return True
+        return current_id in self.memory.process_required_task_nodes
+
+    def _has_endgame_slack_for_process_node_task(
+        self,
+        context: GameContext,
+        snapshot: GameSnapshot,
+        node: dict[str, Any],
+        task: dict[str, Any],
+    ) -> bool:
+        task_rounds = int(task.get("processRound") or 0)
+        expire_round = int(task.get("expireRound") or 0)
+        if expire_round and snapshot.round_no + task_rounds > expire_round:
+            return False
+        if not self._should_go_endgame(context, snapshot):
+            return True
+        if snapshot.phase == "RUSH":
+            return False
+
+        current = str(snapshot.self_player.get("currentNodeId") or "")
+        remaining_rounds = context.duration_round - snapshot.round_no
+        if remaining_rounds <= 0:
+            return False
+        fixed_process_rounds = int(node.get("processRound") or 0)
+        travel_to_gate = self._estimated_travel_rounds(context, snapshot, current, context.gate_node_id)
+        travel_to_terminal = self._estimated_travel_rounds(context, snapshot, context.gate_node_id, context.terminal_node_id)
+        if travel_to_gate is None or travel_to_terminal is None:
+            return False
+        required_rounds = (
+            task_rounds
+            + fixed_process_rounds
+            + travel_to_gate
+            + self._gate_verify_rounds(context, snapshot)
+            + travel_to_terminal
+            + 1
+        )
+        return remaining_rounds >= required_rounds + ENDGAME_TASK_SAFETY_MARGIN_ROUNDS
+
+    def _estimated_travel_rounds(
+        self, context: GameContext, snapshot: GameSnapshot, start: str, target: str
+    ) -> int | None:
+        path = context.graph.shortest_path(start, target, blocked=self._blocked_nodes(context, snapshot))
+        if not path:
+            path = context.graph.shortest_path(start, target)
+        cost = context.graph.path_cost(path)
+        if cost is None:
+            return None
+        return ceil(cost / ROUND_MS)
+
+    def _gate_verify_rounds(self, context: GameContext, snapshot: GameSnapshot) -> int:
+        gate = snapshot.nodes_by_id.get(context.gate_node_id, {})
+        return int(gate.get("processRound") or DEFAULT_GATE_VERIFY_ROUNDS)
 
     def _use_ice_box_if_beneficial(self, context: GameContext, snapshot: GameSnapshot) -> dict[str, Any] | None:
         player = snapshot.self_player

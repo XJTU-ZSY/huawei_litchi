@@ -17,6 +17,7 @@ START = {
         {"nodeId": "S10"},
         {"nodeId": "S11"},
         {"nodeId": "S12"},
+        {"nodeId": "S13"},
         {"nodeId": "S14"},
         {"nodeId": "S15", "terminal": True},
     ],
@@ -29,6 +30,8 @@ START = {
         {"edgeId": "E6", "fromNodeId": "S10", "toNodeId": "S11", "routeType": "ROAD", "distance": 1},
         {"edgeId": "E7", "fromNodeId": "S11", "toNodeId": "S12", "routeType": "ROAD", "distance": 1},
         {"edgeId": "E8", "fromNodeId": "S12", "toNodeId": "S14", "routeType": "ROAD", "distance": 1},
+        {"edgeId": "E9", "fromNodeId": "S12", "toNodeId": "S13", "routeType": "ROAD", "distance": 1},
+        {"edgeId": "E10", "fromNodeId": "S13", "toNodeId": "S14", "routeType": "ROAD", "distance": 1},
     ],
 }
 
@@ -143,6 +146,58 @@ class DecisionTest(unittest.TestCase):
         ]
         snap = snapshot(memory, currentNodeId="S02", nodes=nodes)
         self.assertEqual(engine.decide(context, snap), [{"action": "PROCESS", "targetNodeId": "S02"}])
+
+    def test_claims_process_node_task_before_fixed_process_when_safe(self):
+        memory, context, engine = self.make_engine()
+        nodes = [
+            {"nodeId": "S01", "start": True},
+            {"nodeId": "S13", "processType": "PALACE_TRANSFER", "processRound": 5},
+            {"nodeId": "S14", "processType": "VERIFY", "processRound": 6},
+            {"nodeId": "S15", "terminal": True},
+        ]
+        tasks = [{"taskId": "T13_1", "nodeId": "S13", "score": 15, "processRound": 5, "active": True}]
+
+        snap = snapshot(
+            memory,
+            round_no=430,
+            currentNodeId="S13",
+            taskScore=80,
+            nodes=nodes,
+            tasks=tasks,
+            opponent_overrides={"playerId": 999, "currentNodeId": "S13", "state": "PROCESSING"},
+        )
+
+        self.assertEqual(engine.decide(context, snap), [{"action": "CLAIM_TASK", "taskId": "T13_1"}])
+        self.assertIn("before fixed process", engine.last_reason)
+
+    def test_process_required_task_rejection_falls_back_to_fixed_process(self):
+        memory, context, engine = self.make_engine()
+        nodes = [
+            {"nodeId": "S01", "start": True},
+            {"nodeId": "S13", "processType": "PALACE_TRANSFER", "processRound": 5},
+            {"nodeId": "S14", "processType": "VERIFY", "processRound": 6},
+            {"nodeId": "S15", "terminal": True},
+        ]
+        tasks = [{"taskId": "T13_1", "nodeId": "S13", "score": 15, "processRound": 5, "active": True}]
+        rejected_task = {
+            "playerId": 1001,
+            "action": "CLAIM_TASK",
+            "taskId": "T13_1",
+            "errorCode": "PROCESS_REQUIRED",
+            "accepted": False,
+        }
+
+        snap = snapshot(
+            memory,
+            round_no=431,
+            currentNodeId="S13",
+            nodes=nodes,
+            tasks=tasks,
+            action_results=[rejected_task],
+            opponent_overrides={"playerId": 999, "currentNodeId": "S13", "state": "PROCESSING"},
+        )
+
+        self.assertEqual(engine.decide(context, snap), [{"action": "PROCESS", "targetNodeId": "S13"}])
 
     def test_yields_fixed_process_to_same_node_opponent_once(self):
         memory, context, engine = self.make_engine()

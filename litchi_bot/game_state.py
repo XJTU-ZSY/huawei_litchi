@@ -48,6 +48,8 @@ class GameMemory:
     completed_process_nodes: set[str] = field(default_factory=set)
     process_idle_yield_counts: dict[str, int] = field(default_factory=dict)
     completed_tasks: set[str] = field(default_factory=set)
+    process_required_task_ids: set[str] = field(default_factory=set)
+    process_required_task_nodes: set[str] = field(default_factory=set)
     rejected_actions: list[dict[str, Any]] = field(default_factory=list)
 
     def apply_start(self, data: dict[str, Any]) -> GameContext:
@@ -113,6 +115,7 @@ class GameMemory:
                 node_id = payload.get("targetNodeId") or payload.get("nodeId")
                 if node_id and self._is_fixed_node_process_complete(payload):
                     self.completed_process_nodes.add(str(node_id))
+                    self.process_required_task_nodes.discard(str(node_id))
             elif event_type == "TASK_COMPLETE":
                 task_id = payload.get("taskId")
                 if task_id:
@@ -140,6 +143,12 @@ class GameMemory:
         node_id = payload.get("targetNodeId") or payload.get("currentNodeId") or payload.get("nodeId") or current_node_id
         if node_id:
             self.completed_process_nodes.discard(str(node_id))
+        if str(payload.get("action") or "").upper() == "CLAIM_TASK":
+            task_id = payload.get("taskId")
+            if task_id:
+                self.process_required_task_ids.add(str(task_id))
+            if node_id:
+                self.process_required_task_nodes.add(str(node_id))
 
     @staticmethod
     def _find_start_node(nodes: list[dict[str, Any]]) -> str | None:
