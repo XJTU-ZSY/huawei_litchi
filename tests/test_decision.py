@@ -34,6 +34,7 @@ def snapshot(
     events=None,
     action_results=None,
     opponent_overrides=None,
+    round_no=10,
     **player_overrides,
 ):
     base_player = {
@@ -58,7 +59,7 @@ def snapshot(
     return memory.apply_inquire(
         {
             "matchId": "m1",
-            "round": 10,
+            "round": round_no,
             "phase": phase,
             "players": [base_player, opponent],
             "nodes": nodes or START["nodes"],
@@ -260,6 +261,55 @@ class DecisionTest(unittest.TestCase):
             engine.decide(context, snap),
             [{"action": "CLAIM_RESOURCE", "targetNodeId": "S02", "resourceType": "FAST_HORSE"}],
         )
+
+    def test_late_endgame_skips_current_resource(self):
+        memory, context, engine = self.make_engine()
+        nodes = [
+            {"nodeId": "S01", "start": True},
+            {"nodeId": "S02", "resourceStock": {"FAST_HORSE": 1}},
+            {"nodeId": "S14"},
+            {"nodeId": "S15", "terminal": True},
+        ]
+        snap = snapshot(memory, currentNodeId="S02", taskScore=30, nodes=nodes, round_no=430)
+        self.assertEqual(engine.decide(context, snap), [{"action": "MOVE", "targetNodeId": "S14"}])
+
+    def test_skips_resource_opponent_is_processing_same_resource(self):
+        memory, context, engine = self.make_engine()
+        nodes = [
+            {"nodeId": "S01", "start": True},
+            {"nodeId": "S02", "resourceStock": {"ICE_BOX": 1}},
+            {"nodeId": "S14"},
+            {"nodeId": "S15", "terminal": True},
+        ]
+        snap = snapshot(
+            memory,
+            currentNodeId="S02",
+            taskScore=90,
+            nodes=nodes,
+            opponent_overrides={
+                "currentNodeId": "S02",
+                "state": "PROCESSING",
+                "currentProcess": {"action": "CLAIM_RESOURCE", "resourceType": "ICE_BOX"},
+            },
+        )
+        self.assertEqual(engine.decide(context, snap), [{"action": "MOVE", "targetNodeId": "S14"}])
+
+    def test_skips_low_value_same_node_resource_contest(self):
+        memory, context, engine = self.make_engine()
+        nodes = [
+            {"nodeId": "S01", "start": True},
+            {"nodeId": "S02", "resourceStock": {"OFFICIAL_PERMIT": 1}},
+            {"nodeId": "S14"},
+            {"nodeId": "S15", "terminal": True},
+        ]
+        snap = snapshot(
+            memory,
+            currentNodeId="S02",
+            taskScore=90,
+            nodes=nodes,
+            opponent_overrides={"currentNodeId": "S02", "state": "IDLE"},
+        )
+        self.assertEqual(engine.decide(context, snap), [{"action": "MOVE", "targetNodeId": "S14"}])
 
     def test_contesting_state_only_sends_window_card(self):
         memory, context, engine = self.make_engine()

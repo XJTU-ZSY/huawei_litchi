@@ -16,6 +16,7 @@ RESOURCE_PRIORITY = [
     "BOAT_RIGHT",
 ]
 
+LOW_VALUE_CONTEST_RESOURCES = {"OFFICIAL_PERMIT", "BOAT_RIGHT"}
 FIXED_PROCESS_BUSY_STATES = {"PROCESSING", "VERIFYING", "RESTING", "CONTESTING"}
 IDLE_PROCESS_YIELD_LIMIT = 1
 
@@ -74,6 +75,11 @@ class BaselineStrategy:
         process_action = self._process_current_node(context, snapshot)
         if process_action is not None:
             return process_action
+
+        if self._should_go_endgame(context, snapshot):
+            target = context.terminal_node_id if player.get("verified") else context.gate_node_id
+            self.last_reason = f"prioritize endgame target {target}"
+            return self._move_toward(context, snapshot, target)
 
         task_action = self._claim_current_task(context, snapshot)
         if task_action is not None:
@@ -173,11 +179,51 @@ class BaselineStrategy:
         current = snapshot.self_player.get("currentNodeId")
         node = snapshot.nodes_by_id.get(str(current), {})
         stock = node.get("resourceStock") or {}
+        skipped: list[str] = []
         for resource_type in RESOURCE_PRIORITY:
             if int(stock.get(resource_type) or 0) > 0:
+                if self._opponent_processing_resource(snapshot, current, resource_type):
+                    skipped.append(f"{resource_type}:opponent-processing")
+                    continue
+                if self._would_start_low_value_resource_contest(snapshot, current, resource_type, stock):
+                    skipped.append(f"{resource_type}:low-value-contest")
+                    continue
                 self.last_reason = f"claim resource {resource_type} at {current}"
                 return {"action": "CLAIM_RESOURCE", "targetNodeId": str(current), "resourceType": resource_type}
+        if skipped:
+            self.last_reason = "skip resource " + ",".join(skipped)
         return None
+
+    def _opponent_processing_resource(self, snapshot: GameSnapshot, current: Any, resource_type: str) -> bool:
+        opponent = snapshot.opponent_player or {}
+        if str(opponent.get("currentNodeId") or "") != str(current):
+            return False
+        if str(opponent.get("state") or "") != "PROCESSING":
+            return False
+        process = opponent.get("currentProcess") or {}
+        if str(process.get("action") or "") != "CLAIM_RESOURCE":
+            return False
+        return str(process.get("resourceType") or "") == resource_type
+
+    def _would_start_low_value_resource_contest(
+        self,
+        snapshot: GameSnapshot,
+        current: Any,
+        resource_type: str,
+        stock: dict[str, Any],
+    ) -> bool:
+        if resource_type not in LOW_VALUE_CONTEST_RESOURCES:
+            return False
+        if int(stock.get(resource_type) or 0) > 1:
+            return False
+        opponent = snapshot.opponent_player or {}
+        if str(opponent.get("currentNodeId") or "") != str(current):
+            return False
+        if opponent.get("delivered") or str(opponent.get("state") or "") in {"DELIVERED", "RETIRED"}:
+            return False
+        if str(opponent.get("state") or "IDLE") != "IDLE":
+            return False
+        return True
 
     def _choose_destination(self, context: GameContext, snapshot: GameSnapshot) -> str | None:
         player = snapshot.self_player
