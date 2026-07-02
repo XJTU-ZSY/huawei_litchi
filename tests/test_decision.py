@@ -15,6 +15,8 @@ START = {
         {"nodeId": "S02"},
         {"nodeId": "S09"},
         {"nodeId": "S10"},
+        {"nodeId": "S11"},
+        {"nodeId": "S12"},
         {"nodeId": "S14"},
         {"nodeId": "S15", "terminal": True},
     ],
@@ -24,6 +26,9 @@ START = {
         {"edgeId": "E3", "fromNodeId": "S14", "toNodeId": "S15", "routeType": "ROAD", "distance": 1},
         {"edgeId": "E4", "fromNodeId": "S09", "toNodeId": "S10", "routeType": "ROAD", "distance": 1},
         {"edgeId": "E5", "fromNodeId": "S10", "toNodeId": "S14", "routeType": "ROAD", "distance": 1},
+        {"edgeId": "E6", "fromNodeId": "S10", "toNodeId": "S11", "routeType": "ROAD", "distance": 1},
+        {"edgeId": "E7", "fromNodeId": "S11", "toNodeId": "S12", "routeType": "ROAD", "distance": 1},
+        {"edgeId": "E8", "fromNodeId": "S12", "toNodeId": "S14", "routeType": "ROAD", "distance": 1},
     ],
 }
 
@@ -280,6 +285,21 @@ class DecisionTest(unittest.TestCase):
 
         self.assertEqual(engine.decide(context, snap), [{"action": "MOVE", "targetNodeId": "S10"}])
         self.assertIn("move from S09 to S10 toward S14", engine.last_reason)
+
+    def test_endgame_processes_fixed_node_before_moving(self):
+        memory, context, engine = self.make_engine()
+        nodes = [
+            {"nodeId": "S01", "start": True},
+            {"nodeId": "S10"},
+            {"nodeId": "S11", "processType": "PASS_TRANSFER", "processRound": 5},
+            {"nodeId": "S12"},
+            {"nodeId": "S14"},
+            {"nodeId": "S15", "terminal": True},
+        ]
+        snap = snapshot(memory, round_no=536, currentNodeId="S11", taskScore=30, nodes=nodes)
+
+        self.assertEqual(engine.decide(context, snap), [{"action": "PROCESS", "targetNodeId": "S11"}])
+        self.assertIn("process node S11", engine.last_reason)
 
     def test_contesting_state_only_sends_window_card(self):
         memory, context, engine = self.make_engine()
