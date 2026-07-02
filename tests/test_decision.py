@@ -386,6 +386,42 @@ class DecisionTest(unittest.TestCase):
         self.assertEqual(engine.decide(context, retry), [{"action": "PROCESS", "targetNodeId": "S02"}])
         self.assertIn("process node S02", engine.last_reason)
 
+    def test_competes_for_early_fixed_process_when_downstream_task_is_reachable(self):
+        start = {
+            "matchId": "m1",
+            "round": 1,
+            "durationRound": 600,
+            "players": [{"playerId": 1001, "teamId": "RED"}, {"playerId": 2002, "teamId": "BLUE"}],
+            "map": {"gameplay": {"roles": {"startNodeId": "S01", "gateNodeId": "S14", "terminalNodeIds": ["S15"]}}},
+            "nodes": [
+                {"nodeId": "S01", "start": True},
+                {"nodeId": "S02", "processType": "TRANSFER", "processRound": 4},
+                {"nodeId": "S04"},
+                {"nodeId": "S14", "processRound": 6},
+                {"nodeId": "S15", "terminal": True},
+            ],
+            "edges": [
+                {"edgeId": "E1", "fromNodeId": "S02", "toNodeId": "S04", "routeType": "ROAD", "distance": 20},
+                {"edgeId": "E2", "fromNodeId": "S04", "toNodeId": "S14", "routeType": "ROAD", "distance": 1},
+                {"edgeId": "E3", "fromNodeId": "S14", "toNodeId": "S15", "routeType": "ROAD", "distance": 1},
+            ],
+        }
+        memory = GameMemory(1001)
+        context = memory.apply_start(start)
+        engine = DecisionEngine(memory)
+        tasks = [{"taskId": "T08_008", "nodeId": "S04", "score": 30, "processRound": 4, "active": True}]
+        snap = snapshot(
+            memory,
+            currentNodeId="S02",
+            taskScore=0,
+            nodes=start["nodes"],
+            tasks=tasks,
+            opponent_overrides={"playerId": 2002, "currentNodeId": "S02", "state": "IDLE"},
+        )
+
+        self.assertEqual(engine.decide(context, snap), [{"action": "PROCESS", "targetNodeId": "S02"}])
+        self.assertIn("process node S02", engine.last_reason)
+
     def test_competes_for_fixed_process_before_base_task_score_against_busy_opponent(self):
         memory, context, engine = self.make_engine()
         nodes = [

@@ -26,6 +26,8 @@ BASE_TASK_RESOURCE_SCORE = 90
 FIXED_PROCESS_BUSY_STATES = {"PROCESSING", "VERIFYING", "RESTING", "CONTESTING"}
 IDLE_PROCESS_YIELD_LIMIT = 1
 EARLY_PROCESS_RACE_TASK_SCORE = 90
+DOWNSTREAM_RACE_MIN_TASK_SCORE = 30
+DOWNSTREAM_RACE_MAX_TRAVEL_ROUNDS = 80
 TASK_GATED_PROCESS_TARGET_SCORE = 105
 ENDGAME_TASK_SAFETY_BUFFER_ROUNDS = 10
 DELIVERY_SUBMIT_BUFFER_ROUNDS = 2
@@ -218,6 +220,9 @@ class BaselineStrategy:
 
         current_key = str(current)
         if opponent_state == "IDLE":
+            if early_desync and self._has_reachable_high_value_task_after_process(context, snapshot):
+                self._clear_process_yield(current_key)
+                return False
             yielded = self.memory.process_idle_yield_counts.get(current_key, 0)
             if yielded < IDLE_PROCESS_YIELD_LIMIT:
                 self.memory.process_idle_yield_counts[current_key] = yielded + 1
@@ -240,6 +245,39 @@ class BaselineStrategy:
             return False
         for task in self._current_available_tasks(context, snapshot):
             if not self._missing_task_resources(context, snapshot, task):
+                return True
+        return False
+
+    def _has_reachable_high_value_task_after_process(self, context: GameContext, snapshot: GameSnapshot) -> bool:
+        current = str(snapshot.self_player.get("currentNodeId") or "")
+        if not current:
+            return False
+
+        current_node = snapshot.nodes_by_id.get(current) or {}
+        current_process_rounds = max(1, int(current_node.get("processRound") or 1))
+        blocked = self._blocked_nodes(context, snapshot)
+        for task in sorted(snapshot.tasks, key=self._task_sort_key):
+            if int(task.get("score") or 0) < DOWNSTREAM_RACE_MIN_TASK_SCORE:
+                continue
+            if not self._task_available_for_self(context, task):
+                continue
+            if not self._task_route_viable(context, snapshot, task):
+                continue
+            node_id = str(task.get("nodeId") or "")
+            if not node_id or node_id == current or node_id in blocked:
+                continue
+            travel_rounds = self._shortest_rounds(context, current, node_id, blocked)
+            if travel_rounds is None:
+                travel_rounds = self._shortest_rounds(context, current, node_id, set())
+            if travel_rounds is None or travel_rounds > DOWNSTREAM_RACE_MAX_TRAVEL_ROUNDS:
+                continue
+            if self._can_finish_after_remote_task(
+                context,
+                snapshot,
+                task,
+                node_id,
+                current_process_rounds + travel_rounds,
+            ):
                 return True
         return False
 
