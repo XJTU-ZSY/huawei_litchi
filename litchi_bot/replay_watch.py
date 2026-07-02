@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import subprocess
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -215,6 +216,75 @@ def write_report(report_dir: Path, replay_path: Path, report: str) -> Path:
     output = report_dir / f"{_safe_name(replay_path.stem)}.md"
     output.write_text(report, encoding="utf-8")
     return output
+
+
+def build_skill_handoff_prompt(
+    replay_path: Path,
+    machine_report_path: Path,
+    player_id: int | str | None = None,
+    append_backlog: bool = False,
+) -> str:
+    player_line = f"我方 playerId 是 `{player_id}`。" if player_id is not None else "请先从回放中识别我方 playerId；如果无法识别，明确说明。"
+    backlog_instruction = (
+        "请把最终需求卡追加到 `docs/backlog.md`。"
+        if append_backlog
+        else "请先输出需求卡草案，不要直接修改 `docs/backlog.md`，除非用户确认。"
+    )
+    return "\n".join(
+        [
+            "使用 $litchi-replay-analyst 和 $litchi-coach 处理新回放。",
+            "",
+            "技能路径：",
+            "- `$litchi-replay-analyst`: `.codex/skills/litchi-replay-analyst/SKILL.md`",
+            "- `$litchi-coach`: `.codex/skills/litchi-coach/SKILL.md`",
+            "",
+            "输入：",
+            f"- 原始回放：`{replay_path}`",
+            f"- 机器预分析报告：`{machine_report_path}`",
+            f"- {player_line}",
+            "",
+            "请按以下顺序执行：",
+            "1. 先使用 `$litchi-replay-analyst`，读取原始回放和机器预分析报告。",
+            "2. 不要只复述机器报告；需要用 AI 判断补充：卡住原因、策略失误、对手优秀策略、窗口/路线/任务模式。",
+            "3. 再交给 `$litchi-coach`，按 P0/P1/P2 排优先级。",
+            "4. 生成 1-3 张可执行需求卡，每张卡必须包含 Evidence、Expected behavior、Forbidden behavior、Implementation owner、Validation。",
+            "5. P0 问题优先于胜率优化；没有 P0 问题时，再选择最高预期收益的 P1/P2 卡。",
+            f"6. {backlog_instruction}",
+            "",
+            "输出格式：",
+            "```text",
+            "Replay:",
+            "Outcome:",
+            "Hard bugs:",
+            "Strategy losses:",
+            "Opponent lessons:",
+            "Recommended cards:",
+            "Regression checks:",
+            "```",
+            "",
+            "限制：",
+            "- 本轮只做分析和需求卡，不直接改代码，除非用户明确要求实现。",
+            "- 如果证据不足，写明缺失字段或需要补充的回放/日志。",
+            "- 需求卡的 Validation 优先使用 `python -B tools/quality_gate.py` 和具体回放回归。",
+            "",
+        ]
+    )
+
+
+def write_ai_task(task_dir: Path, replay_path: Path, prompt: str) -> Path:
+    task_dir.mkdir(parents=True, exist_ok=True)
+    output = task_dir / f"{_safe_name(replay_path.stem)}.prompt.md"
+    output.write_text(prompt, encoding="utf-8")
+    return output
+
+
+def run_ai_command(command_template: str, task_path: Path, replay_path: Path, report_path: Path) -> subprocess.CompletedProcess[str]:
+    command = command_template.format(
+        task=str(task_path),
+        replay=str(replay_path),
+        report=str(report_path),
+    )
+    return subprocess.run(command, shell=True, text=True, capture_output=True)
 
 
 def append_cards_to_backlog(backlog_path: Path, replay_path: Path, cards: Iterable[RequirementCard]) -> None:

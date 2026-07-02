@@ -83,13 +83,22 @@ python -B tools/watch_replays.py replays --player-id 1001
 流程：
 
 1. watcher 轮询目录中的 `.json/.jsonl/.log/.txt/.replay` 文件。
-2. 等文件稳定后交给 `$litchi-replay-analyst` 对应的分析逻辑。
-3. 自动生成符合 `$litchi-coach` 需求卡格式的报告。
-4. 默认报告写入 `.replay_watch/reports/`，处理状态写入 `.replay_watch/state.json`。
-5. 加 `--append-backlog` 时，将需求卡追加到 `docs/backlog.md`。
+2. 等文件稳定后生成机器预分析报告。
+3. 同时生成 `.replay_watch/ai_tasks/*.prompt.md`，该 prompt 明确要求使用 `$litchi-replay-analyst` 和 `$litchi-coach`。
+4. 将 prompt 交给 opencode/Codex 后，由 AI 读取原始回放和机器报告，补充策略判断并生成需求卡。
+5. 默认报告写入 `.replay_watch/reports/`，AI handoff prompt 写入 `.replay_watch/ai_tasks/`，处理状态写入 `.replay_watch/state.json`。
+6. 加 `--append-backlog` 时，脚本会将机器生成的初步需求卡追加到 `docs/backlog.md`；更推荐先让 AI 审核 prompt 后再写入 backlog。
 
 测试或手动批处理时只扫描一次：
 
 ```bash
 python -B tools/watch_replays.py replays --player-id 1001 --once
 ```
+
+如果 opencode 支持命令行 prompt 文件，可以使用：
+
+```bash
+python -B tools/watch_replays.py replays --player-id 1001 --ai-command-template "opencode run --prompt-file {task}"
+```
+
+`--ai-command-template` 支持 `{task}`、`{replay}`、`{report}` 占位符。具体命令取决于本机 opencode CLI。

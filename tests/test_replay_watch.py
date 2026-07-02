@@ -1,7 +1,7 @@
 import unittest
 from pathlib import Path
 
-from litchi_bot.replay_watch import build_replay_report, build_requirement_cards, is_stable, ReplayCandidate
+from litchi_bot.replay_watch import build_replay_report, build_requirement_cards, build_skill_handoff_prompt, is_stable, ReplayCandidate
 
 
 class ReplayWatchTest(unittest.TestCase):
@@ -63,6 +63,19 @@ class ReplayWatchTest(unittest.TestCase):
 
         self.assertFalse(is_stable(candidate, stable_seconds=5, now=3))
         self.assertTrue(is_stable(candidate, stable_seconds=2, now=3))
+
+    def test_skill_handoff_prompt_targets_replay_analyst_and_coach(self):
+        prompt = build_skill_handoff_prompt(
+            replay_path=Path("replays/match_001.json"),
+            machine_report_path=Path(".replay_watch/reports/match_001.md"),
+            player_id=1001,
+        )
+
+        self.assertIn("$litchi-replay-analyst", prompt)
+        self.assertIn("$litchi-coach", prompt)
+        self.assertIn("replays\\match_001.json", prompt.replace("/", "\\"))
+        self.assertIn(".replay_watch\\reports\\match_001.md", prompt.replace("/", "\\"))
+        self.assertIn("不直接改代码", prompt)
 
 
 if __name__ == "__main__":

@@ -29,6 +29,17 @@ Convert match evidence into actionable fixes and strategy improvements. Analyze 
    - Endgame timing.
 7. Convert findings into requirement cards for `$litchi-coach`.
 
+## Continuous Monitoring Handoff
+
+When a task file appears under `.replay_watch/ai_tasks/`, treat it as a replay handoff from `tools/watch_replays.py`.
+
+1. Read the task prompt completely.
+2. Read the referenced raw replay and machine pre-analysis report.
+3. Use the machine report only as a starting point; add AI judgment about hidden failure modes, strategic leaks, and opponent patterns.
+4. Produce the standard replay report sections below.
+5. Hand the recommended cards to `$litchi-coach` for prioritization.
+6. Do not modify code unless the task explicitly asks for implementation.
+
 ## Report Format
 
 ```text

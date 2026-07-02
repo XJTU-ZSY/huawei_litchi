@@ -25,6 +25,16 @@ Act as the owner of win rate and delivery quality. Keep the team focused on the 
    - `$litchi-replay-analyst` when the input is a match replay.
 5. Accept the iteration only after tests or a replay regression can explain the outcome.
 
+## Replay Handoff Intake
+
+When `$litchi-replay-analyst` or `.replay_watch/ai_tasks/*.prompt.md` provides a replay handoff:
+
+1. Verify the evidence path: raw replay, machine report, and player ID.
+2. Convert findings into at most three requirement cards.
+3. Prefer one high-confidence P0 card over multiple speculative strategy cards.
+4. If there are no P0 failures, pick the highest expected win-rate or score improvement.
+5. Keep implementation out of the intake response unless the user explicitly asks to proceed.
+
 ## Requirement Card
 
 Use this format:
