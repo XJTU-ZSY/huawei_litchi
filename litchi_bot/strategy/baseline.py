@@ -161,7 +161,7 @@ class BaselineStrategy:
         for task in sorted(snapshot.tasks, key=self._task_sort_key):
             if str(task.get("nodeId")) != current_id:
                 continue
-            if not self._task_available_for_self(context, task):
+            if not self._task_available_for_self(context, task, snapshot.self_player):
                 continue
             if self._task_waiting_for_fixed_process(task, current_id):
                 continue
@@ -331,8 +331,27 @@ class BaselineStrategy:
         return task is not None and self._task_requires_horse_resource(context, task)
 
     def _task_requires_horse_resource(self, context: GameContext, task: dict[str, Any]) -> bool:
-        required = task.get("requiredResourceTypes") or self._task_template_required_resources(context, task)
+        required = self._task_required_resources(context, task)
         return any(str(resource_type) in HORSE_RESOURCES for resource_type in required)
+
+    def _task_requirements_met(
+        self, context: GameContext, task: dict[str, Any], player: dict[str, Any] | None
+    ) -> bool:
+        if player is None:
+            return True
+        resources = player.get("resources") or {}
+        for resource_type in self._task_required_resources(context, task):
+            if self._resource_count(resources, str(resource_type)) <= 0:
+                return False
+        return True
+
+    def _task_required_resources(self, context: GameContext, task: dict[str, Any]) -> list[Any]:
+        required = task.get("requiredResourceTypes")
+        if required is None:
+            required = self._task_template_required_resources(context, task)
+        if isinstance(required, str):
+            return [required]
+        return list(required or [])
 
     @staticmethod
     def _task_template_required_resources(context: GameContext, task: dict[str, Any]) -> list[Any]:
@@ -427,7 +446,7 @@ class BaselineStrategy:
         if not current:
             return None
         for task in sorted(snapshot.tasks, key=self._task_sort_key):
-            if not self._task_available_for_self(context, task):
+            if not self._task_available_for_self(context, task, snapshot.self_player):
                 continue
             if str(task.get("nodeId")) == str(current):
                 self.last_reason = f"claim current task {task.get('taskId')}"
@@ -509,7 +528,7 @@ class BaselineStrategy:
         best_path: list[str] = []
         best_task: dict[str, Any] | None = None
         for task in sorted(snapshot.tasks, key=self._task_sort_key):
-            if not self._task_available_for_self(context, task):
+            if not self._task_available_for_self(context, task, snapshot.self_player):
                 continue
             node_id = str(task.get("nodeId") or "")
             if not node_id or node_id in blocked:
@@ -564,7 +583,9 @@ class BaselineStrategy:
             return True
         return False
 
-    def _task_available_for_self(self, context: GameContext, task: dict[str, Any]) -> bool:
+    def _task_available_for_self(
+        self, context: GameContext, task: dict[str, Any], player: dict[str, Any] | None = None
+    ) -> bool:
         if not task.get("taskId") or task.get("completed") or task.get("failed"):
             return False
         if task.get("active") is False:
@@ -576,6 +597,8 @@ class BaselineStrategy:
             return False
         protection = task.get("protectionPlayerId")
         if protection not in (None, 0, "0") and str(protection) != str(context.player_id):
+            return False
+        if not self._task_requirements_met(context, task, player):
             return False
         return True
 

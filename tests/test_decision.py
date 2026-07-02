@@ -33,6 +33,12 @@ START = {
         {"edgeId": "E9", "fromNodeId": "S12", "toNodeId": "S13", "routeType": "ROAD", "distance": 1},
         {"edgeId": "E10", "fromNodeId": "S13", "toNodeId": "S14", "routeType": "ROAD", "distance": 1},
     ],
+    "taskTemplates": [
+        {
+            "taskTemplateId": "T06",
+            "requiredResourceTypes": ["FAST_HORSE"],
+        }
+    ],
 }
 
 
@@ -193,6 +199,48 @@ class DecisionTest(unittest.TestCase):
         memory, context, engine = self.make_engine()
         snap = snapshot(memory, currentNodeId="S02", tasks=[{"taskId": "T01_1", "nodeId": "S02", "score": 30, "active": True}])
         self.assertEqual(engine.decide(context, snap), [{"action": "CLAIM_TASK", "taskId": "T01_1"}])
+
+    def test_resource_gated_task_claims_required_resource_first(self):
+        memory, context, engine = self.make_engine()
+        nodes = [
+            {"nodeId": "S01", "start": True},
+            {"nodeId": "S09", "resourceStock": {"FAST_HORSE": 1}},
+            {"nodeId": "S10"},
+            {"nodeId": "S14"},
+            {"nodeId": "S15", "terminal": True},
+        ]
+        tasks = [
+            {
+                "taskId": "T06_006",
+                "taskTemplateId": "T06",
+                "nodeId": "S09",
+                "score": 30,
+                "active": True,
+            }
+        ]
+
+        snap = snapshot(memory, currentNodeId="S09", taskScore=60, nodes=nodes, tasks=tasks)
+
+        self.assertEqual(
+            engine.decide(context, snap),
+            [{"action": "CLAIM_RESOURCE", "targetNodeId": "S09", "resourceType": "FAST_HORSE"}],
+        )
+
+    def test_resource_gated_task_claims_when_resource_is_owned(self):
+        memory, context, engine = self.make_engine()
+        tasks = [
+            {
+                "taskId": "T06_006",
+                "taskTemplateId": "T06",
+                "nodeId": "S09",
+                "score": 30,
+                "active": True,
+            }
+        ]
+
+        snap = snapshot(memory, currentNodeId="S09", taskScore=60, resources={"FAST_HORSE": 1}, tasks=tasks)
+
+        self.assertEqual(engine.decide(context, snap), [{"action": "CLAIM_TASK", "taskId": "T06_006"}])
 
     def test_process_current_node_before_moving(self):
         memory, context, engine = self.make_engine()
