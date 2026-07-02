@@ -273,12 +273,14 @@ class BaselineStrategy:
             for resource_type in RESOURCE_PRIORITY:
                 if resource_type not in options:
                     continue
-                if self._resource_count(stock, resource_type) <= 0:
+                stock_count = self._resource_count(stock, resource_type)
+                if stock_count <= 0:
                     continue
                 if (current_id, resource_type) in self.memory.contested_resources:
                     continue
-                if resource_type in contested and not allow_contested:
-                    continue
+                if resource_type in contested:
+                    if stock_count <= 1 or not allow_contested:
+                        continue
                 candidates.append(resource_type)
             if not candidates:
                 return None

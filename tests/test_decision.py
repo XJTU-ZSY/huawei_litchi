@@ -965,6 +965,10 @@ class DecisionTest(unittest.TestCase):
 
     def test_process_node_contests_opponent_resource_unlock_before_fixed_process(self):
         memory, context, engine, nodes = self.make_replay_split_engine()
+        nodes = [dict(node) for node in nodes]
+        for node in nodes:
+            if node["nodeId"] == "S04":
+                node["resourceStock"] = {"SHORT_HORSE": 2}
         tasks = [
             {"taskId": "T06_007", "taskTemplateId": "T06", "nodeId": "S04", "score": 30, "processRound": 3, "active": True}
         ]
@@ -997,6 +1001,37 @@ class DecisionTest(unittest.TestCase):
             [{"action": "CLAIM_RESOURCE", "targetNodeId": "S04", "resourceType": "SHORT_HORSE"}],
         )
         self.assertIn("contest process-node resource SHORT_HORSE", engine.last_reason)
+
+    def test_process_node_skips_singleton_resource_opponent_already_claiming(self):
+        memory, context, engine, nodes = self.make_replay_split_engine()
+        tasks = [
+            {"taskId": "T06_007", "taskTemplateId": "T06", "nodeId": "S04", "score": 30, "processRound": 3, "active": True}
+        ]
+
+        snap = snapshot(
+            memory,
+            round_no=83,
+            playerId=1002,
+            teamId="BLUE",
+            currentNodeId="S04",
+            nodes=nodes,
+            tasks=tasks,
+            opponent_overrides={
+                "playerId": 1001,
+                "teamId": "RED",
+                "currentNodeId": "S04",
+                "state": "PROCESSING",
+                "currentProcess": {
+                    "action": "CLAIM_RESOURCE",
+                    "objectKey": "RESOURCE:S04:SHORT_HORSE",
+                    "targetNodeId": "S04",
+                    "resourceType": "SHORT_HORSE",
+                    "remainRound": 1,
+                },
+            },
+        )
+
+        self.assertEqual(engine.decide(context, snap), [{"action": "PROCESS", "targetNodeId": "S04"}])
 
     def test_process_node_does_not_repeat_contested_resource_unlock_before_fixed_process(self):
         memory, context, engine, nodes = self.make_replay_split_engine()
