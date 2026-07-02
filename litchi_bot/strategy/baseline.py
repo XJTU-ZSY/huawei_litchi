@@ -82,6 +82,10 @@ class BaselineStrategy:
         if current == context.gate_node_id and snapshot.phase == "RUSH" and not player.get("verified"):
             return self._gate_verify_action(context, snapshot)
 
+        pre_process_task_action = self._claim_resource_free_current_task_before_process(context, snapshot)
+        if pre_process_task_action is not None:
+            return pre_process_task_action
+
         if self._should_yield_drawn_process(context, snapshot):
             return None
 
@@ -132,6 +136,37 @@ class BaselineStrategy:
         if process_type and process_round > 0 and current not in {context.gate_node_id, context.terminal_node_id}:
             self.last_reason = f"process node {current}"
             return {"action": "PROCESS", "targetNodeId": str(current)}
+        return None
+
+    def _claim_resource_free_current_task_before_process(
+        self,
+        context: GameContext,
+        snapshot: GameSnapshot,
+    ) -> dict[str, Any] | None:
+        if snapshot.phase == "RUSH":
+            return None
+        current = snapshot.self_player.get("currentNodeId")
+        if not current or current in {context.gate_node_id, context.terminal_node_id}:
+            return None
+        if current in self.memory.completed_process_nodes:
+            return None
+
+        node = snapshot.nodes_by_id.get(str(current), {})
+        process_type = node.get("processType")
+        process_round = int(node.get("processRound") or 0)
+        if not process_type or process_round <= 0:
+            return None
+
+        for task in self._current_available_tasks(context, snapshot):
+            if self._task_required_resources(context, task):
+                continue
+            if self._missing_task_resources(context, snapshot, task):
+                continue
+            if not self._can_finish_after_current_task_with_pending_process(context, snapshot, task, process_round):
+                self.last_reason = f"skip pre-process task {task.get('taskId')} due delivery budget"
+                continue
+            self.last_reason = f"claim current task {task.get('taskId')} before process {current}"
+            return {"action": "CLAIM_TASK", "taskId": task["taskId"]}
         return None
 
     def _gate_verify_action(self, context: GameContext, snapshot: GameSnapshot) -> dict[str, Any]:
@@ -504,6 +539,35 @@ class BaselineStrategy:
         verify_rounds = 0 if snapshot.self_player.get("verified") else self._gate_verify_rounds(context, snapshot)
         required_rounds = (
             task_rounds
+            + travel_rounds
+            + verify_rounds
+            + DELIVERY_SUBMIT_BUFFER_ROUNDS
+            + ENDGAME_TASK_SAFETY_BUFFER_ROUNDS
+        )
+        return remaining_rounds >= required_rounds
+
+    def _can_finish_after_current_task_with_pending_process(
+        self,
+        context: GameContext,
+        snapshot: GameSnapshot,
+        task: dict[str, Any],
+        process_rounds: int,
+    ) -> bool:
+        current = str(snapshot.self_player.get("currentNodeId") or "")
+        if not current:
+            return False
+        remaining_rounds = context.duration_round - snapshot.round_no
+        if remaining_rounds <= 0:
+            return False
+
+        task_rounds = max(1, int(task.get("processRound") or 1))
+        travel_rounds = self._endgame_travel_rounds(context, snapshot, current)
+        if travel_rounds is None:
+            return False
+        verify_rounds = 0 if snapshot.self_player.get("verified") else self._gate_verify_rounds(context, snapshot)
+        required_rounds = (
+            task_rounds
+            + max(0, process_rounds)
             + travel_rounds
             + verify_rounds
             + DELIVERY_SUBMIT_BUFFER_ROUNDS

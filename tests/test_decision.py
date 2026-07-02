@@ -311,6 +311,30 @@ class DecisionTest(unittest.TestCase):
         snap = snapshot(memory, currentNodeId="S02", nodes=nodes)
         self.assertEqual(engine.decide(context, snap), [{"action": "PROCESS", "targetNodeId": "S02"}])
 
+    def test_resource_required_task_does_not_bypass_current_process(self):
+        memory, context, engine = self.make_engine()
+        nodes = [
+            {"nodeId": "S01", "start": True},
+            {"nodeId": "S02", "processType": "BOARD", "processRound": 3, "resourceStock": {"FAST_HORSE": 1}},
+            {"nodeId": "S14"},
+            {"nodeId": "S15", "terminal": True},
+        ]
+        tasks = [
+            {
+                "taskId": "T06_006",
+                "taskTemplateId": "T06",
+                "nodeId": "S02",
+                "score": 30,
+                "active": True,
+            }
+        ]
+
+        self.assertEqual(
+            engine.decide(context, snapshot(memory, currentNodeId="S02", nodes=nodes, tasks=tasks)),
+            [{"action": "PROCESS", "targetNodeId": "S02"}],
+        )
+        self.assertNotIn("CLAIM_RESOURCE", engine.last_reason)
+
     def test_yields_fixed_process_to_same_node_opponent_once(self):
         memory, context, engine = self.make_engine()
         nodes = [
@@ -441,7 +465,7 @@ class DecisionTest(unittest.TestCase):
         self.assertEqual(engine.decide(context, snap), [{"action": "PROCESS", "targetNodeId": "S02"}])
         self.assertIn("process node S02", engine.last_reason)
 
-    def test_competes_for_early_fixed_process_when_current_task_is_available(self):
+    def test_claims_current_task_before_process_against_idle_opponent(self):
         memory, context, engine = self.make_engine()
         nodes = [
             {"nodeId": "S01", "start": True},
@@ -459,10 +483,10 @@ class DecisionTest(unittest.TestCase):
             opponent_overrides={"playerId": 2002, "currentNodeId": "S02", "state": "IDLE"},
         )
 
-        self.assertEqual(engine.decide(context, snap), [{"action": "PROCESS", "targetNodeId": "S02"}])
-        self.assertIn("process node S02", engine.last_reason)
+        self.assertEqual(engine.decide(context, snap), [{"action": "CLAIM_TASK", "taskId": "T12_012"}])
+        self.assertIn("before process S02", engine.last_reason)
 
-    def test_competes_for_fixed_process_when_current_task_is_available(self):
+    def test_claims_current_task_before_process_against_busy_opponent(self):
         memory, context, engine = self.make_engine()
         nodes = [
             {"nodeId": "S01", "start": True},
@@ -479,10 +503,10 @@ class DecisionTest(unittest.TestCase):
             tasks=tasks,
             opponent_overrides={"playerId": 2002, "currentNodeId": "S02", "state": "PROCESSING"},
         )
-        self.assertEqual(engine.decide(context, snap), [{"action": "PROCESS", "targetNodeId": "S02"}])
-        self.assertIn("process node S02", engine.last_reason)
+        self.assertEqual(engine.decide(context, snap), [{"action": "CLAIM_TASK", "taskId": "T12_012"}])
+        self.assertIn("before process S02", engine.last_reason)
 
-    def test_yields_task_gated_process_after_stretch_task_score(self):
+    def test_claims_task_before_process_after_stretch_task_score(self):
         memory, context, engine = self.make_engine()
         nodes = [
             {"nodeId": "S01", "start": True},
@@ -504,8 +528,8 @@ class DecisionTest(unittest.TestCase):
             tasks=tasks,
             opponent_overrides={"playerId": 2002, "currentNodeId": "S02", "state": "PROCESSING"},
         )
-        self.assertEqual(engine.decide(context, snap), [])
-        self.assertIn("wait for opponent 2002", engine.last_reason)
+        self.assertEqual(engine.decide(context, snap), [{"action": "CLAIM_TASK", "taskId": "T12_012"}])
+        self.assertIn("before process S02", engine.last_reason)
 
     def test_does_not_yield_fixed_process_to_lower_id_opponent(self):
         memory, context, engine = self.make_engine()
