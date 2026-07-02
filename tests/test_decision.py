@@ -1255,7 +1255,7 @@ class DecisionTest(unittest.TestCase):
 
         self.assertEqual(engine.decide(context, snap), [{"action": "WINDOW_CARD", "contestId": "C1", "card": "ABSTAIN"}])
 
-    def test_high_id_keeps_xian_gong_pressure_for_early_process_task_race(self):
+    def test_high_id_abstains_after_xian_gong_in_early_process_task_race_without_qiang_xing(self):
         memory, context, engine, nodes = self.make_replay_split_engine()
         contests = [
             {
@@ -1286,7 +1286,7 @@ class DecisionTest(unittest.TestCase):
             opponent_overrides={"playerId": 1001, "teamId": "RED", "currentNodeId": "S02"},
         )
 
-        self.assertEqual(engine.decide(context, snap), [{"action": "WINDOW_CARD", "contestId": "C1", "card": "XIAN_GONG"}])
+        self.assertEqual(engine.decide(context, snap), [{"action": "WINDOW_CARD", "contestId": "C1", "card": "ABSTAIN"}])
 
     def test_late_fixed_process_window_still_abstains_after_xian_gong(self):
         memory, context, engine, nodes = self.make_replay_split_engine()
