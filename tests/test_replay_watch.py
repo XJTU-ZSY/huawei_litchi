@@ -1,3 +1,4 @@
+import io
 import unittest
 import subprocess
 import sys
@@ -16,6 +17,7 @@ from litchi_bot.replay_watch import (
     is_stable,
     resolve_done_file_path,
 )
+from tools.watch_replays import format_stage_line, print_stage
 
 
 class FakeStat:
@@ -216,6 +218,20 @@ class ReplayWatchTest(unittest.TestCase):
         self.assertIn("$litchi-implementer", prompt)
         self.assertIn("$litchi-tester", prompt)
         self.assertIn("git commit", prompt)
+
+    def test_stage_line_format(self):
+        self.assertEqual(format_stage_line("idle"), "[STAGE] idle")
+        self.assertEqual(
+            format_stage_line("ai-command-start", "task.md"),
+            "[STAGE] ai-command-start: task.md",
+        )
+
+    def test_print_stage_writes_to_stream(self):
+        stream = io.StringIO()
+
+        print_stage("report-written", "report.md", stream=stream)
+
+        self.assertEqual(stream.getvalue(), "[STAGE] report-written: report.md\n")
 
     def test_watch_replays_help_exposes_process_log_dir(self):
         completed = subprocess.run(

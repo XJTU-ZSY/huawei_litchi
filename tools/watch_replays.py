@@ -28,6 +28,16 @@ from litchi_bot.replay_watch import (
 from litchi_bot.process_log import append_process_event
 
 
+def format_stage_line(stage: str, detail: str = "") -> str:
+    return f"[STAGE] {stage}: {detail}" if detail else f"[STAGE] {stage}"
+
+
+def print_stage(stage: str, detail: str = "", *, stream=None) -> None:
+    if stream is None:
+        stream = sys.stdout
+    print(format_stage_line(stage, detail), file=stream, flush=True)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Continuously watch a replay folder and generate coach-ready reports")
     parser.add_argument("folder", help="Folder containing replay files")
@@ -60,7 +70,7 @@ def main() -> int:
     backlog_path = ROOT / args.backlog
     player_id = parse_player_id(args.player_id) if args.player_id else None
 
-    print(f"watching {folder} every {args.interval}s; reports -> {report_dir}")
+    print_stage("watch-start", f"folder={folder}; interval={args.interval}s; reports={report_dir}")
     while True:
         state = load_state(state_path)
         processed_any = False
@@ -69,8 +79,11 @@ def main() -> int:
             if state.get(key) == candidate.fingerprint:
                 continue
             if not is_stable(candidate, args.stable_seconds):
+                print_stage("wait-stable", str(candidate.path))
                 continue
+            print_stage("replay-detected", str(candidate.path))
             try:
+                print_stage("machine-analysis-start", str(candidate.path))
                 summary, report = analyze_replay_file(candidate.path, player_id)
             except Exception as exc:
                 print(f"[ERROR] {candidate.path}: {exc}", file=sys.stderr)
@@ -78,8 +91,14 @@ def main() -> int:
             if summary["messageCount"] == 0 and not args.process_empty:
                 print(f"[WAIT] {candidate.path}: no messages parsed yet", file=sys.stderr)
                 continue
+            print_stage(
+                "machine-analysis-complete",
+                f"messages={summary['messageCount']}; rejected={summary['rejectedCount']}; invalid={summary['invalidCount']}",
+            )
             process_log_path = start_replay_process_log(process_log_dir, candidate.path, player_id)
+            print_stage("process-log", str(process_log_path))
             report_path = write_report(report_dir, candidate.path, report)
+            print_stage("report-written", str(report_path))
             append_process_event(
                 process_log_path,
                 "Machine replay analysis",
@@ -87,10 +106,13 @@ def main() -> int:
             )
             task_path = None
             if not args.no_ai_task:
+                print_stage("ai-handoff-build", str(candidate.path))
                 prompt = build_skill_handoff_prompt(candidate.path, report_path, process_log_path, player_id, args.append_backlog, args.auto_implement)
                 task_path = write_ai_task(ai_task_dir, candidate.path, prompt)
+                print_stage("ai-task-written", str(task_path))
                 append_process_event(process_log_path, "AI handoff prompt", f"Generated skill handoff prompt `{task_path}`.")
             if args.ai_command_template and task_path is not None:
+                print_stage("ai-command-start", str(task_path))
                 completed = run_ai_command(args.ai_command_template, task_path, candidate.path, report_path)
                 if completed.stdout.strip():
                     print(completed.stdout.strip())
@@ -99,36 +121,45 @@ def main() -> int:
                 if completed.returncode != 0:
                     append_process_event(process_log_path, "AI command failed", f"Command exited with `{completed.returncode}` for `{task_path}`.")
                     print(f"[ERROR] AI command failed with code {completed.returncode}: {task_path}", file=sys.stderr)
+                    print_stage("ai-command-failed", f"code={completed.returncode}; task={task_path}", stream=sys.stderr)
                     continue
+                print_stage("ai-command-complete", str(task_path))
                 append_process_event(process_log_path, "AI command completed", f"Command completed for `{task_path}`.")
                 if not args.skip_done_file:
                     try:
+                        print_stage("done-file-start", str(folder))
                         done_paths = create_done_files_from_latest_manifest(folder, args.done_client)
                     except Exception as exc:
                         append_process_event(process_log_path, "Done file failed", f"Could not create doneFile marker from latest manifest in `{folder}`: {exc}")
                         print(f"[ERROR] failed to create doneFile marker from latest manifest: {exc}", file=sys.stderr)
+                        print_stage("done-file-failed", str(exc), stream=sys.stderr)
                         continue
                     if done_paths:
+                        print_stage("done-file-created", ", ".join(str(path) for path in done_paths))
                         append_process_event(process_log_path, "Done file created", "Created doneFile marker(s): " + ", ".join(f"`{path}`" for path in done_paths))
                     else:
                         append_process_event(process_log_path, "Done file missing", f"No latest `*.manifest.json` or doneFile entry found in `{folder}`.")
                         print(f"[ERROR] no latest *.manifest.json or doneFile entry found in {folder}", file=sys.stderr)
+                        print_stage("done-file-missing", str(folder), stream=sys.stderr)
                         continue
             if args.append_backlog:
+                print_stage("backlog-append", str(backlog_path))
                 append_cards_to_backlog(backlog_path, candidate.path, build_requirement_cards(candidate.path, summary, player_id))
                 append_process_event(process_log_path, "Backlog append", f"Appended machine-generated cards to `{backlog_path}`.")
             state[key] = candidate.fingerprint
             save_state(state_path, state)
+            print_stage("state-saved", str(state_path))
             append_process_event(process_log_path, "Watcher state saved", f"Updated processed state `{state_path}`.")
             processed_any = True
             if task_path is not None:
                 print(f"[OK] {candidate.path} -> {report_path}; AI task -> {task_path}")
             else:
                 print(f"[OK] {candidate.path} -> {report_path}")
+            print_stage("replay-complete", str(candidate.path))
         if args.once:
             return 0
         if not processed_any:
-            print("[idle] no new stable replay")
+            print_stage("idle", "no new stable replay")
         time.sleep(args.interval)
 
 
