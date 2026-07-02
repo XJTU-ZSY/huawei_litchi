@@ -266,7 +266,7 @@ class BaselineStrategy:
         for task in sorted(snapshot.tasks, key=self._task_sort_key):
             if task is current_task:
                 continue
-            if int(task.get("score") or 0) < current_task_score:
+            if int(task.get("score") or 0) <= current_task_score:
                 continue
             if not self._task_available_for_self(context, task):
                 continue

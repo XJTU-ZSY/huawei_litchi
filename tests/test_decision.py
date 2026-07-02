@@ -311,7 +311,7 @@ class DecisionTest(unittest.TestCase):
         snap = snapshot(memory, currentNodeId="S02", nodes=nodes)
         self.assertEqual(engine.decide(context, snap), [{"action": "PROCESS", "targetNodeId": "S02"}])
 
-    def test_defers_low_value_current_task_for_downstream_route_task_after_base_score(self):
+    def test_claims_equal_value_current_task_before_downstream_route_task_after_base_score(self):
         start = {
             "matchId": "m1",
             "round": 1,
@@ -341,6 +341,43 @@ class DecisionTest(unittest.TestCase):
             {"taskId": "DONE_3", "nodeId": "S10", "score": 30, "completed": True, "ownerPlayerId": 1001},
             {"taskId": "T12_012", "nodeId": "S11", "score": 15, "processRound": 5, "active": True},
             {"taskId": "T13_013", "nodeId": "S13", "score": 15, "processRound": 5, "active": True},
+        ]
+
+        self.assertEqual(
+            engine.decide(context, snapshot(memory, currentNodeId="S11", taskScore=80, nodes=start["nodes"], tasks=tasks)),
+            [{"action": "CLAIM_TASK", "taskId": "T12_012"}],
+        )
+
+    def test_defers_low_value_current_task_for_higher_downstream_route_task_after_base_score(self):
+        start = {
+            "matchId": "m1",
+            "round": 1,
+            "durationRound": 600,
+            "players": [{"playerId": 1001, "teamId": "RED"}, {"playerId": 2002, "teamId": "BLUE"}],
+            "map": {"gameplay": {"roles": {"startNodeId": "S01", "gateNodeId": "S14", "terminalNodeIds": ["S15"]}}},
+            "nodes": [
+                {"nodeId": "S11", "processType": "PASS_TRANSFER", "processRound": 5},
+                {"nodeId": "S12"},
+                {"nodeId": "S13", "processType": "PALACE_TRANSFER", "processRound": 5},
+                {"nodeId": "S14"},
+                {"nodeId": "S15", "terminal": True},
+            ],
+            "edges": [
+                {"edgeId": "E1", "fromNodeId": "S11", "toNodeId": "S12", "routeType": "ROAD", "distance": 1},
+                {"edgeId": "E2", "fromNodeId": "S12", "toNodeId": "S13", "routeType": "ROAD", "distance": 1},
+                {"edgeId": "E3", "fromNodeId": "S13", "toNodeId": "S14", "routeType": "ROAD", "distance": 1},
+                {"edgeId": "E4", "fromNodeId": "S14", "toNodeId": "S15", "routeType": "ROAD", "distance": 1},
+            ],
+        }
+        memory = GameMemory(1001)
+        context = memory.apply_start(start)
+        engine = DecisionEngine(memory)
+        tasks = [
+            {"taskId": "DONE_1", "nodeId": "S04", "score": 30, "completed": True, "ownerPlayerId": 1001},
+            {"taskId": "DONE_2", "nodeId": "S05", "score": 30, "completed": True, "ownerPlayerId": 1001},
+            {"taskId": "DONE_3", "nodeId": "S10", "score": 30, "completed": True, "ownerPlayerId": 1001},
+            {"taskId": "T12_012", "nodeId": "S11", "score": 15, "processRound": 5, "active": True},
+            {"taskId": "T02_013", "nodeId": "S13", "score": 30, "processRound": 4, "active": True},
         ]
 
         self.assertEqual(
