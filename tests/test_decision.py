@@ -840,11 +840,75 @@ class DecisionTest(unittest.TestCase):
         self.assertEqual(engine.decide(context, snap), [{"action": "PROCESS", "targetNodeId": "S11"}])
         self.assertIn("process node S11", engine.last_reason)
 
-    def test_contesting_state_only_sends_window_card(self):
+    def test_task_contesting_prefers_xian_gong_to_break_bing_mirror(self):
         memory, context, engine = self.make_engine()
         contests = [{"contestId": "C1", "contestType": "TASK", "redPlayerId": 1001, "bluePlayerId": 2002, "roundIndex": 1}]
         snap = snapshot(memory, state="CONTESTING", currentNodeId="S02", contests=contests)
+        self.assertEqual(engine.decide(context, snap), [{"action": "WINDOW_CARD", "contestId": "C1", "card": "XIAN_GONG"}])
+
+    def test_task_window_falls_back_to_bing_when_xian_gong_is_unsafe(self):
+        memory, context, engine = self.make_engine()
+        contests = [{"contestId": "C1", "contestType": "TASK", "redPlayerId": 1001, "bluePlayerId": 2002, "roundIndex": 1}]
+        snap = snapshot(memory, state="CONTESTING", currentNodeId="S02", contests=contests, freshness=79, goodFruit=100)
         self.assertEqual(engine.decide(context, snap), [{"action": "WINDOW_CARD", "contestId": "C1", "card": "BING_ZHENG"}])
+
+    def test_window_counter_uses_xian_gong_against_seen_bing_zheng(self):
+        memory, context, engine = self.make_engine()
+        contests = [
+            {
+                "contestId": "C1",
+                "contestType": "TASK",
+                "redPlayerId": 1001,
+                "bluePlayerId": 2002,
+                "roundIndex": 2,
+                "cards": {"R1:BLUE": "BING_ZHENG"},
+            }
+        ]
+        snap = snapshot(memory, state="CONTESTING", currentNodeId="S02", contests=contests)
+        self.assertEqual(engine.decide(context, snap), [{"action": "WINDOW_CARD", "contestId": "C1", "card": "XIAN_GONG"}])
+
+    def test_window_counter_uses_qiang_xing_against_seen_xian_gong_when_affordable(self):
+        memory, context, engine = self.make_engine()
+        contests = [
+            {
+                "contestId": "C1",
+                "contestType": "TASK",
+                "redPlayerId": 1001,
+                "bluePlayerId": 2002,
+                "roundIndex": 2,
+                "cards": {"R1:BLUE": "XIAN_GONG"},
+            }
+        ]
+        snap = snapshot(
+            memory,
+            state="CONTESTING",
+            currentNodeId="S02",
+            contests=contests,
+            resources={"FAST_HORSE": 1},
+        )
+        self.assertEqual(engine.decide(context, snap), [{"action": "WINDOW_CARD", "contestId": "C1", "card": "QIANG_XING"}])
+
+    def test_window_counter_abstains_when_seen_card_cannot_be_matched_or_beaten(self):
+        memory, context, engine = self.make_engine()
+        contests = [
+            {
+                "contestId": "C1",
+                "contestType": "TASK",
+                "redPlayerId": 1001,
+                "bluePlayerId": 2002,
+                "roundIndex": 2,
+                "cards": {"R1:BLUE": "XIAN_GONG"},
+            }
+        ]
+        snap = snapshot(
+            memory,
+            state="CONTESTING",
+            currentNodeId="S02",
+            contests=contests,
+            freshness=79,
+            goodFruit=100,
+        )
+        self.assertEqual(engine.decide(context, snap), [{"action": "WINDOW_CARD", "contestId": "C1", "card": "ABSTAIN"}])
 
     def test_suppressed_contest_is_ignored(self):
         memory, context, engine = self.make_engine()
