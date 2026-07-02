@@ -327,10 +327,15 @@ def done_file_names_from_manifest_data(data: Mapping[str, Any], client: str | No
 
 
 def resolve_done_file_path(replay_out_dir: Path, done_file: str) -> Path:
-    relative_path = Path(done_file)
-    if not relative_path.name or relative_path.is_absolute() or ".." in relative_path.parts:
+    candidate = Path(done_file)
+    if not candidate.name:
         raise ValueError(f"doneFile must stay inside replay_out_dir: {done_file}")
-    return replay_out_dir / relative_path
+    done_path = candidate if candidate.is_absolute() else replay_out_dir / candidate
+    resolved_root = replay_out_dir.resolve(strict=False)
+    resolved_done = done_path.resolve(strict=False)
+    if resolved_done != resolved_root and resolved_root not in resolved_done.parents:
+        raise ValueError(f"doneFile must stay inside replay_out_dir: {done_file}")
+    return done_path
 
 
 def create_done_files_from_latest_manifest(replay_out_dir: Path, client: str | None = None) -> list[Path]:

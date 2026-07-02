@@ -163,6 +163,16 @@ class ReplayWatchTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "inside replay_out_dir"):
             resolve_done_file_path(Path("out"), ".")
 
+    def test_resolve_done_file_path_allows_absolute_path_inside_replay_dir(self):
+        replay_out_dir = Path("D:/workspace/replay_output")
+        done_file = "D:/workspace/replay_output/match_001.client_a.done"
+
+        self.assertEqual(resolve_done_file_path(replay_out_dir, done_file), Path(done_file))
+
+    def test_resolve_done_file_path_rejects_absolute_path_outside_replay_dir(self):
+        with self.assertRaisesRegex(ValueError, "inside replay_out_dir"):
+            resolve_done_file_path(Path("D:/workspace/replay_output"), "D:/workspace/other/client_a.done")
+
     def test_create_done_files_from_latest_manifest(self):
         manifest = FakePath(
             "match_001.manifest.json",
