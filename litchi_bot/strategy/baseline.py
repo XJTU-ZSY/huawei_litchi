@@ -171,9 +171,87 @@ class BaselineStrategy:
             if not self._task_available_for_self(context, task):
                 continue
             if str(task.get("nodeId")) == str(current):
+                missing_resources = self._missing_task_resources(context, snapshot, task)
+                if missing_resources:
+                    resource_action = self._claim_required_current_resource(snapshot, current, missing_resources, task)
+                    if resource_action is not None:
+                        return resource_action
+                    self.last_reason = (
+                        f"skip task {task.get('taskId')} missing required resource "
+                        + ",".join(missing_resources)
+                    )
+                    continue
                 self.last_reason = f"claim current task {task.get('taskId')}"
                 return {"action": "CLAIM_TASK", "taskId": task["taskId"]}
         return None
+
+    def _claim_required_current_resource(
+        self,
+        snapshot: GameSnapshot,
+        current: Any,
+        missing_resources: list[str],
+        task: dict[str, Any],
+    ) -> dict[str, Any] | None:
+        node = snapshot.nodes_by_id.get(str(current), {})
+        stock = node.get("resourceStock") or {}
+        for resource_type in self._sort_resource_types(missing_resources):
+            if int(stock.get(resource_type) or 0) <= 0:
+                continue
+            if self._opponent_processing_resource(snapshot, current, resource_type):
+                continue
+            self.last_reason = f"claim required resource {resource_type} for task {task.get('taskId')} at {current}"
+            return {"action": "CLAIM_RESOURCE", "targetNodeId": str(current), "resourceType": resource_type}
+        return None
+
+    def _missing_task_resources(
+        self,
+        context: GameContext,
+        snapshot: GameSnapshot,
+        task: dict[str, Any],
+    ) -> list[str]:
+        required = self._task_required_resources(context, task)
+        if not required:
+            return []
+        resources = snapshot.self_player.get("resources") or {}
+        return [resource_type for resource_type in required if int(resources.get(resource_type) or 0) <= 0]
+
+    def _task_required_resources(self, context: GameContext, task: dict[str, Any]) -> list[str]:
+        direct = self._coerce_resource_types(task.get("requiredResourceTypes"))
+        if direct:
+            return direct
+        template_id = task.get("taskTemplateId")
+        if not template_id:
+            return []
+        template = self._task_template(context, str(template_id))
+        if template is None:
+            return []
+        return self._coerce_resource_types(template.get("requiredResourceTypes"))
+
+    def _task_template(self, context: GameContext, template_id: str) -> dict[str, Any] | None:
+        raw_start = context.raw_start or {}
+        template_groups = [raw_start.get("taskTemplates") or []]
+        map_data = raw_start.get("map") or {}
+        template_groups.append(map_data.get("taskTemplates") or [])
+        for templates in template_groups:
+            for template in templates:
+                if str(template.get("taskTemplateId") or "") == template_id:
+                    return template
+        return None
+
+    @staticmethod
+    def _coerce_resource_types(value: Any) -> list[str]:
+        if not value:
+            return []
+        if isinstance(value, str):
+            return [value]
+        if isinstance(value, (list, tuple, set)):
+            return [str(item) for item in value if item]
+        return []
+
+    @classmethod
+    def _sort_resource_types(cls, resource_types: list[str]) -> list[str]:
+        priority = {resource_type: index for index, resource_type in enumerate(RESOURCE_PRIORITY)}
+        return sorted(resource_types, key=lambda item: (priority.get(item, len(priority)), item))
 
     def _claim_current_resource(self, snapshot: GameSnapshot) -> dict[str, Any] | None:
         current = snapshot.self_player.get("currentNodeId")
@@ -246,6 +324,8 @@ class BaselineStrategy:
         for task in sorted(snapshot.tasks, key=self._task_sort_key):
             if not self._task_available_for_self(context, task):
                 continue
+            if not self._task_route_viable(context, snapshot, task):
+                continue
             node_id = str(task.get("nodeId") or "")
             if not node_id or node_id in blocked:
                 continue
@@ -253,6 +333,17 @@ class BaselineStrategy:
             if path and (not best_path or len(path) < len(best_path)):
                 best_path = path
         return best_path[-1] if best_path else None
+
+    def _task_route_viable(self, context: GameContext, snapshot: GameSnapshot, task: dict[str, Any]) -> bool:
+        missing_resources = self._missing_task_resources(context, snapshot, task)
+        if not missing_resources:
+            return True
+        node_id = str(task.get("nodeId") or "")
+        node = snapshot.nodes_by_id.get(node_id)
+        if node is None:
+            return True
+        stock = node.get("resourceStock") or {}
+        return any(int(stock.get(resource_type) or 0) > 0 for resource_type in missing_resources)
 
     def _move_toward(self, context: GameContext, snapshot: GameSnapshot, target: str) -> dict[str, Any] | None:
         current = snapshot.self_player.get("currentNodeId")

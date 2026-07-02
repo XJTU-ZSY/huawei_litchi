@@ -21,6 +21,7 @@ START = {
         {"edgeId": "E2", "fromNodeId": "S02", "toNodeId": "S14", "routeType": "ROAD", "distance": 1},
         {"edgeId": "E3", "fromNodeId": "S14", "toNodeId": "S15", "routeType": "ROAD", "distance": 1},
     ],
+    "taskTemplates": [{"taskTemplateId": "T06", "requiredResourceTypes": ["FAST_HORSE"]}],
 }
 
 
@@ -123,6 +124,52 @@ class DecisionTest(unittest.TestCase):
         memory, context, engine = self.make_engine()
         snap = snapshot(memory, currentNodeId="S02", tasks=[{"taskId": "T01_1", "nodeId": "S02", "score": 30, "active": True}])
         self.assertEqual(engine.decide(context, snap), [{"action": "CLAIM_TASK", "taskId": "T01_1"}])
+
+    def test_claims_required_resource_before_current_task(self):
+        memory, context, engine = self.make_engine()
+        nodes = [
+            {"nodeId": "S01", "start": True},
+            {"nodeId": "S02", "resourceStock": {"FAST_HORSE": 1}},
+            {"nodeId": "S14"},
+            {"nodeId": "S15", "terminal": True},
+        ]
+        tasks = [
+            {
+                "taskId": "T06_006",
+                "taskTemplateId": "T06",
+                "nodeId": "S02",
+                "score": 30,
+                "active": True,
+            }
+        ]
+        self.assertEqual(
+            engine.decide(context, snapshot(memory, currentNodeId="S02", nodes=nodes, tasks=tasks)),
+            [{"action": "CLAIM_RESOURCE", "targetNodeId": "S02", "resourceType": "FAST_HORSE"}],
+        )
+        self.assertIn("claim required resource FAST_HORSE", engine.last_reason)
+
+    def test_skips_current_task_when_required_resource_unavailable(self):
+        memory, context, engine = self.make_engine()
+        nodes = [
+            {"nodeId": "S01", "start": True},
+            {"nodeId": "S02", "resourceStock": {"FAST_HORSE": 0}},
+            {"nodeId": "S14"},
+            {"nodeId": "S15", "terminal": True},
+        ]
+        tasks = [
+            {
+                "taskId": "T06_006",
+                "taskTemplateId": "T06",
+                "nodeId": "S02",
+                "score": 30,
+                "active": True,
+            }
+        ]
+        self.assertEqual(
+            engine.decide(context, snapshot(memory, currentNodeId="S02", nodes=nodes, tasks=tasks)),
+            [{"action": "MOVE", "targetNodeId": "S14"}],
+        )
+        self.assertNotEqual(engine.last_reason, "claim current task T06_006")
 
     def test_process_current_node_before_moving(self):
         memory, context, engine = self.make_engine()
