@@ -1,0 +1,3 @@
+interface:
+  display_name: "Litchi Tester"
+  short_description: "Add protocol, decision, replay, and packaging regression checks."

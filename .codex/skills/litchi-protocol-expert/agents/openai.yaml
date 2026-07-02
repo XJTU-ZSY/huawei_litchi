@@ -1,0 +1,3 @@
+interface:
+  display_name: "Litchi Protocol Expert"
+  short_description: "Check TCP framing, message flow, action fields, and server feedback."

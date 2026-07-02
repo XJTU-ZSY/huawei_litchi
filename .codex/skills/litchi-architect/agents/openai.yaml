@@ -1,0 +1,3 @@
+interface:
+  display_name: "Litchi Architect"
+  short_description: "Design module boundaries and interfaces for the Python contest client."
