@@ -666,6 +666,109 @@ class DecisionTest(unittest.TestCase):
         snap = snapshot(memory, state="CONTESTING", currentNodeId="S02", contests=contests)
         self.assertEqual(engine.decide(context, snap), [{"action": "WINDOW_CARD", "contestId": "C1", "card": "BING_ZHENG"}])
 
+    def test_task_window_preserves_only_horse_resource_for_t06(self):
+        memory, context, engine = self.make_engine()
+        contests = [
+            {
+                "contestId": "C1",
+                "contestType": "TASK",
+                "taskId": "T06_006",
+                "redPlayerId": 1001,
+                "bluePlayerId": 2002,
+                "roundIndex": 2,
+            }
+        ]
+        tasks = [
+            {
+                "taskId": "T06_006",
+                "taskTemplateId": "T06",
+                "nodeId": "S09",
+                "processType": "HORSE_TRANSFER",
+                "score": 30,
+                "active": True,
+            }
+        ]
+        snap = snapshot(
+            memory,
+            state="CONTESTING",
+            currentNodeId="S09",
+            guardActionPoint=0,
+            resources={"FAST_HORSE": 1},
+            tasks=tasks,
+            contests=contests,
+        )
+
+        self.assertEqual(engine.decide(context, snap), [{"action": "WINDOW_CARD", "contestId": "C1", "card": "XIAN_GONG"}])
+
+    def test_task_window_abstains_before_spending_only_horse_when_no_safe_card_exists(self):
+        memory, context, engine = self.make_engine()
+        contests = [
+            {
+                "contestId": "C1",
+                "contestType": "TASK",
+                "taskId": "T06_006",
+                "redPlayerId": 1001,
+                "bluePlayerId": 2002,
+            }
+        ]
+        tasks = [
+            {
+                "taskId": "T06_006",
+                "taskTemplateId": "T06",
+                "nodeId": "S09",
+                "processType": "HORSE_TRANSFER",
+                "score": 30,
+                "active": True,
+            }
+        ]
+        snap = snapshot(
+            memory,
+            state="CONTESTING",
+            currentNodeId="S09",
+            freshness=70,
+            goodFruit=30,
+            guardActionPoint=0,
+            resources={"FAST_HORSE": 1},
+            tasks=tasks,
+            contests=contests,
+        )
+
+        self.assertEqual(engine.decide(context, snap), [{"action": "WINDOW_CARD", "contestId": "C1", "card": "ABSTAIN"}])
+
+    def test_task_window_allows_qiang_xing_when_horse_buff_makes_it_free(self):
+        memory, context, engine = self.make_engine()
+        contests = [
+            {
+                "contestId": "C1",
+                "contestType": "TASK",
+                "taskId": "T06_006",
+                "redPlayerId": 1001,
+                "bluePlayerId": 2002,
+            }
+        ]
+        tasks = [
+            {
+                "taskId": "T06_006",
+                "taskTemplateId": "T06",
+                "nodeId": "S09",
+                "processType": "HORSE_TRANSFER",
+                "score": 30,
+                "active": True,
+            }
+        ]
+        snap = snapshot(
+            memory,
+            state="CONTESTING",
+            currentNodeId="S09",
+            guardActionPoint=0,
+            resources={"FAST_HORSE": 1},
+            buffs=[{"type": "FAST_HORSE"}],
+            tasks=tasks,
+            contests=contests,
+        )
+
+        self.assertEqual(engine.decide(context, snap), [{"action": "WINDOW_CARD", "contestId": "C1", "card": "QIANG_XING"}])
+
     def test_suppressed_contest_is_ignored(self):
         memory, context, engine = self.make_engine()
         contests = [{"contestId": "C1", "contestType": "TASK", "redPlayerId": 1001, "status": "SUPPRESSED"}]
