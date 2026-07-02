@@ -35,6 +35,8 @@ class AiTaskRunnerTest(unittest.TestCase):
 
         self.assertEqual(result.returncode, 0)
         self.assertEqual(run.call_args.kwargs["input"], "prompt text")
+        self.assertEqual(run.call_args.kwargs["encoding"], "utf-8")
+        self.assertEqual(run.call_args.kwargs["errors"], "replace")
 
     def test_run_ai_task_reports_missing_cli(self):
         with patch("tools.run_ai_task.choose_provider", return_value=None):

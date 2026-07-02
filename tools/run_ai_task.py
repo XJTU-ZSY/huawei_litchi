@@ -54,7 +54,15 @@ def run_ai_task(prompt_path: Path, provider: str = "auto", cwd: Path = ROOT, mod
     prompt_text = prompt_path.read_text(encoding="utf-8")
     command = build_command(selected, prompt_path, cwd, model)
     input_text = prompt_text if selected == "codex" else None
-    return subprocess.run(command, cwd=cwd, input=input_text, text=True, capture_output=True)
+    return subprocess.run(
+        command,
+        cwd=cwd,
+        input=input_text,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        capture_output=True,
+    )
 
 
 def main() -> int:
