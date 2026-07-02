@@ -28,6 +28,15 @@ class GraphTest(unittest.TestCase):
         )
         self.assertEqual(graph.shortest_path("S01", "S03", blocked={"S02"}), [])
 
+    def test_shortest_path_movement_rounds(self):
+        graph = RouteGraph.from_raw_edges(
+            [
+                {"edgeId": "E1", "fromNodeId": "S01", "toNodeId": "S02", "routeType": "ROAD", "distance": 1},
+                {"edgeId": "E2", "fromNodeId": "S02", "toNodeId": "S03", "routeType": "WATER", "distance": 2},
+            ]
+        )
+        self.assertEqual(graph.shortest_path_movement_rounds("S01", "S03"), 5)
+
 
 if __name__ == "__main__":
     unittest.main()

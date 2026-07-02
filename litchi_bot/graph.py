@@ -57,6 +57,27 @@ class RouteGraph:
     def neighbors(self, node_id: str) -> list[str]:
         return [neighbor for neighbor, _ in self._adjacency.get(node_id, [])]
 
+    def path_movement_rounds(self, path: Iterable[str]) -> int | None:
+        nodes = list(path)
+        total = 0
+        for from_node, to_node in zip(nodes, nodes[1:]):
+            edge = self._edge_between(from_node, to_node)
+            if edge is None:
+                return None
+            total += max(1, ceil(edge.movement_cost / 1000))
+        return total
+
+    def shortest_path_movement_rounds(
+        self,
+        start: str | None,
+        goals: str | Iterable[str] | None,
+        blocked: set[str] | None = None,
+    ) -> int | None:
+        path = self.shortest_path(start, goals, blocked=blocked)
+        if not path:
+            return None
+        return self.path_movement_rounds(path)
+
     def shortest_path(
         self,
         start: str | None,
@@ -87,3 +108,9 @@ class RouteGraph:
                 best[neighbor] = next_cost
                 heappush(queue, (next_cost, neighbor, next_path))
         return []
+
+    def _edge_between(self, from_node: str, to_node: str) -> Edge | None:
+        for neighbor, edge in self._adjacency.get(from_node, []):
+            if neighbor == to_node:
+                return edge
+        return None

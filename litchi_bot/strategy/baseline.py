@@ -19,6 +19,8 @@ RESOURCE_PRIORITY = [
 LOW_VALUE_CONTEST_RESOURCES = {"OFFICIAL_PERMIT", "BOAT_RIGHT"}
 FIXED_PROCESS_BUSY_STATES = {"PROCESSING", "VERIFYING", "RESTING", "CONTESTING"}
 IDLE_PROCESS_YIELD_LIMIT = 1
+ENDGAME_TASK_SAFETY_BUFFER_ROUNDS = 10
+DELIVERY_SUBMIT_BUFFER_ROUNDS = 2
 
 
 class BaselineStrategy:
@@ -75,6 +77,10 @@ class BaselineStrategy:
         process_action = self._process_current_node(context, snapshot)
         if process_action is not None:
             return process_action
+
+        endgame_task_action = self._claim_safe_current_task_before_endgame(context, snapshot)
+        if endgame_task_action is not None:
+            return endgame_task_action
 
         if self._should_go_endgame(context, snapshot):
             target = context.terminal_node_id if player.get("verified") else context.gate_node_id
@@ -163,27 +169,120 @@ class BaselineStrategy:
             return (0, int(text))
         return (1, text)
 
-    def _claim_current_task(self, context: GameContext, snapshot: GameSnapshot) -> dict[str, Any] | None:
+    def _claim_current_task(
+        self,
+        context: GameContext,
+        snapshot: GameSnapshot,
+        *,
+        allow_required_resource: bool = True,
+    ) -> dict[str, Any] | None:
         current = snapshot.self_player.get("currentNodeId")
         if not current:
             return None
-        for task in sorted(snapshot.tasks, key=self._task_sort_key):
-            if not self._task_available_for_self(context, task):
-                continue
-            if str(task.get("nodeId")) == str(current):
-                missing_resources = self._missing_task_resources(context, snapshot, task)
-                if missing_resources:
+        for task in self._current_available_tasks(context, snapshot):
+            missing_resources = self._missing_task_resources(context, snapshot, task)
+            if missing_resources:
+                if allow_required_resource:
                     resource_action = self._claim_required_current_resource(snapshot, current, missing_resources, task)
                     if resource_action is not None:
                         return resource_action
-                    self.last_reason = (
-                        f"skip task {task.get('taskId')} missing required resource "
-                        + ",".join(missing_resources)
-                    )
-                    continue
-                self.last_reason = f"claim current task {task.get('taskId')}"
-                return {"action": "CLAIM_TASK", "taskId": task["taskId"]}
+                self.last_reason = (
+                    f"skip task {task.get('taskId')} missing required resource " + ",".join(missing_resources)
+                )
+                continue
+            self.last_reason = f"claim current task {task.get('taskId')}"
+            return {"action": "CLAIM_TASK", "taskId": task["taskId"]}
         return None
+
+    def _claim_safe_current_task_before_endgame(
+        self,
+        context: GameContext,
+        snapshot: GameSnapshot,
+    ) -> dict[str, Any] | None:
+        if not self._should_go_endgame(context, snapshot):
+            return None
+        if snapshot.phase == "RUSH":
+            return None
+        player = snapshot.self_player
+        if int(player.get("taskScore") or 0) >= 90:
+            return None
+        if float(player.get("freshness") or 0) <= 20 or int(player.get("goodFruit") or 0) <= 5:
+            return None
+
+        task = next(iter(self._current_available_tasks(context, snapshot)), None)
+        if task is None:
+            return None
+        if self._missing_task_resources(context, snapshot, task):
+            self.last_reason = f"skip endgame task {task.get('taskId')} missing required resource"
+            return None
+        if not self._can_finish_after_current_task(context, snapshot, task):
+            self.last_reason = f"skip endgame task {task.get('taskId')} due delivery budget"
+            return None
+        return self._claim_current_task(context, snapshot, allow_required_resource=False)
+
+    def _current_available_tasks(self, context: GameContext, snapshot: GameSnapshot) -> list[dict[str, Any]]:
+        current = snapshot.self_player.get("currentNodeId")
+        if not current:
+            return []
+        return [
+            task
+            for task in sorted(snapshot.tasks, key=self._task_sort_key)
+            if str(task.get("nodeId")) == str(current) and self._task_available_for_self(context, task)
+        ]
+
+    def _can_finish_after_current_task(
+        self,
+        context: GameContext,
+        snapshot: GameSnapshot,
+        task: dict[str, Any],
+    ) -> bool:
+        current = str(snapshot.self_player.get("currentNodeId") or "")
+        if not current:
+            return False
+        remaining_rounds = context.duration_round - snapshot.round_no
+        if remaining_rounds <= 0:
+            return False
+
+        task_rounds = max(1, int(task.get("processRound") or 1))
+        travel_rounds = self._endgame_travel_rounds(context, snapshot, current)
+        if travel_rounds is None:
+            return False
+        verify_rounds = 0 if snapshot.self_player.get("verified") else self._gate_verify_rounds(context, snapshot)
+        required_rounds = (
+            task_rounds
+            + travel_rounds
+            + verify_rounds
+            + DELIVERY_SUBMIT_BUFFER_ROUNDS
+            + ENDGAME_TASK_SAFETY_BUFFER_ROUNDS
+        )
+        return remaining_rounds >= required_rounds
+
+    def _endgame_travel_rounds(self, context: GameContext, snapshot: GameSnapshot, current: str) -> int | None:
+        blocked = self._blocked_nodes(context, snapshot)
+        if snapshot.self_player.get("verified"):
+            return self._shortest_rounds(context, current, context.terminal_node_id, blocked)
+
+        to_gate = self._shortest_rounds(context, current, context.gate_node_id, blocked)
+        gate_to_terminal = self._shortest_rounds(context, context.gate_node_id, context.terminal_node_id, blocked)
+        if to_gate is None or gate_to_terminal is None:
+            return None
+        return to_gate + gate_to_terminal
+
+    def _shortest_rounds(
+        self,
+        context: GameContext,
+        start: str,
+        target: str,
+        blocked: set[str],
+    ) -> int | None:
+        rounds = context.graph.shortest_path_movement_rounds(start, target, blocked=blocked)
+        if rounds is not None:
+            return rounds
+        return context.graph.shortest_path_movement_rounds(start, target)
+
+    def _gate_verify_rounds(self, context: GameContext, snapshot: GameSnapshot) -> int:
+        gate = snapshot.nodes_by_id.get(context.gate_node_id) or {}
+        return max(1, int(gate.get("processRound") or 6))
 
     def _claim_required_current_resource(
         self,

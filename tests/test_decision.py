@@ -13,6 +13,7 @@ START = {
     "nodes": [
         {"nodeId": "S01", "start": True},
         {"nodeId": "S02"},
+        {"nodeId": "S13"},
         {"nodeId": "S14"},
         {"nodeId": "S15", "terminal": True},
     ],
@@ -20,6 +21,7 @@ START = {
         {"edgeId": "E1", "fromNodeId": "S01", "toNodeId": "S02", "routeType": "ROAD", "distance": 1},
         {"edgeId": "E2", "fromNodeId": "S02", "toNodeId": "S14", "routeType": "ROAD", "distance": 1},
         {"edgeId": "E3", "fromNodeId": "S14", "toNodeId": "S15", "routeType": "ROAD", "distance": 1},
+        {"edgeId": "E4", "fromNodeId": "S13", "toNodeId": "S14", "routeType": "ROAD", "distance": 1},
     ],
     "taskTemplates": [{"taskTemplateId": "T06", "requiredResourceTypes": ["FAST_HORSE"]}],
 }
@@ -318,6 +320,51 @@ class DecisionTest(unittest.TestCase):
             {"nodeId": "S15", "terminal": True},
         ]
         snap = snapshot(memory, currentNodeId="S02", taskScore=30, nodes=nodes, round_no=430)
+        self.assertEqual(engine.decide(context, snap), [{"action": "MOVE", "targetNodeId": "S14"}])
+
+    def test_endgame_claims_safe_current_task_before_moving(self):
+        memory, context, engine = self.make_engine()
+        nodes = [
+            {"nodeId": "S01", "start": True},
+            {"nodeId": "S13"},
+            {"nodeId": "S14", "processRound": 6},
+            {"nodeId": "S15", "terminal": True},
+        ]
+        tasks = [{"taskId": "T13_013", "nodeId": "S13", "score": 15, "processRound": 5, "active": True}]
+        snap = snapshot(memory, currentNodeId="S13", taskScore=75, nodes=nodes, tasks=tasks, round_no=560)
+        self.assertEqual(engine.decide(context, snap), [{"action": "CLAIM_TASK", "taskId": "T13_013"}])
+
+    def test_endgame_skips_current_task_when_delivery_budget_is_too_small(self):
+        memory, context, engine = self.make_engine()
+        nodes = [
+            {"nodeId": "S01", "start": True},
+            {"nodeId": "S13"},
+            {"nodeId": "S14", "processRound": 6},
+            {"nodeId": "S15", "terminal": True},
+        ]
+        tasks = [{"taskId": "T13_013", "nodeId": "S13", "score": 15, "processRound": 5, "active": True}]
+        snap = snapshot(memory, currentNodeId="S13", taskScore=75, nodes=nodes, tasks=tasks, round_no=590)
+        self.assertEqual(engine.decide(context, snap), [{"action": "MOVE", "targetNodeId": "S14"}])
+
+    def test_endgame_current_task_does_not_start_required_resource_chain(self):
+        memory, context, engine = self.make_engine()
+        nodes = [
+            {"nodeId": "S01", "start": True},
+            {"nodeId": "S13", "resourceStock": {"FAST_HORSE": 1}},
+            {"nodeId": "S14", "processRound": 6},
+            {"nodeId": "S15", "terminal": True},
+        ]
+        tasks = [
+            {
+                "taskId": "T06_013",
+                "nodeId": "S13",
+                "score": 30,
+                "processRound": 3,
+                "requiredResourceTypes": ["FAST_HORSE"],
+                "active": True,
+            }
+        ]
+        snap = snapshot(memory, currentNodeId="S13", taskScore=60, nodes=nodes, tasks=tasks, round_no=560)
         self.assertEqual(engine.decide(context, snap), [{"action": "MOVE", "targetNodeId": "S14"}])
 
     def test_skips_resource_opponent_is_processing_same_resource(self):
