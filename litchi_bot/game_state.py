@@ -47,6 +47,7 @@ class GameMemory:
     context: GameContext | None = None
     completed_process_nodes: set[str] = field(default_factory=set)
     process_idle_yield_counts: dict[str, int] = field(default_factory=dict)
+    process_contest_counts: dict[str, int] = field(default_factory=dict)
     completed_tasks: set[str] = field(default_factory=set)
     process_required_task_ids: set[str] = field(default_factory=set)
     process_required_task_nodes: set[str] = field(default_factory=set)
@@ -115,6 +116,8 @@ class GameMemory:
                 node_id = payload.get("targetNodeId") or payload.get("nodeId")
                 if node_id and self._is_fixed_node_process_complete(payload):
                     self.completed_process_nodes.add(str(node_id))
+                    self.process_contest_counts.pop(str(node_id), None)
+                    self.process_idle_yield_counts.pop(str(node_id), None)
                     self.process_required_task_nodes.discard(str(node_id))
             elif event_type == "TASK_COMPLETE":
                 task_id = payload.get("taskId")
@@ -129,6 +132,7 @@ class GameMemory:
             payload = result.get("payload") or result
             if payload.get("playerId") is not None and not same_player_id(payload.get("playerId"), self.player_id):
                 continue
+            self._record_process_contest(payload, current_node_id)
             self._recover_from_rejection(payload, current_node_id)
 
     @staticmethod
@@ -136,6 +140,19 @@ class GameMemory:
         action = str(payload.get("action") or "").upper()
         object_key = str(payload.get("objectKey") or "")
         return action == "PROCESS" or object_key.startswith("PROCESS:")
+
+    def _record_process_contest(self, payload: dict[str, Any], current_node_id: Any = None) -> None:
+        if str(payload.get("action") or "").upper() != "PROCESS":
+            return
+        if payload.get("accepted") is not True:
+            return
+        result_text = f"{payload.get('result') or ''} {payload.get('message') or ''}".upper()
+        if "CONTEST_CREATED" not in result_text:
+            return
+        node_id = payload.get("targetNodeId") or payload.get("currentNodeId") or payload.get("nodeId") or current_node_id
+        if node_id:
+            node_key = str(node_id)
+            self.process_contest_counts[node_key] = self.process_contest_counts.get(node_key, 0) + 1
 
     def _recover_from_rejection(self, payload: dict[str, Any], current_node_id: Any = None) -> None:
         if str(payload.get("errorCode") or "").upper() != "PROCESS_REQUIRED":

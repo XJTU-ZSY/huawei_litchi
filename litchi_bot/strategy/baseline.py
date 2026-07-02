@@ -371,21 +371,35 @@ class BaselineStrategy:
         if opponent.get("delivered") or opponent_state in {"DELIVERED", "RETIRED", "MOVING"}:
             self._clear_process_yield(str(current))
             return False
-        if not self._loses_process_tie(context.player_id, opponent.get("playerId")):
+        current_key = str(current)
+        loses_tie = self._loses_process_tie(context.player_id, opponent.get("playerId"))
+        contested_count = self.memory.process_contest_counts.get(current_key, 0)
+        should_yield = (not loses_tie) if contested_count > 0 else loses_tie
+        if not should_yield:
             self._clear_process_yield(str(current))
             return False
 
-        current_key = str(current)
         if opponent_state == "IDLE":
             yielded = self.memory.process_idle_yield_counts.get(current_key, 0)
             if yielded < IDLE_PROCESS_YIELD_LIMIT:
                 self.memory.process_idle_yield_counts[current_key] = yielded + 1
-                self.last_reason = f"yield process node {current} to opponent {opponent.get('playerId')}"
+                if contested_count > 0:
+                    self.last_reason = (
+                        f"back off process node {current} after {contested_count} contest(s) "
+                        f"with opponent {opponent.get('playerId')}"
+                    )
+                else:
+                    self.last_reason = f"yield process node {current} to opponent {opponent.get('playerId')}"
                 return True
             return False
 
         if opponent_state in FIXED_PROCESS_BUSY_STATES:
-            self.last_reason = f"wait for opponent {opponent.get('playerId')} at process node {current}"
+            if contested_count > 0:
+                self.last_reason = (
+                    f"wait after process contest for opponent {opponent.get('playerId')} at node {current}"
+                )
+            else:
+                self.last_reason = f"wait for opponent {opponent.get('playerId')} at process node {current}"
             return True
 
         self._clear_process_yield(current_key)

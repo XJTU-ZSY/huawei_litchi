@@ -315,6 +315,105 @@ class DecisionTest(unittest.TestCase):
         )
         self.assertEqual(engine.decide(context, snap), [{"action": "PROCESS", "targetNodeId": "S02"}])
 
+    def test_high_id_backs_off_after_process_contest_created(self):
+        memory = GameMemory(2002)
+        context = memory.apply_start(START)
+        engine = DecisionEngine(memory)
+        nodes = [
+            {"nodeId": "S01", "start": True},
+            {"nodeId": "S02", "processType": "TRANSFER", "processRound": 4},
+            {"nodeId": "S14"},
+            {"nodeId": "S15", "terminal": True},
+        ]
+        contest_created = {
+            "round": 43,
+            "playerId": 2002,
+            "action": "PROCESS",
+            "accepted": True,
+            "result": "ACCEPTED",
+            "message": "CONTEST_CREATED",
+        }
+
+        snap = snapshot(
+            memory,
+            playerId=2002,
+            teamId="BLUE",
+            currentNodeId="S02",
+            nodes=nodes,
+            action_results=[contest_created],
+            opponent_overrides={"playerId": 1001, "teamId": "RED", "currentNodeId": "S02", "state": "IDLE"},
+        )
+
+        self.assertEqual(engine.decide(context, snap), [])
+        self.assertIn("back off process node S02", engine.last_reason)
+
+    def test_process_contest_backoff_waits_while_opponent_is_busy(self):
+        memory = GameMemory(2002)
+        context = memory.apply_start(START)
+        engine = DecisionEngine(memory)
+        memory.process_contest_counts["S02"] = 1
+        nodes = [
+            {"nodeId": "S01", "start": True},
+            {"nodeId": "S02", "processType": "TRANSFER", "processRound": 4},
+            {"nodeId": "S14"},
+            {"nodeId": "S15", "terminal": True},
+        ]
+
+        snap = snapshot(
+            memory,
+            playerId=2002,
+            teamId="BLUE",
+            currentNodeId="S02",
+            nodes=nodes,
+            opponent_overrides={"playerId": 1001, "teamId": "RED", "currentNodeId": "S02", "state": "PROCESSING"},
+        )
+
+        self.assertEqual(engine.decide(context, snap), [])
+        self.assertIn("wait after process contest", engine.last_reason)
+
+    def test_process_contest_backoff_is_bounded_when_opponent_stays_idle(self):
+        memory = GameMemory(2002)
+        context = memory.apply_start(START)
+        engine = DecisionEngine(memory)
+        memory.process_contest_counts["S02"] = 1
+        memory.process_idle_yield_counts["S02"] = 1
+        nodes = [
+            {"nodeId": "S01", "start": True},
+            {"nodeId": "S02", "processType": "TRANSFER", "processRound": 4},
+            {"nodeId": "S14"},
+            {"nodeId": "S15", "terminal": True},
+        ]
+
+        snap = snapshot(
+            memory,
+            playerId=2002,
+            teamId="BLUE",
+            currentNodeId="S02",
+            nodes=nodes,
+            opponent_overrides={"playerId": 1001, "teamId": "RED", "currentNodeId": "S02", "state": "IDLE"},
+        )
+
+        self.assertEqual(engine.decide(context, snap), [{"action": "PROCESS", "targetNodeId": "S02"}])
+
+    def test_low_id_processes_after_recorded_contest_to_avoid_double_yield(self):
+        memory, context, engine = self.make_engine()
+        memory.process_contest_counts["S02"] = 1
+        nodes = [
+            {"nodeId": "S01", "start": True},
+            {"nodeId": "S02", "processType": "TRANSFER", "processRound": 4},
+            {"nodeId": "S14"},
+            {"nodeId": "S15", "terminal": True},
+        ]
+
+        snap = snapshot(
+            memory,
+            currentNodeId="S02",
+            nodes=nodes,
+            opponent_overrides={"playerId": 2002, "currentNodeId": "S02", "state": "IDLE"},
+        )
+
+        self.assertEqual(engine.decide(context, snap), [{"action": "PROCESS", "targetNodeId": "S02"}])
+
     def test_rest_completion_does_not_complete_fixed_node_process(self):
         memory, context, engine = self.make_engine()
         nodes = [
