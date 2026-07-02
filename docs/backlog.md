@@ -16,6 +16,22 @@ Validation:
 
 Status: done
 
+### 000A. 回放目录自动监控
+
+Priority: P0
+
+Expected behavior:
+- 监控指定回放目录中新出现且已稳定写完的回放文件。
+- 自动生成回放分析报告和 coach 需求卡。
+- 默认输出到 `.replay_watch/`，避免持续污染 git。
+- 可选 `--append-backlog` 将需求卡追加到 `docs/backlog.md`。
+
+Validation:
+- `python -B tools/watch_replays.py <folder> --player-id <playerId> --once`
+- `python -B tools/quality_gate.py`
+
+Status: done
+
 ### 001. 最小可运行 Python 客户端
 
 Priority: P0

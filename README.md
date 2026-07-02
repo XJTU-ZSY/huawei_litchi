@@ -9,6 +9,7 @@
 
 ```bash
 python -B tools/quality_gate.py
+python -B tools/watch_replays.py replays --player-id <playerId>
 python -B -m unittest
 python -B tools/analyze_replay.py <replay-file> --player-id <playerId>
 python -B tools/package.py
@@ -18,4 +19,16 @@ python -B tools/package.py
 
 ```bash
 python -B tools/quality_gate.py --replay replays/match_001.json --player-id 1001
+```
+
+持续监控回放目录：
+
+```bash
+python -B tools/watch_replays.py replays --player-id 1001
+```
+
+默认报告写入 `.replay_watch/reports/`，不会污染 git。若希望把生成的需求卡追加到 `docs/backlog.md`：
+
+```bash
+python -B tools/watch_replays.py replays --player-id 1001 --append-backlog
 ```

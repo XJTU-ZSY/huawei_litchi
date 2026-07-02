@@ -71,3 +71,25 @@ python -B tools/quality_gate.py --replay replays/match_001.json --player-id 1001
 ```
 
 默认要求被检查玩家的 `ACTION_REJECTED` 和 `INVALID_ACTION` 都为 0。必要时可用 `--max-rejected` 和 `--max-invalid` 为特定回放设置阈值。
+
+## 回放目录监控
+
+长期监控某个回放目录：
+
+```bash
+python -B tools/watch_replays.py replays --player-id 1001
+```
+
+流程：
+
+1. watcher 轮询目录中的 `.json/.jsonl/.log/.txt/.replay` 文件。
+2. 等文件稳定后交给 `$litchi-replay-analyst` 对应的分析逻辑。
+3. 自动生成符合 `$litchi-coach` 需求卡格式的报告。
+4. 默认报告写入 `.replay_watch/reports/`，处理状态写入 `.replay_watch/state.json`。
+5. 加 `--append-backlog` 时，将需求卡追加到 `docs/backlog.md`。
+
+测试或手动批处理时只扫描一次：
+
+```bash
+python -B tools/watch_replays.py replays --player-id 1001 --once
+```

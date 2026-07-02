@@ -2,6 +2,7 @@ __pycache__/
 *.py[cod]
 logs/
 dist/
+.replay_watch/
 *.zip
 .codex/*
 !.codex/skills/

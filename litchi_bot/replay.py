@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from collections import Counter, defaultdict
+from collections import Counter
 from pathlib import Path
 from typing import Any
 
@@ -30,13 +30,20 @@ def analyze_messages(messages: list[dict[str, Any]], player_id: int | str | None
     window_cards: Counter[str] = Counter()
     scores: dict[str, Any] = {}
     deliveries: dict[str, Any] = {}
+    final_players: dict[str, Any] = {}
+    latest_players: dict[str, Any] = {}
 
     for message in messages:
         name = message.get("msg_name")
         data = message.get("msg_data") or message
         if name == "over":
             for player in data.get("players") or []:
-                scores[str(player.get("playerId"))] = player.get("totalScore")
+                player_key = str(player.get("playerId"))
+                scores[player_key] = player.get("totalScore")
+                final_players[player_key] = player
+        for player in data.get("players") or []:
+            if player.get("playerId") is not None:
+                latest_players[str(player.get("playerId"))] = player
         for event in data.get("events") or []:
             event_type = str(event.get("type"))
             payload = event.get("payload") or {}
@@ -67,6 +74,8 @@ def analyze_messages(messages: list[dict[str, Any]], player_id: int | str | None
         "windowCards": dict(window_cards),
         "scores": scores,
         "deliveries": deliveries,
+        "finalPlayers": final_players,
+        "latestPlayers": latest_players,
     }
 
 
