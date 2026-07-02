@@ -26,6 +26,7 @@ MIN_HORSE_TRAVEL_ROUNDS = 8
 ROUND_MS = 1000
 DEFAULT_GATE_VERIFY_ROUNDS = 6
 ENDGAME_TASK_SAFETY_MARGIN_ROUNDS = 10
+DELIVERY_CLOSURE_SAFETY_MARGIN_ROUNDS = 20
 
 
 class BaselineStrategy:
@@ -231,6 +232,67 @@ class BaselineStrategy:
         if cost is None:
             return None
         return ceil(cost / ROUND_MS)
+
+    def _estimated_delivery_closure_rounds(
+        self,
+        context: GameContext,
+        snapshot: GameSnapshot,
+        start: str,
+        *,
+        assumed_completed_process_nodes: set[str] | None = None,
+    ) -> int | None:
+        player = snapshot.self_player
+        completed = set(self.memory.completed_process_nodes)
+        completed.update(assumed_completed_process_nodes or set())
+
+        if player.get("verified"):
+            terminal_path = self._path_to(context, snapshot, start, context.terminal_node_id)
+            if not terminal_path:
+                return None
+            terminal_rounds = self._path_rounds(context, snapshot, terminal_path, completed)
+            if terminal_rounds is None:
+                return None
+            return terminal_rounds + 1
+
+        gate_path = self._path_to(context, snapshot, start, context.gate_node_id)
+        terminal_path = self._path_to(context, snapshot, context.gate_node_id, context.terminal_node_id)
+        if not gate_path or not terminal_path:
+            return None
+        gate_rounds = self._path_rounds(context, snapshot, gate_path, completed)
+        terminal_rounds = self._path_rounds(context, snapshot, terminal_path, completed)
+        if gate_rounds is None or terminal_rounds is None:
+            return None
+        return gate_rounds + self._gate_verify_rounds(context, snapshot) + terminal_rounds + 1
+
+    def _path_to(
+        self, context: GameContext, snapshot: GameSnapshot, start: str, target: str
+    ) -> list[str]:
+        path = context.graph.shortest_path(start, target, blocked=self._blocked_nodes(context, snapshot))
+        if not path:
+            path = context.graph.shortest_path(start, target)
+        return path
+
+    def _path_rounds(
+        self,
+        context: GameContext,
+        snapshot: GameSnapshot,
+        path: list[str],
+        completed_process_nodes: set[str],
+    ) -> int | None:
+        cost = context.graph.path_cost(path)
+        if cost is None:
+            return None
+        process_rounds = 0
+        for node_id in path:
+            if node_id in {context.gate_node_id, context.terminal_node_id}:
+                continue
+            if node_id in completed_process_nodes:
+                continue
+            node = snapshot.nodes_by_id.get(node_id, {})
+            process_round = int(node.get("processRound") or 0)
+            if node.get("processType") and process_round > 0:
+                process_rounds += process_round
+        return ceil(cost / ROUND_MS) + process_rounds
 
     def _gate_verify_rounds(self, context: GameContext, snapshot: GameSnapshot) -> int:
         gate = snapshot.nodes_by_id.get(context.gate_node_id, {})
@@ -449,6 +511,8 @@ class BaselineStrategy:
             if not self._task_available_for_self(context, task, snapshot.self_player):
                 continue
             if str(task.get("nodeId")) == str(current):
+                if not self._has_endgame_slack_for_task(context, snapshot, task):
+                    continue
                 self.last_reason = f"claim current task {task.get('taskId')}"
                 return {"action": "CLAIM_TASK", "taskId": task["taskId"]}
         return None
@@ -535,9 +599,50 @@ class BaselineStrategy:
                 continue
             path = context.graph.shortest_path(str(current), node_id, blocked=blocked)
             if path and (not best_path or len(path) < len(best_path)):
+                if not self._has_endgame_slack_for_task(context, snapshot, task):
+                    continue
                 best_path = path
                 best_task = task
         return best_task
+
+    def _has_endgame_slack_for_task(
+        self, context: GameContext, snapshot: GameSnapshot, task: dict[str, Any]
+    ) -> bool:
+        current = str(snapshot.self_player.get("currentNodeId") or "")
+        task_node = str(task.get("nodeId") or "")
+        if not current or not task_node:
+            return False
+        if snapshot.phase == "RUSH":
+            return False
+
+        path = self._path_to(context, snapshot, current, task_node)
+        if not path:
+            return False
+        travel_rounds = self._path_rounds(context, snapshot, path, self.memory.completed_process_nodes)
+        if travel_rounds is None:
+            return False
+
+        task_rounds = int(task.get("processRound") or 0)
+        expire_round = int(task.get("expireRound") or 0)
+        if expire_round and snapshot.round_no + travel_rounds + task_rounds > expire_round:
+            return False
+
+        assumed_completed = set(self.memory.completed_process_nodes)
+        node = snapshot.nodes_by_id.get(task_node, {})
+        if node.get("processType") and int(node.get("processRound") or 0) > 0:
+            assumed_completed.add(task_node)
+        closure_rounds = self._estimated_delivery_closure_rounds(
+            context,
+            snapshot,
+            task_node,
+            assumed_completed_process_nodes=assumed_completed,
+        )
+        if closure_rounds is None:
+            return False
+
+        remaining_rounds = context.duration_round - snapshot.round_no
+        required_rounds = travel_rounds + task_rounds + closure_rounds
+        return remaining_rounds >= required_rounds + ENDGAME_TASK_SAFETY_MARGIN_ROUNDS
 
     def _move_toward(self, context: GameContext, snapshot: GameSnapshot, target: str) -> dict[str, Any] | None:
         current = snapshot.self_player.get("currentNodeId")
@@ -577,6 +682,14 @@ class BaselineStrategy:
             return True
         if snapshot.round_no >= min(430, context.duration_round - 120):
             return True
+        current = str(player.get("currentNodeId") or "")
+        if current:
+            closure_rounds = self._estimated_delivery_closure_rounds(context, snapshot, current)
+            remaining_rounds = context.duration_round - snapshot.round_no
+            if closure_rounds is not None and (
+                remaining_rounds <= closure_rounds + DELIVERY_CLOSURE_SAFETY_MARGIN_ROUNDS
+            ):
+                return True
         if float(player.get("freshness") or 0) <= 20:
             return True
         if int(player.get("goodFruit") or 0) <= 5:
