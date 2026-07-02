@@ -266,6 +266,7 @@ class DecisionTest(unittest.TestCase):
         snap = snapshot(
             memory,
             currentNodeId="S02",
+            taskScore=90,
             nodes=nodes,
             opponent_overrides={"playerId": 2002, "currentNodeId": "S02", "state": "IDLE"},
         )
@@ -275,6 +276,7 @@ class DecisionTest(unittest.TestCase):
         retry = snapshot(
             memory,
             currentNodeId="S02",
+            taskScore=90,
             nodes=nodes,
             opponent_overrides={"playerId": 2002, "currentNodeId": "S02", "state": "IDLE"},
         )
@@ -291,11 +293,50 @@ class DecisionTest(unittest.TestCase):
         snap = snapshot(
             memory,
             currentNodeId="S02",
+            taskScore=90,
             nodes=nodes,
             opponent_overrides={"playerId": 2002, "currentNodeId": "S02", "state": "PROCESSING"},
         )
         self.assertEqual(engine.decide(context, snap), [])
         self.assertIn("wait for opponent 2002", engine.last_reason)
+
+    def test_competes_for_fixed_process_before_base_task_score_against_idle_opponent(self):
+        memory, context, engine = self.make_engine()
+        nodes = [
+            {"nodeId": "S01", "start": True},
+            {"nodeId": "S02", "processType": "TRANSFER", "processRound": 4},
+            {"nodeId": "S14"},
+            {"nodeId": "S15", "terminal": True},
+        ]
+        snap = snapshot(
+            memory,
+            currentNodeId="S02",
+            taskScore=0,
+            nodes=nodes,
+            opponent_overrides={"playerId": 2002, "currentNodeId": "S02", "state": "IDLE"},
+        )
+
+        self.assertEqual(engine.decide(context, snap), [{"action": "PROCESS", "targetNodeId": "S02"}])
+        self.assertIn("process node S02", engine.last_reason)
+
+    def test_competes_for_fixed_process_before_base_task_score_against_busy_opponent(self):
+        memory, context, engine = self.make_engine()
+        nodes = [
+            {"nodeId": "S01", "start": True},
+            {"nodeId": "S02", "processType": "TRANSFER", "processRound": 4},
+            {"nodeId": "S14"},
+            {"nodeId": "S15", "terminal": True},
+        ]
+        snap = snapshot(
+            memory,
+            currentNodeId="S02",
+            taskScore=0,
+            nodes=nodes,
+            opponent_overrides={"playerId": 2002, "currentNodeId": "S02", "state": "PROCESSING"},
+        )
+
+        self.assertEqual(engine.decide(context, snap), [{"action": "PROCESS", "targetNodeId": "S02"}])
+        self.assertIn("process node S02", engine.last_reason)
 
     def test_competes_for_fixed_process_when_current_task_is_available(self):
         memory, context, engine = self.make_engine()

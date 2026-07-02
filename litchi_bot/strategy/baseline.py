@@ -23,6 +23,7 @@ HORSE_TRANSFER_PROCESS_TYPES = {"HORSE_TRANSFER"}
 LOW_VALUE_CONTEST_RESOURCES = {"OFFICIAL_PERMIT", "BOAT_RIGHT"}
 FIXED_PROCESS_BUSY_STATES = {"PROCESSING", "VERIFYING", "RESTING", "CONTESTING"}
 IDLE_PROCESS_YIELD_LIMIT = 1
+EARLY_PROCESS_RACE_TASK_SCORE = 90
 TASK_GATED_PROCESS_TARGET_SCORE = 105
 ENDGAME_TASK_SAFETY_BUFFER_ROUNDS = 10
 DELIVERY_SUBMIT_BUFFER_ROUNDS = 2
@@ -130,6 +131,10 @@ class BaselineStrategy:
         process_type = node.get("processType")
         process_round = int(node.get("processRound") or 0)
         if not process_type or process_round <= 0 or current in {context.gate_node_id, context.terminal_node_id}:
+            self._clear_process_yield(str(current))
+            return False
+
+        if self._ordinary_task_base_score(context, snapshot) < EARLY_PROCESS_RACE_TASK_SCORE:
             self._clear_process_yield(str(current))
             return False
 
