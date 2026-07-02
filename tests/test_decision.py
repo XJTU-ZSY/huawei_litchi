@@ -271,6 +271,63 @@ class DecisionTest(unittest.TestCase):
             [{"action": "CLAIM_RESOURCE", "targetNodeId": "S02", "resourceType": "FAST_HORSE"}],
         )
 
+    def test_skips_resource_opponent_is_already_claiming(self):
+        memory, context, engine = self.make_engine()
+        nodes = [
+            {"nodeId": "S01", "start": True},
+            {"nodeId": "S02", "resourceStock": {"ICE_BOX": 1, "FAST_HORSE": 1}},
+            {"nodeId": "S14"},
+            {"nodeId": "S15", "terminal": True},
+        ]
+        snap = snapshot(
+            memory,
+            currentNodeId="S02",
+            nodes=nodes,
+            opponent_overrides={
+                "currentNodeId": "S02",
+                "state": "PROCESSING",
+                "currentProcess": {
+                    "action": "CLAIM_RESOURCE",
+                    "objectKey": "RESOURCE:S02:FAST_HORSE",
+                    "targetNodeId": "S02",
+                    "resourceType": "FAST_HORSE",
+                    "remainRound": 1,
+                },
+            },
+        )
+
+        self.assertEqual(
+            engine.decide(context, snap),
+            [{"action": "CLAIM_RESOURCE", "targetNodeId": "S02", "resourceType": "ICE_BOX"}],
+        )
+
+    def test_does_not_claim_only_resource_opponent_is_already_claiming(self):
+        memory, context, engine = self.make_engine()
+        nodes = [
+            {"nodeId": "S01", "start": True},
+            {"nodeId": "S02", "resourceStock": {"FAST_HORSE": 1}},
+            {"nodeId": "S14"},
+            {"nodeId": "S15", "terminal": True},
+        ]
+        snap = snapshot(
+            memory,
+            currentNodeId="S02",
+            nodes=nodes,
+            opponent_overrides={
+                "currentNodeId": "S02",
+                "state": "PROCESSING",
+                "currentProcess": {
+                    "action": "CLAIM_RESOURCE",
+                    "objectKey": "RESOURCE:S02:FAST_HORSE",
+                    "targetNodeId": "S02",
+                    "resourceType": "FAST_HORSE",
+                    "remainRound": 1,
+                },
+            },
+        )
+
+        self.assertEqual(engine.decide(context, snap), [{"action": "MOVE", "targetNodeId": "S14"}])
+
     def test_endgame_preempts_optional_task_and_resource(self):
         memory, context, engine = self.make_engine()
         nodes = [

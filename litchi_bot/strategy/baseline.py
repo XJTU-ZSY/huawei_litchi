@@ -178,10 +178,46 @@ class BaselineStrategy:
         current = snapshot.self_player.get("currentNodeId")
         node = snapshot.nodes_by_id.get(str(current), {})
         stock = node.get("resourceStock") or {}
+        contested = self._opponent_claiming_resources_at_current(snapshot, current)
         for resource_type in RESOURCE_PRIORITY:
             if int(stock.get(resource_type) or 0) > 0:
+                if resource_type in contested:
+                    continue
                 self.last_reason = f"claim resource {resource_type} at {current}"
                 return {"action": "CLAIM_RESOURCE", "targetNodeId": str(current), "resourceType": resource_type}
+        if contested:
+            self.last_reason = f"skip contested resources at {current}: {','.join(sorted(contested))}"
+        return None
+
+    def _opponent_claiming_resources_at_current(self, snapshot: GameSnapshot, current: Any) -> set[str]:
+        if current is None:
+            return set()
+        opponent = snapshot.opponent_player or {}
+        if str(opponent.get("currentNodeId") or "") != str(current):
+            return set()
+        process = opponent.get("currentProcess") or {}
+        if str(process.get("action") or "").upper() != "CLAIM_RESOURCE":
+            return set()
+        target_node = process.get("targetNodeId") or self._resource_node_from_object_key(process.get("objectKey"))
+        if target_node is not None and str(target_node) != str(current):
+            return set()
+        resource_type = process.get("resourceType") or self._resource_type_from_object_key(process.get("objectKey"))
+        if not resource_type:
+            return set()
+        return {str(resource_type)}
+
+    @staticmethod
+    def _resource_node_from_object_key(object_key: Any) -> str | None:
+        parts = str(object_key or "").split(":")
+        if len(parts) >= 3 and parts[0] == "RESOURCE":
+            return parts[1]
+        return None
+
+    @staticmethod
+    def _resource_type_from_object_key(object_key: Any) -> str | None:
+        parts = str(object_key or "").split(":")
+        if len(parts) >= 3 and parts[0] == "RESOURCE":
+            return parts[2]
         return None
 
     def _choose_destination(self, context: GameContext, snapshot: GameSnapshot) -> str | None:
