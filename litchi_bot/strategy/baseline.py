@@ -23,6 +23,7 @@ HORSE_TRANSFER_PROCESS_TYPES = {"HORSE_TRANSFER"}
 LOW_VALUE_CONTEST_RESOURCES = {"OFFICIAL_PERMIT", "BOAT_RIGHT"}
 LOW_YIELD_OPTIONAL_RESOURCES = {"INTEL", "PASS_TOKEN", "OFFICIAL_PERMIT", "BOAT_RIGHT"}
 BASE_TASK_RESOURCE_SCORE = 90
+LOW_VALUE_ROUTE_TASK_SCORE = 15
 FIXED_PROCESS_BUSY_STATES = {"PROCESSING", "VERIFYING", "RESTING", "CONTESTING"}
 IDLE_PROCESS_YIELD_LIMIT = 1
 DRAWN_PROCESS_PRESSURE_RETRY_LIMIT = 1
@@ -158,6 +159,18 @@ class BaselineStrategy:
             return None
 
         for task in self._current_available_tasks(context, snapshot):
+            downstream_task = self._downstream_replacement_task_after_process(
+                context,
+                snapshot,
+                task,
+                process_round,
+            )
+            if downstream_task is not None:
+                self.last_reason = (
+                    f"defer low-value task {task.get('taskId')} for downstream task "
+                    f"{downstream_task.get('taskId')}"
+                )
+                continue
             if self._task_required_resources(context, task):
                 continue
             if self._missing_task_resources(context, snapshot, task):
@@ -167,6 +180,63 @@ class BaselineStrategy:
                 continue
             self.last_reason = f"claim current task {task.get('taskId')} before process {current}"
             return {"action": "CLAIM_TASK", "taskId": task["taskId"]}
+        return None
+
+    def _downstream_replacement_task_after_process(
+        self,
+        context: GameContext,
+        snapshot: GameSnapshot,
+        current_task: dict[str, Any],
+        process_rounds: int,
+    ) -> dict[str, Any] | None:
+        if self._ordinary_task_base_score(context, snapshot) < BASE_TASK_RESOURCE_SCORE:
+            return None
+        current_task_score = int(current_task.get("score") or 0)
+        if current_task_score <= 0 or current_task_score > LOW_VALUE_ROUTE_TASK_SCORE:
+            return None
+        if self._task_required_resources(context, current_task):
+            return None
+        if self._missing_task_resources(context, snapshot, current_task):
+            return None
+
+        current = str(snapshot.self_player.get("currentNodeId") or "")
+        if not current:
+            return None
+        target = context.terminal_node_id if snapshot.self_player.get("verified") else context.gate_node_id
+        blocked = self._blocked_nodes(context, snapshot)
+        path = context.graph.shortest_path(current, target, blocked=blocked)
+        if not path or len(path) < 2:
+            return None
+
+        for task in sorted(snapshot.tasks, key=self._task_sort_key):
+            if task is current_task:
+                continue
+            if int(task.get("score") or 0) < current_task_score:
+                continue
+            if not self._task_available_for_self(context, task):
+                continue
+            if self._task_claim_skipped(snapshot, task):
+                continue
+            if self._missing_task_resources(context, snapshot, task):
+                continue
+            node_id = str(task.get("nodeId") or "")
+            if not node_id or node_id == current or node_id in blocked:
+                continue
+            if node_id not in path[1:]:
+                continue
+            node_index = path.index(node_id)
+            travel_rounds = context.graph.path_movement_rounds(path[: node_index + 1])
+            if travel_rounds is None:
+                continue
+            if not self._can_finish_after_remote_task(
+                context,
+                snapshot,
+                task,
+                node_id,
+                process_rounds + travel_rounds,
+            ):
+                continue
+            return task
         return None
 
     def _gate_verify_action(self, context: GameContext, snapshot: GameSnapshot) -> dict[str, Any]:
