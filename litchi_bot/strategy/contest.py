@@ -9,6 +9,10 @@ TASK_CONTEST_TYPES = {"TASK"}
 BING_CONTEST_TYPES = {"GATE", "TASK", "PASS", "OBSTACLE"}
 SPEED_BUFF_TYPES = {"FAST_HORSE", "SHORT_HORSE", "RUSH_SPEED"}
 WINDOW_CARDS = {"YAN_DIE", "QIANG_XING", "XIAN_GONG", "BING_ZHENG", "ABSTAIN"}
+EARLY_PROCESS_TEMPO_ROUND_NUMERATOR = 35
+EARLY_PROCESS_TEMPO_ROUND_DENOMINATOR = 100
+TEMPO_TASK_MIN_SCORE = 30
+TEMPO_TASK_MAX_TRAVEL_MS = 120_000
 
 COUNTER_CARD_PREFERENCE = {
     "YAN_DIE": ("BING_ZHENG", "XIAN_GONG", "YAN_DIE", "ABSTAIN"),
@@ -24,7 +28,7 @@ class WindowCardSelector:
         contest = self._active_contest_for_self(context, snapshot)
         if contest is None:
             return None
-        card = self._choose_card(context, snapshot.self_player, contest)
+        card = self._choose_card(context, snapshot, contest)
         return {"action": "WINDOW_CARD", "contestId": contest["contestId"], "card": card}
 
     def _active_contest_for_self(self, context: GameContext, snapshot: GameSnapshot) -> dict[str, Any] | None:
@@ -39,11 +43,12 @@ class WindowCardSelector:
                 return contest
         return None
 
-    def _choose_card(self, context: GameContext, player: dict[str, Any], contest: dict[str, Any]) -> str:
+    def _choose_card(self, context: GameContext, snapshot: GameSnapshot, contest: dict[str, Any]) -> str:
         contest_type = str(contest.get("contestType") or "").upper()
+        player = snapshot.self_player
         affordable = self._affordable_cards(player)
 
-        low_value_card = self._low_value_process_card(context, contest, affordable)
+        low_value_card = self._low_value_process_card(context, snapshot, contest, affordable)
         if low_value_card is not None:
             return low_value_card
 
@@ -65,7 +70,7 @@ class WindowCardSelector:
         return "ABSTAIN"
 
     def _low_value_process_card(
-        self, context: GameContext, contest: dict[str, Any], affordable: set[str]
+        self, context: GameContext, snapshot: GameSnapshot, contest: dict[str, Any], affordable: set[str]
     ) -> str | None:
         if not self._is_fixed_process_contest(context, contest):
             return None
@@ -75,8 +80,65 @@ class WindowCardSelector:
         if opponent_card == "XIAN_GONG" and "QIANG_XING" not in affordable and self._should_defer_process_after_draw(
             context
         ):
+            if "XIAN_GONG" in affordable and self._fixed_process_tempo_is_worth_xian_gong(
+                context, snapshot, contest
+            ):
+                return "XIAN_GONG"
             return "ABSTAIN"
         return None
+
+    def _fixed_process_tempo_is_worth_xian_gong(
+        self, context: GameContext, snapshot: GameSnapshot, contest: dict[str, Any]
+    ) -> bool:
+        if str(snapshot.phase or "").upper() != "NORMAL":
+            return False
+        early_limit = max(
+            1,
+            int(context.duration_round * EARLY_PROCESS_TEMPO_ROUND_NUMERATOR / EARLY_PROCESS_TEMPO_ROUND_DENOMINATOR),
+        )
+        if int(snapshot.round_no or 0) > early_limit:
+            return False
+
+        current = str(snapshot.self_player.get("currentNodeId") or "")
+        if not current:
+            current = self._process_node_from_contest(contest) or ""
+        if not current:
+            return False
+
+        for task in snapshot.tasks:
+            if not self._is_open_high_value_task(context, task):
+                continue
+            node_id = str(task.get("nodeId") or "")
+            if not node_id:
+                continue
+            path = context.graph.shortest_path(current, node_id)
+            if not path:
+                continue
+            cost = context.graph.path_cost(path)
+            if cost is not None and cost <= TEMPO_TASK_MAX_TRAVEL_MS:
+                return True
+        return False
+
+    @staticmethod
+    def _process_node_from_contest(contest: dict[str, Any]) -> str | None:
+        parts = str(contest.get("objectKey") or "").split(":")
+        if len(parts) >= 2 and parts[0] == "PROCESS":
+            return parts[1]
+        return None
+
+    @staticmethod
+    def _is_open_high_value_task(context: GameContext, task: dict[str, Any]) -> bool:
+        if int(task.get("score") or 0) < TEMPO_TASK_MIN_SCORE:
+            return False
+        if task.get("completed") or task.get("failed") or task.get("active") is False:
+            return False
+        owner = task.get("ownerPlayerId")
+        if owner not in (None, 0, "0") and str(owner) != str(context.player_id):
+            return False
+        protection = task.get("protectionPlayerId")
+        if protection not in (None, 0, "0") and str(protection) != str(context.player_id):
+            return False
+        return True
 
     def _is_fixed_process_contest(self, context: GameContext, contest: dict[str, Any]) -> bool:
         if str(contest.get("objectKey") or "").startswith("PROCESS:"):
