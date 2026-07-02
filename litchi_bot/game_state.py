@@ -46,6 +46,7 @@ class GameMemory:
     player_id: int | str
     context: GameContext | None = None
     completed_process_nodes: set[str] = field(default_factory=set)
+    process_idle_yield_counts: dict[str, int] = field(default_factory=dict)
     completed_tasks: set[str] = field(default_factory=set)
     rejected_actions: list[dict[str, Any]] = field(default_factory=list)
 

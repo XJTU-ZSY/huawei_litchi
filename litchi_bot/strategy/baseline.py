@@ -16,6 +16,9 @@ RESOURCE_PRIORITY = [
     "BOAT_RIGHT",
 ]
 
+FIXED_PROCESS_BUSY_STATES = {"PROCESSING", "VERIFYING", "RESTING", "CONTESTING"}
+IDLE_PROCESS_YIELD_LIMIT = 1
+
 
 class BaselineStrategy:
     def __init__(self, memory: GameMemory) -> None:
@@ -65,6 +68,9 @@ class BaselineStrategy:
             self.last_reason = "rush gate verification"
             return {"action": "VERIFY_GATE"}
 
+        if self._should_yield_fixed_process(context, snapshot):
+            return None
+
         process_action = self._process_current_node(context, snapshot)
         if process_action is not None:
             return process_action
@@ -94,6 +100,62 @@ class BaselineStrategy:
             self.last_reason = f"process node {current}"
             return {"action": "PROCESS", "targetNodeId": str(current)}
         return None
+
+    def _should_yield_fixed_process(self, context: GameContext, snapshot: GameSnapshot) -> bool:
+        current = snapshot.self_player.get("currentNodeId")
+        node = snapshot.nodes_by_id.get(str(current), {})
+        if not current or current in self.memory.completed_process_nodes:
+            return False
+        process_type = node.get("processType")
+        process_round = int(node.get("processRound") or 0)
+        if not process_type or process_round <= 0 or current in {context.gate_node_id, context.terminal_node_id}:
+            self._clear_process_yield(str(current))
+            return False
+
+        opponent = snapshot.opponent_player or {}
+        if str(opponent.get("currentNodeId") or "") != str(current):
+            self._clear_process_yield(str(current))
+            return False
+        opponent_state = str(opponent.get("state") or "IDLE")
+        if opponent.get("delivered") or opponent_state in {"DELIVERED", "RETIRED", "MOVING"}:
+            self._clear_process_yield(str(current))
+            return False
+        if not self._loses_process_tie(context.player_id, opponent.get("playerId")):
+            self._clear_process_yield(str(current))
+            return False
+
+        current_key = str(current)
+        if opponent_state == "IDLE":
+            yielded = self.memory.process_idle_yield_counts.get(current_key, 0)
+            if yielded < IDLE_PROCESS_YIELD_LIMIT:
+                self.memory.process_idle_yield_counts[current_key] = yielded + 1
+                self.last_reason = f"yield process node {current} to opponent {opponent.get('playerId')}"
+                return True
+            return False
+
+        if opponent_state in FIXED_PROCESS_BUSY_STATES:
+            self.last_reason = f"wait for opponent {opponent.get('playerId')} at process node {current}"
+            return True
+
+        self._clear_process_yield(current_key)
+        return False
+
+    def _clear_process_yield(self, node_id: str) -> None:
+        if node_id:
+            self.memory.process_idle_yield_counts.pop(node_id, None)
+
+    @classmethod
+    def _loses_process_tie(cls, self_player_id: Any, opponent_player_id: Any) -> bool:
+        if opponent_player_id is None:
+            return False
+        return cls._player_tie_key(self_player_id) < cls._player_tie_key(opponent_player_id)
+
+    @staticmethod
+    def _player_tie_key(player_id: Any) -> tuple[int, int | str]:
+        text = str(player_id)
+        if text.isdigit():
+            return (0, int(text))
+        return (1, text)
 
     def _claim_current_task(self, context: GameContext, snapshot: GameSnapshot) -> dict[str, Any] | None:
         current = snapshot.self_player.get("currentNodeId")
