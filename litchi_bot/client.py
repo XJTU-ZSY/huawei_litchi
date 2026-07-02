@@ -31,7 +31,7 @@ class LitchiClient:
         logger: logging.Logger | None = None,
     ) -> None:
         self.config = config
-        self.strategy = strategy or BaselineStrategy()
+        self.strategy = strategy or BaselineStrategy(config.player_id)
         self.logger = logger or logging.getLogger(__name__)
         self.match_id: str | None = None
         self.running = True
