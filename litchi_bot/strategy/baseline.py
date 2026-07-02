@@ -435,6 +435,55 @@ class BaselineStrategy:
         )
         return remaining_rounds >= required_rounds
 
+    def _can_finish_after_remote_task(
+        self,
+        context: GameContext,
+        snapshot: GameSnapshot,
+        task: dict[str, Any],
+        task_node_id: str,
+        travel_to_task_rounds: int,
+    ) -> bool:
+        remaining_rounds = context.duration_round - snapshot.round_no
+        if remaining_rounds <= 0:
+            return False
+
+        task_rounds = max(1, int(task.get("processRound") or 1))
+        endgame_travel_rounds = self._endgame_travel_rounds(context, snapshot, task_node_id)
+        if endgame_travel_rounds is None:
+            return False
+        verify_rounds = 0 if snapshot.self_player.get("verified") else self._gate_verify_rounds(context, snapshot)
+        required_rounds = (
+            travel_to_task_rounds
+            + self._remote_task_resource_rounds(context, snapshot, task, task_node_id)
+            + task_rounds
+            + endgame_travel_rounds
+            + verify_rounds
+            + DELIVERY_SUBMIT_BUFFER_ROUNDS
+            + ENDGAME_TASK_SAFETY_BUFFER_ROUNDS
+        )
+        return remaining_rounds >= required_rounds
+
+    def _remote_task_resource_rounds(
+        self,
+        context: GameContext,
+        snapshot: GameSnapshot,
+        task: dict[str, Any],
+        task_node_id: str,
+    ) -> int:
+        missing_resources = self._missing_task_resources(context, snapshot, task)
+        if not missing_resources:
+            return 0
+        node = snapshot.nodes_by_id.get(task_node_id) or {}
+        stock = node.get("resourceStock") or {}
+        if self._task_accepts_horse_resource(context, task) and any(
+            resource_type in HORSE_RESOURCE_TYPES for resource_type in missing_resources
+        ):
+            if any(int(stock.get(resource_type) or 0) > 0 for resource_type in HORSE_RESOURCE_PRIORITY):
+                return 2
+            return 0
+        claimable = sum(1 for resource_type in missing_resources if int(stock.get(resource_type) or 0) > 0)
+        return claimable * 2
+
     def _endgame_travel_rounds(self, context: GameContext, snapshot: GameSnapshot, current: str) -> int | None:
         blocked = self._blocked_nodes(context, snapshot)
         if snapshot.self_player.get("verified"):
@@ -693,6 +742,8 @@ class BaselineStrategy:
                 continue
             rounds = context.graph.path_movement_rounds(path)
             if rounds is None:
+                continue
+            if not self._can_finish_after_remote_task(context, snapshot, task, node_id, rounds):
                 continue
             if best_rounds is None or rounds < best_rounds:
                 best_node_id = node_id

@@ -802,6 +802,68 @@ class DecisionTest(unittest.TestCase):
         snap = snapshot(memory, currentNodeId="S02", taskScore=30, nodes=nodes, round_no=430)
         self.assertEqual(engine.decide(context, snap), [{"action": "MOVE", "targetNodeId": "S14"}])
 
+    def test_late_remote_task_without_delivery_budget_goes_endgame(self):
+        start = {
+            "matchId": "m1",
+            "round": 1,
+            "durationRound": 600,
+            "players": [{"playerId": 1001, "teamId": "RED"}, {"playerId": 2002, "teamId": "BLUE"}],
+            "map": {"gameplay": {"roles": {"startNodeId": "S01", "gateNodeId": "S14", "terminalNodeIds": ["S15"]}}},
+            "nodes": [
+                {"nodeId": "S01", "start": True},
+                {"nodeId": "S07"},
+                {"nodeId": "S12"},
+                {"nodeId": "S13"},
+                {"nodeId": "S14", "processRound": 6},
+                {"nodeId": "S15", "terminal": True},
+            ],
+            "edges": [
+                {"edgeId": "E1", "fromNodeId": "S13", "toNodeId": "S12", "routeType": "ROAD", "distance": 25},
+                {"edgeId": "E2", "fromNodeId": "S12", "toNodeId": "S07", "routeType": "ROAD", "distance": 300},
+                {"edgeId": "E3", "fromNodeId": "S13", "toNodeId": "S14", "routeType": "ROAD", "distance": 18},
+                {"edgeId": "E4", "fromNodeId": "S14", "toNodeId": "S15", "routeType": "ROAD", "distance": 10},
+            ],
+        }
+        memory = GameMemory(1001)
+        context = memory.apply_start(start)
+        engine = DecisionEngine(memory)
+        tasks = [{"taskId": "T02_002", "nodeId": "S07", "score": 30, "processRound": 4, "active": True}]
+        snap = snapshot(memory, currentNodeId="S13", taskScore=75, nodes=start["nodes"], tasks=tasks, round_no=409)
+
+        self.assertEqual(engine.decide(context, snap), [{"action": "MOVE", "targetNodeId": "S14"}])
+        self.assertIn("toward S14", engine.last_reason)
+
+    def test_early_remote_task_with_delivery_budget_is_still_selected(self):
+        start = {
+            "matchId": "m1",
+            "round": 1,
+            "durationRound": 600,
+            "players": [{"playerId": 1001, "teamId": "RED"}, {"playerId": 2002, "teamId": "BLUE"}],
+            "map": {"gameplay": {"roles": {"startNodeId": "S01", "gateNodeId": "S14", "terminalNodeIds": ["S15"]}}},
+            "nodes": [
+                {"nodeId": "S01", "start": True},
+                {"nodeId": "S07"},
+                {"nodeId": "S12"},
+                {"nodeId": "S13"},
+                {"nodeId": "S14", "processRound": 6},
+                {"nodeId": "S15", "terminal": True},
+            ],
+            "edges": [
+                {"edgeId": "E1", "fromNodeId": "S13", "toNodeId": "S12", "routeType": "ROAD", "distance": 1},
+                {"edgeId": "E2", "fromNodeId": "S12", "toNodeId": "S07", "routeType": "ROAD", "distance": 1},
+                {"edgeId": "E3", "fromNodeId": "S13", "toNodeId": "S14", "routeType": "ROAD", "distance": 18},
+                {"edgeId": "E4", "fromNodeId": "S14", "toNodeId": "S15", "routeType": "ROAD", "distance": 10},
+            ],
+        }
+        memory = GameMemory(1001)
+        context = memory.apply_start(start)
+        engine = DecisionEngine(memory)
+        tasks = [{"taskId": "T02_002", "nodeId": "S07", "score": 30, "processRound": 4, "active": True}]
+        snap = snapshot(memory, currentNodeId="S13", taskScore=30, nodes=start["nodes"], tasks=tasks, round_no=10)
+
+        self.assertEqual(engine.decide(context, snap), [{"action": "MOVE", "targetNodeId": "S12"}])
+        self.assertIn("toward S07", engine.last_reason)
+
     def test_endgame_claims_safe_current_task_before_moving(self):
         memory, context, engine = self.make_engine()
         nodes = [
