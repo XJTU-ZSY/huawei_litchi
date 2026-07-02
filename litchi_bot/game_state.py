@@ -48,6 +48,9 @@ class GameMemory:
     completed_process_nodes: set[str] = field(default_factory=set)
     skipped_process_nodes: set[str] = field(default_factory=set)
     active_process_contests: dict[str, str] = field(default_factory=dict)
+    active_resource_contests: dict[str, str] = field(default_factory=dict)
+    skipped_resource_claims: set[str] = field(default_factory=set)
+    drawn_process_yield_counts: dict[str, int] = field(default_factory=dict)
     process_idle_yield_counts: dict[str, int] = field(default_factory=dict)
     completed_tasks: set[str] = field(default_factory=set)
     rejected_actions: list[dict[str, Any]] = field(default_factory=list)
@@ -112,14 +115,15 @@ class GameMemory:
                 continue
             event_type = event.get("type")
             if event_type == "WINDOW_CONTEST_START":
-                self._record_process_contest_start(payload)
+                self._record_window_contest_start(payload)
             elif event_type in {"WINDOW_CONTEST_END", "WINDOW_CONTEST_DRAW"}:
-                self._record_process_contest_result(event_type, payload)
+                self._record_window_contest_result(event_type, payload)
             elif event_type == "PROCESS_COMPLETE":
                 node_id = payload.get("targetNodeId") or payload.get("nodeId")
                 if node_id and self._is_fixed_node_process_complete(payload):
                     self.completed_process_nodes.add(str(node_id))
                     self.skipped_process_nodes.discard(str(node_id))
+                    self.drawn_process_yield_counts.pop(str(node_id), None)
             elif event_type == "TASK_COMPLETE":
                 task_id = payload.get("taskId")
                 if task_id:
@@ -141,13 +145,21 @@ class GameMemory:
         object_key = str(payload.get("objectKey") or "")
         return action == "PROCESS" or object_key.startswith("PROCESS:")
 
-    def _record_process_contest_start(self, payload: dict[str, Any]) -> None:
+    def _record_window_contest_start(self, payload: dict[str, Any]) -> None:
         contest_id = payload.get("contestId")
-        node_id = self._process_node_from_object_key(payload.get("objectKey"), payload.get("targetNodeId"))
-        if contest_id and node_id:
+        if not contest_id:
+            return
+        object_key = str(payload.get("objectKey") or "")
+        contest_type = str(payload.get("contestType") or "").upper()
+        resource_key = self.resource_claim_key_from_object(object_key, payload.get("targetNodeId"), payload.get("resourceType"))
+        if resource_key and (object_key.startswith("RESOURCE:") or contest_type == "RESOURCE"):
+            self.active_resource_contests[str(contest_id)] = resource_key
+            return
+        node_id = self._process_node_from_object_key(object_key, payload.get("targetNodeId"))
+        if node_id:
             self.active_process_contests[str(contest_id)] = node_id
 
-    def _record_process_contest_result(self, event_type: Any, payload: dict[str, Any]) -> None:
+    def _record_window_contest_result(self, event_type: Any, payload: dict[str, Any]) -> None:
         contest_id = payload.get("contestId")
         if not contest_id:
             return
@@ -155,6 +167,10 @@ class GameMemory:
         node_id = self.active_process_contests.pop(str(contest_id), None)
         if is_draw and node_id:
             self.skipped_process_nodes.add(node_id)
+            self.drawn_process_yield_counts.pop(node_id, None)
+        resource_key = self.active_resource_contests.pop(str(contest_id), None)
+        if is_draw and resource_key:
+            self.skipped_resource_claims.add(resource_key)
 
     @staticmethod
     def _process_node_from_object_key(object_key: Any, fallback_node_id: Any = None) -> str | None:
@@ -174,6 +190,27 @@ class GameMemory:
         if node_id:
             self.completed_process_nodes.discard(str(node_id))
             self.skipped_process_nodes.discard(str(node_id))
+            self.drawn_process_yield_counts.pop(str(node_id), None)
+
+    @classmethod
+    def resource_claim_key_from_object(
+        cls,
+        object_key: Any,
+        fallback_node_id: Any = None,
+        fallback_resource_type: Any = None,
+    ) -> str | None:
+        text = str(object_key or "")
+        if text.startswith("RESOURCE:"):
+            parts = text.split(":")
+            if len(parts) >= 3 and parts[1] and parts[2]:
+                return cls.resource_claim_key(parts[1], parts[2])
+        if fallback_node_id and fallback_resource_type:
+            return cls.resource_claim_key(fallback_node_id, fallback_resource_type)
+        return None
+
+    @staticmethod
+    def resource_claim_key(node_id: Any, resource_type: Any) -> str:
+        return f"RESOURCE:{node_id}:{resource_type}"
 
     @staticmethod
     def _find_start_node(nodes: list[dict[str, Any]]) -> str | None:

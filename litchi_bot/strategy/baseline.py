@@ -77,6 +77,9 @@ class BaselineStrategy:
             self.last_reason = "rush gate verification"
             return {"action": "VERIFY_GATE"}
 
+        if self._should_yield_drawn_process(context, snapshot):
+            return None
+
         if self._should_yield_fixed_process(context, snapshot):
             return None
 
@@ -125,6 +128,36 @@ class BaselineStrategy:
             self.last_reason = f"process node {current}"
             return {"action": "PROCESS", "targetNodeId": str(current)}
         return None
+
+    def _should_yield_drawn_process(self, context: GameContext, snapshot: GameSnapshot) -> bool:
+        current = snapshot.self_player.get("currentNodeId")
+        current_key = str(current or "")
+        if not current_key or current_key not in self.memory.skipped_process_nodes:
+            return False
+
+        node = snapshot.nodes_by_id.get(current_key, {})
+        process_type = node.get("processType")
+        process_round = int(node.get("processRound") or 0)
+        if not process_type or process_round <= 0 or current_key in {context.gate_node_id, context.terminal_node_id}:
+            self._clear_drawn_process(current_key)
+            return False
+
+        opponent = snapshot.opponent_player or {}
+        opponent_state = str(opponent.get("state") or "IDLE")
+        if (
+            str(opponent.get("currentNodeId") or "") == current_key
+            and opponent_state == "IDLE"
+            and not opponent.get("delivered")
+            and self._loses_process_tie(context.player_id, opponent.get("playerId"))
+        ):
+            yielded = self.memory.drawn_process_yield_counts.get(current_key, 0)
+            if yielded < 1:
+                self.memory.drawn_process_yield_counts[current_key] = yielded + 1
+                self.last_reason = f"yield drawn process node {current_key} to opponent {opponent.get('playerId')}"
+                return True
+
+        self._clear_drawn_process(current_key)
+        return False
 
     def _should_yield_fixed_process(self, context: GameContext, snapshot: GameSnapshot) -> bool:
         current = snapshot.self_player.get("currentNodeId")
@@ -199,6 +232,11 @@ class BaselineStrategy:
     def _clear_process_yield(self, node_id: str) -> None:
         if node_id:
             self.memory.process_idle_yield_counts.pop(node_id, None)
+
+    def _clear_drawn_process(self, node_id: str) -> None:
+        if node_id:
+            self.memory.skipped_process_nodes.discard(node_id)
+            self.memory.drawn_process_yield_counts.pop(node_id, None)
 
     @classmethod
     def _loses_process_tie(cls, self_player_id: Any, opponent_player_id: Any) -> bool:
@@ -415,6 +453,8 @@ class BaselineStrategy:
         for resource_type in self._sort_resource_types(missing_resources):
             if int(stock.get(resource_type) or 0) <= 0:
                 continue
+            if self._resource_claim_skipped(current, resource_type):
+                continue
             if self._opponent_processing_resource(snapshot, current, resource_type):
                 continue
             self.last_reason = f"claim required resource {resource_type} for task {task.get('taskId')} at {current}"
@@ -504,6 +544,9 @@ class BaselineStrategy:
         skipped: list[str] = []
         for resource_type in RESOURCE_PRIORITY:
             if int(stock.get(resource_type) or 0) > 0:
+                if self._resource_claim_skipped(current, resource_type):
+                    skipped.append(f"{resource_type}:drawn-contest")
+                    continue
                 if self._opponent_processing_resource(snapshot, current, resource_type):
                     skipped.append(f"{resource_type}:opponent-processing")
                     continue
@@ -522,10 +565,18 @@ class BaselineStrategy:
         for resource_type in HORSE_RESOURCE_PRIORITY:
             if int(stock.get(resource_type) or 0) <= 0:
                 continue
+            if self._resource_claim_skipped(current, resource_type):
+                continue
             if self._opponent_processing_resource(snapshot, current, resource_type):
                 continue
             return resource_type
         return None
+
+    def _resource_claim_skipped(self, current: Any, resource_type: str) -> bool:
+        if not current or not resource_type:
+            return False
+        key = self.memory.resource_claim_key(current, resource_type)
+        return key in self.memory.skipped_resource_claims
 
     @staticmethod
     def _has_any_resource(player: dict[str, Any], resource_types: set[str]) -> bool:
@@ -606,8 +657,16 @@ class BaselineStrategy:
         if self._task_accepts_horse_resource(context, task) and any(
             resource_type in HORSE_RESOURCE_TYPES for resource_type in missing_resources
         ):
-            return any(int(stock.get(resource_type) or 0) > 0 for resource_type in HORSE_RESOURCE_PRIORITY)
-        return any(int(stock.get(resource_type) or 0) > 0 for resource_type in missing_resources)
+            return any(
+                int(stock.get(resource_type) or 0) > 0
+                and not self._resource_claim_skipped(node_id, resource_type)
+                for resource_type in HORSE_RESOURCE_PRIORITY
+            )
+        return any(
+            int(stock.get(resource_type) or 0) > 0
+            and not self._resource_claim_skipped(node_id, resource_type)
+            for resource_type in missing_resources
+        )
 
     def _move_toward(self, context: GameContext, snapshot: GameSnapshot, target: str) -> dict[str, Any] | None:
         current = snapshot.self_player.get("currentNodeId")
