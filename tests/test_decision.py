@@ -613,7 +613,7 @@ class DecisionTest(unittest.TestCase):
         ]
         memory.skipped_resource_claims.add("RESOURCE:S02:INTEL")
 
-        snap = snapshot(memory, currentNodeId="S02", taskScore=90, nodes=nodes)
+        snap = snapshot(memory, currentNodeId="S02", taskScore=60, nodes=nodes)
 
         self.assertEqual(
             engine.decide(context, snap),
@@ -698,6 +698,58 @@ class DecisionTest(unittest.TestCase):
         self.assertEqual(
             engine.decide(context, snap),
             [{"action": "CLAIM_RESOURCE", "targetNodeId": "S02", "resourceType": "FAST_HORSE"}],
+        )
+
+    def test_claims_optional_resource_before_base_task_score(self):
+        memory, context, engine = self.make_engine()
+        nodes = [
+            {"nodeId": "S01", "start": True},
+            {"nodeId": "S02", "resourceStock": {"INTEL": 1}},
+            {"nodeId": "S14"},
+            {"nodeId": "S15", "terminal": True},
+        ]
+
+        self.assertEqual(
+            engine.decide(context, snapshot(memory, currentNodeId="S02", taskScore=60, nodes=nodes)),
+            [{"action": "CLAIM_RESOURCE", "targetNodeId": "S02", "resourceType": "INTEL"}],
+        )
+
+    def test_skips_optional_resource_after_base_task_score(self):
+        memory, context, engine = self.make_engine()
+        nodes = [
+            {"nodeId": "S01", "start": True},
+            {"nodeId": "S02", "resourceStock": {"INTEL": 1}},
+            {"nodeId": "S14"},
+            {"nodeId": "S15", "terminal": True},
+        ]
+        tasks = [
+            {"taskId": "T_DONE_1", "nodeId": "S01", "score": 30, "completed": True, "ownerPlayerId": 1001},
+            {"taskId": "T_DONE_2", "nodeId": "S01", "score": 30, "completed": True, "ownerPlayerId": 1001},
+            {"taskId": "T_DONE_3", "nodeId": "S01", "score": 30, "completed": True, "ownerPlayerId": 1001},
+        ]
+
+        self.assertEqual(
+            engine.decide(context, snapshot(memory, currentNodeId="S02", nodes=nodes, tasks=tasks)),
+            [{"action": "MOVE", "targetNodeId": "S14"}],
+        )
+
+    def test_claims_ice_box_after_base_task_score(self):
+        memory, context, engine = self.make_engine()
+        nodes = [
+            {"nodeId": "S01", "start": True},
+            {"nodeId": "S02", "resourceStock": {"ICE_BOX": 1}},
+            {"nodeId": "S14"},
+            {"nodeId": "S15", "terminal": True},
+        ]
+        tasks = [
+            {"taskId": "T_DONE_1", "nodeId": "S01", "score": 30, "completed": True, "ownerPlayerId": 1001},
+            {"taskId": "T_DONE_2", "nodeId": "S01", "score": 30, "completed": True, "ownerPlayerId": 1001},
+            {"taskId": "T_DONE_3", "nodeId": "S01", "score": 30, "completed": True, "ownerPlayerId": 1001},
+        ]
+
+        self.assertEqual(
+            engine.decide(context, snapshot(memory, currentNodeId="S02", nodes=nodes, tasks=tasks)),
+            [{"action": "CLAIM_RESOURCE", "targetNodeId": "S02", "resourceType": "ICE_BOX"}],
         )
 
     def test_late_endgame_skips_current_resource(self):

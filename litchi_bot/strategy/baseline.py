@@ -21,6 +21,8 @@ HORSE_RESOURCE_TYPES = set(HORSE_RESOURCE_PRIORITY)
 HORSE_TRANSFER_TEMPLATE_IDS = {"T06"}
 HORSE_TRANSFER_PROCESS_TYPES = {"HORSE_TRANSFER"}
 LOW_VALUE_CONTEST_RESOURCES = {"OFFICIAL_PERMIT", "BOAT_RIGHT"}
+LOW_YIELD_OPTIONAL_RESOURCES = {"INTEL", "PASS_TOKEN", "OFFICIAL_PERMIT", "BOAT_RIGHT"}
+BASE_TASK_RESOURCE_SCORE = 90
 FIXED_PROCESS_BUSY_STATES = {"PROCESSING", "VERIFYING", "RESTING", "CONTESTING"}
 IDLE_PROCESS_YIELD_LIMIT = 1
 EARLY_PROCESS_RACE_TASK_SCORE = 90
@@ -104,7 +106,7 @@ class BaselineStrategy:
         if task_action is not None:
             return task_action
 
-        resource_action = self._claim_current_resource(snapshot)
+        resource_action = self._claim_current_resource(context, snapshot)
         if resource_action is not None:
             return resource_action
 
@@ -567,13 +569,16 @@ class BaselineStrategy:
         priority = {resource_type: index for index, resource_type in enumerate(RESOURCE_PRIORITY)}
         return sorted(resource_types, key=lambda item: (priority.get(item, len(priority)), item))
 
-    def _claim_current_resource(self, snapshot: GameSnapshot) -> dict[str, Any] | None:
+    def _claim_current_resource(self, context: GameContext, snapshot: GameSnapshot) -> dict[str, Any] | None:
         current = snapshot.self_player.get("currentNodeId")
         node = snapshot.nodes_by_id.get(str(current), {})
         stock = node.get("resourceStock") or {}
         skipped: list[str] = []
         for resource_type in RESOURCE_PRIORITY:
             if int(stock.get(resource_type) or 0) > 0:
+                if self._low_yield_resource_after_base_score(context, snapshot, resource_type):
+                    skipped.append(f"{resource_type}:base-task-score")
+                    continue
                 if self._resource_claim_skipped(current, resource_type):
                     skipped.append(f"{resource_type}:drawn-contest")
                     continue
@@ -588,6 +593,16 @@ class BaselineStrategy:
         if skipped:
             self.last_reason = "skip resource " + ",".join(skipped)
         return None
+
+    def _low_yield_resource_after_base_score(
+        self,
+        context: GameContext,
+        snapshot: GameSnapshot,
+        resource_type: str,
+    ) -> bool:
+        if resource_type not in LOW_YIELD_OPTIONAL_RESOURCES:
+            return False
+        return self._ordinary_task_base_score(context, snapshot) >= BASE_TASK_RESOURCE_SCORE
 
     def _available_current_horse_resource(self, snapshot: GameSnapshot, current: Any) -> str | None:
         node = snapshot.nodes_by_id.get(str(current), {})
