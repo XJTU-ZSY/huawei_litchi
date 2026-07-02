@@ -22,7 +22,7 @@ class AiTaskRunnerTest(unittest.TestCase):
     def test_build_codex_command_reads_prompt_from_stdin(self):
         command = build_command("codex", Path("task.prompt.md"), Path("repo"))
 
-        self.assertEqual(command[:3], ["codex", "exec", "-C"])
+        self.assertEqual(command[:4], ["codex", "--ask-for-approval", "never", "exec"])
         self.assertIn("workspace-write", command)
         self.assertEqual(command[-1], "-")
 

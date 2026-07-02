@@ -27,13 +27,13 @@ def build_command(provider: str, prompt_path: Path, cwd: Path, model: str | None
     if provider == "codex":
         command = [
             "codex",
+            "--ask-for-approval",
+            "never",
             "exec",
             "-C",
             str(cwd),
             "--sandbox",
             "workspace-write",
-            "--ask-for-approval",
-            "never",
         ]
         if model:
             command.extend(["--model", model])
