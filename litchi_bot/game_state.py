@@ -120,6 +120,8 @@ class GameMemory:
                 self._record_window_contest_start(payload)
             elif event_type in {"WINDOW_CONTEST_END", "WINDOW_CONTEST_DRAW"}:
                 self._record_window_contest_result(event_type, payload)
+            elif event_type == "NODE_ENTER":
+                self._record_node_enter(payload)
             elif event_type == "PROCESS_COMPLETE":
                 node_id = payload.get("targetNodeId") or payload.get("nodeId")
                 if node_id and self._is_fixed_node_process_complete(payload):
@@ -141,6 +143,16 @@ class GameMemory:
             if payload.get("playerId") is not None and not same_player_id(payload.get("playerId"), self.player_id):
                 continue
             self._recover_from_rejection(payload, current_node_id)
+
+    def _record_node_enter(self, payload: dict[str, Any]) -> None:
+        node_id = payload.get("nodeId") or payload.get("targetNodeId")
+        if not node_id:
+            return
+        node_key = str(node_id)
+        self.completed_process_nodes.discard(node_key)
+        self.skipped_process_nodes.discard(node_key)
+        self.drawn_process_yield_counts.pop(node_key, None)
+        self.process_idle_yield_counts.pop(node_key, None)
 
     @staticmethod
     def _is_fixed_node_process_complete(payload: dict[str, Any]) -> bool:

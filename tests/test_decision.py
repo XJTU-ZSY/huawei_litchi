@@ -551,6 +551,45 @@ class DecisionTest(unittest.TestCase):
         self.assertIn("S02", memory.completed_process_nodes)
         self.assertEqual(engine.decide(context, snap), [{"action": "MOVE", "targetNodeId": "S14"}])
 
+    def test_reentered_fixed_process_node_requires_new_process(self):
+        memory, context, engine = self.make_engine()
+        nodes = [
+            {"nodeId": "S01", "start": True},
+            {"nodeId": "S13", "processType": "PALACE_TRANSFER", "processRound": 5},
+            {"nodeId": "S14"},
+            {"nodeId": "S15", "terminal": True},
+        ]
+        process_complete = {
+            "type": "PROCESS_COMPLETE",
+            "payload": {
+                "playerId": 1001,
+                "targetNodeId": "S13",
+                "action": "PROCESS",
+                "objectKey": "PROCESS:S13:PALACE_TRANSFER",
+            },
+        }
+        snapshot(memory, currentNodeId="S13", nodes=nodes, events=[process_complete])
+        self.assertIn("S13", memory.completed_process_nodes)
+
+        node_enter = {
+            "type": "NODE_ENTER",
+            "payload": {"playerId": 1001, "fromNodeId": "S12", "nodeId": "S13"},
+        }
+        snap = snapshot(
+            memory,
+            phase="RUSH",
+            currentNodeId="S13",
+            taskScore=80,
+            nodes=nodes,
+            events=[node_enter],
+            round_no=474,
+            opponent_overrides={"delivered": True, "state": "DELIVERED", "currentNodeId": "S15"},
+        )
+
+        self.assertNotIn("S13", memory.completed_process_nodes)
+        self.assertEqual(engine.decide(context, snap), [{"action": "PROCESS", "targetNodeId": "S13"}])
+        self.assertNotEqual(engine.last_reason, "move from S13 to S14 toward S14")
+
     def test_process_required_rejection_retries_process(self):
         memory, context, engine = self.make_engine()
         memory.completed_process_nodes.add("S02")
