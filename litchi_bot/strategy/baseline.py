@@ -30,6 +30,8 @@ ENDGAME_TASK_SAFETY_MARGIN_ROUNDS = 10
 DELIVERY_CLOSURE_SAFETY_MARGIN_ROUNDS = 20
 TASK_SCORE_TARGET = 90
 TASK_CLUSTER_LOOKAHEAD_ROUNDS = 90
+BONUS_TASK_MIN_SCORE = 30
+BONUS_TASK_MAX_DETOUR_ROUNDS = 85
 
 
 class BaselineStrategy:
@@ -705,14 +707,71 @@ class BaselineStrategy:
         task_score = int(player.get("taskScore") or 0)
         if self._should_go_endgame(context, snapshot):
             return context.terminal_node_id if player.get("verified") else context.gate_node_id
-        if task_score < 90:
-            target = self._nearest_task_node(context, snapshot)
-            if target:
+        target = self._nearest_task_node(context, snapshot)
+        if target:
+            waypoint = self._bonus_task_waypoint_before_destination(context, snapshot, target)
+            if waypoint:
+                self.last_reason = f"detour to bonus task node {waypoint} before {target}"
+                return waypoint
+            if task_score < TASK_SCORE_TARGET:
                 self.last_reason = f"go to task node {target}"
-                return target
+            else:
+                self.last_reason = f"go to bonus task node {target}"
+            return target
         target = context.terminal_node_id if player.get("verified") else context.gate_node_id
         self.last_reason = f"default endgame target {target}"
         return target
+
+    def _bonus_task_waypoint_before_destination(
+        self, context: GameContext, snapshot: GameSnapshot, destination: str
+    ) -> str | None:
+        current = str(snapshot.self_player.get("currentNodeId") or "")
+        if not current or not destination or current == destination:
+            return None
+        if current not in self.memory.completed_process_nodes:
+            return None
+        blocked = self._blocked_nodes(context, snapshot)
+        direct_path = self._path_to(context, snapshot, current, destination)
+        if not direct_path:
+            return None
+        direct_rounds = self._path_rounds(context, snapshot, direct_path, self.memory.completed_process_nodes)
+        if direct_rounds is None:
+            return None
+
+        best_node: str | None = None
+        best_key: tuple[int, int, int] | None = None
+        for task in sorted(snapshot.tasks, key=self._task_sort_key):
+            score = int(task.get("score") or 0)
+            if score < BONUS_TASK_MIN_SCORE:
+                continue
+            if not self._task_routeable_for_self(context, snapshot, task):
+                continue
+            if not self._has_endgame_slack_for_task(context, snapshot, task):
+                continue
+            node_id = str(task.get("nodeId") or "")
+            if not node_id or node_id in {current, destination} or node_id in blocked:
+                continue
+            path_to_task = self._path_to(context, snapshot, current, node_id)
+            path_to_destination = self._path_to(context, snapshot, node_id, destination)
+            if not path_to_task or not path_to_destination:
+                continue
+            if current in path_to_destination[1:]:
+                continue
+            to_task_rounds = self._path_rounds(context, snapshot, path_to_task, self.memory.completed_process_nodes)
+            to_destination_rounds = self._path_rounds(
+                context, snapshot, path_to_destination, self.memory.completed_process_nodes
+            )
+            if to_task_rounds is None or to_destination_rounds is None:
+                continue
+            task_rounds = int(task.get("processRound") or 0)
+            detour_rounds = to_task_rounds + task_rounds + to_destination_rounds - direct_rounds
+            if detour_rounds < 0 or detour_rounds > BONUS_TASK_MAX_DETOUR_ROUNDS:
+                continue
+            key = (score, -detour_rounds, -to_task_rounds)
+            if best_key is None or key > best_key or (key == best_key and (best_node is None or node_id < best_node)):
+                best_key = key
+                best_node = node_id
+        return best_node
 
     def _nearest_task_node(self, context: GameContext, snapshot: GameSnapshot) -> str | None:
         current = str(snapshot.self_player.get("currentNodeId") or "")
@@ -906,7 +965,11 @@ class BaselineStrategy:
             self.last_reason = f"no path from {current} to {target}"
             return None
         next_node = path[1]
-        self.last_reason = f"move from {current} to {next_node} toward {target}"
+        movement_reason = f"move from {current} to {next_node} toward {target}"
+        if self.last_reason.startswith(("detour to bonus task node", "go to bonus task node", "go to task node")):
+            self.last_reason = f"{self.last_reason}; {movement_reason}"
+        else:
+            self.last_reason = movement_reason
         return {"action": "MOVE", "targetNodeId": next_node}
 
     def _blocked_nodes(self, context: GameContext, snapshot: GameSnapshot) -> set[str]:

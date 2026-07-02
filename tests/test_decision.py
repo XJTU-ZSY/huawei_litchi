@@ -897,6 +897,66 @@ class DecisionTest(unittest.TestCase):
         self.assertEqual(engine.decide(context, snap), [{"action": "MOVE", "targetNodeId": "S09"}])
         self.assertIn("toward S09", engine.last_reason)
 
+    def test_detours_to_path_side_bonus_task_before_cluster_target(self):
+        memory, context, engine, nodes = self.make_delivery_map_engine()
+        memory.completed_process_nodes.add("S05")
+        nodes = [dict(node) for node in nodes]
+        for node in nodes:
+            if node["nodeId"] == "S09":
+                node["resourceStock"] = {"FAST_HORSE": 1}
+        tasks = [
+            {"taskId": "T02_002", "nodeId": "S07", "score": 30, "processRound": 4, "active": True},
+            {
+                "taskId": "T06_006",
+                "nodeId": "S09",
+                "score": 30,
+                "processRound": 3,
+                "active": True,
+                "requiredResourceTypes": ["FAST_HORSE"],
+            },
+            {"taskId": "T11_011", "nodeId": "S10", "score": 30, "processRound": 4, "active": True},
+        ]
+
+        snap = snapshot(memory, round_no=151, currentNodeId="S05", taskScore=60, nodes=nodes, tasks=tasks)
+
+        self.assertEqual(engine.decide(context, snap), [{"action": "MOVE", "targetNodeId": "S07"}])
+        self.assertIn("detour to bonus task node S07 before S09", engine.last_reason)
+
+    def test_routes_to_bonus_task_after_task_score_target_when_slack_allows(self):
+        memory, context, engine, nodes = self.make_delivery_map_engine()
+        memory.completed_process_nodes.add("S05")
+        tasks = [{"taskId": "T02_002", "nodeId": "S07", "score": 30, "processRound": 4, "active": True}]
+
+        snap = snapshot(memory, round_no=151, currentNodeId="S05", taskScore=90, nodes=nodes, tasks=tasks)
+
+        self.assertEqual(engine.decide(context, snap), [{"action": "MOVE", "targetNodeId": "S07"}])
+        self.assertIn("bonus task node S07", engine.last_reason)
+
+    def test_skips_path_side_bonus_task_when_delivery_slack_is_tight(self):
+        memory, context, engine, nodes = self.make_delivery_map_engine()
+        memory.completed_process_nodes.add("S05")
+        nodes = [dict(node) for node in nodes]
+        for node in nodes:
+            if node["nodeId"] == "S09":
+                node["resourceStock"] = {"FAST_HORSE": 1}
+        tasks = [
+            {"taskId": "T02_002", "nodeId": "S07", "score": 30, "processRound": 4, "active": True},
+            {
+                "taskId": "T06_006",
+                "nodeId": "S09",
+                "score": 30,
+                "processRound": 3,
+                "active": True,
+                "requiredResourceTypes": ["FAST_HORSE"],
+            },
+            {"taskId": "T11_011", "nodeId": "S10", "score": 30, "processRound": 4, "active": True},
+        ]
+
+        snap = snapshot(memory, round_no=330, currentNodeId="S05", taskScore=60, nodes=nodes, tasks=tasks)
+
+        self.assertEqual(engine.decide(context, snap), [{"action": "MOVE", "targetNodeId": "S09"}])
+        self.assertIn("toward S14", engine.last_reason)
+
     def test_does_not_route_to_resource_gated_task_when_unlock_resource_is_absent(self):
         memory, context, engine, nodes = self.make_delivery_map_engine()
         tasks = [
