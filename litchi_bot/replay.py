@@ -41,6 +41,15 @@ def analyze_messages(messages: list[dict[str, Any]], player_id: int | str | None
                 player_key = str(player.get("playerId"))
                 scores[player_key] = player.get("totalScore")
                 final_players[player_key] = player
+                if player.get("delivered") is True and _matches_player(player, player_id):
+                    deliveries.setdefault(
+                        player_key,
+                        {
+                            "round": player.get("deliverRound") or data.get("overRound"),
+                            "goodFruit": player.get("goodFruit"),
+                            "freshness": player.get("freshness"),
+                        },
+                    )
         for player in data.get("players") or []:
             if player.get("playerId") is not None:
                 latest_players[str(player.get("playerId"))] = player
