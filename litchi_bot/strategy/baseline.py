@@ -18,6 +18,7 @@ RESOURCE_PRIORITY = [
 
 FIXED_PROCESS_BUSY_STATES = {"PROCESSING", "VERIFYING", "RESTING", "CONTESTING"}
 IDLE_PROCESS_YIELD_LIMIT = 1
+ICE_BOX_USE_FRESHNESS_LIMIT = 90.0
 
 
 class BaselineStrategy:
@@ -75,6 +76,10 @@ class BaselineStrategy:
         if process_action is not None:
             return process_action
 
+        ice_box_action = self._use_ice_box_if_beneficial(context, snapshot)
+        if ice_box_action is not None:
+            return ice_box_action
+
         if self._should_go_endgame(context, snapshot):
             target = context.terminal_node_id if player.get("verified") else context.gate_node_id
             self.last_reason = f"endgame lock target {target}"
@@ -105,6 +110,24 @@ class BaselineStrategy:
             self.last_reason = f"process node {current}"
             return {"action": "PROCESS", "targetNodeId": str(current)}
         return None
+
+    def _use_ice_box_if_beneficial(self, context: GameContext, snapshot: GameSnapshot) -> dict[str, Any] | None:
+        player = snapshot.self_player
+        if snapshot.phase == "RUSH":
+            return None
+        current = str(player.get("currentNodeId") or "")
+        if current in {context.gate_node_id, context.terminal_node_id}:
+            return None
+        resources = player.get("resources") or {}
+        if int(resources.get("ICE_BOX") or 0) <= 0:
+            return None
+        freshness = float(player.get("freshness") or 0)
+        if freshness <= 0 or freshness >= ICE_BOX_USE_FRESHNESS_LIMIT:
+            return None
+        if not self._should_go_endgame(context, snapshot):
+            return None
+        self.last_reason = f"use ICE_BOX before endgame at freshness {freshness:g}"
+        return {"action": "USE_RESOURCE", "resourceType": "ICE_BOX"}
 
     def _should_yield_fixed_process(self, context: GameContext, snapshot: GameSnapshot) -> bool:
         current = snapshot.self_player.get("currentNodeId")

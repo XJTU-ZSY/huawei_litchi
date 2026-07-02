@@ -343,6 +343,54 @@ class DecisionTest(unittest.TestCase):
         self.assertEqual(engine.decide(context, snap), [{"action": "MOVE", "targetNodeId": "S10"}])
         self.assertIn("move from S09 to S10 toward S14", engine.last_reason)
 
+    def test_uses_ice_box_before_endgame_movement(self):
+        memory, context, engine = self.make_engine()
+        snap = snapshot(
+            memory,
+            round_no=430,
+            currentNodeId="S09",
+            freshness=80,
+            resources={"ICE_BOX": 1},
+        )
+
+        self.assertEqual(engine.decide(context, snap), [{"action": "USE_RESOURCE", "resourceType": "ICE_BOX"}])
+        self.assertIn("use ICE_BOX before endgame", engine.last_reason)
+
+    def test_does_not_use_ice_box_when_freshness_is_high(self):
+        memory, context, engine = self.make_engine()
+        snap = snapshot(
+            memory,
+            round_no=430,
+            currentNodeId="S09",
+            freshness=93,
+            resources={"ICE_BOX": 1},
+        )
+
+        self.assertEqual(engine.decide(context, snap), [{"action": "MOVE", "targetNodeId": "S10"}])
+
+    def test_ice_box_does_not_block_gate_or_terminal(self):
+        memory, context, engine = self.make_engine()
+        gate = snapshot(
+            memory,
+            phase="RUSH",
+            round_no=462,
+            currentNodeId="S14",
+            freshness=70,
+            resources={"ICE_BOX": 1},
+        )
+        self.assertEqual(engine.decide(context, gate), [{"action": "VERIFY_GATE"}])
+
+        terminal = snapshot(
+            memory,
+            phase="RUSH",
+            round_no=482,
+            currentNodeId="S15",
+            freshness=70,
+            verified=True,
+            resources={"ICE_BOX": 1},
+        )
+        self.assertEqual(engine.decide(context, terminal), [{"action": "DELIVER"}])
+
     def test_endgame_processes_fixed_node_before_moving(self):
         memory, context, engine = self.make_engine()
         nodes = [
