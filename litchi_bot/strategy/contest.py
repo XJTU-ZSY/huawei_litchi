@@ -78,6 +78,9 @@ class WindowCardSelector:
             return None
         opponent_card = self._latest_opponent_card(context, contest)
         if opponent_card == "ABSTAIN" and self._self_is_ahead(context, contest):
+            cover_card = self._final_round_process_lead_cover_card(context, contest, affordable)
+            if cover_card is not None:
+                return cover_card
             return "ABSTAIN"
         if opponent_card == "XIAN_GONG" and "QIANG_XING" not in affordable and self._should_defer_process_after_draw(
             context
@@ -88,6 +91,40 @@ class WindowCardSelector:
                 return None
             return "ABSTAIN"
         return None
+
+    def _final_round_process_lead_cover_card(
+        self, context: GameContext, contest: dict[str, Any], affordable: set[str]
+    ) -> str | None:
+        if "XIAN_GONG" not in affordable:
+            return None
+        if not self._should_defer_process_after_draw(context):
+            return None
+        if self._remaining_window_rounds(contest) != 1:
+            return None
+        if self._self_point_lead(context, contest) != 1:
+            return None
+        return "XIAN_GONG"
+
+    @staticmethod
+    def _remaining_window_rounds(contest: dict[str, Any]) -> int | None:
+        try:
+            round_index = int(contest.get("roundIndex") or 0)
+            total_rounds = int(contest.get("totalRounds") or 0)
+        except (TypeError, ValueError):
+            return None
+        if round_index <= 0 or total_rounds <= 0 or round_index > total_rounds:
+            return None
+        return total_rounds - round_index + 1
+
+    def _self_point_lead(self, context: GameContext, contest: dict[str, Any]) -> int:
+        team_id = str(context.team_id or "").upper()
+        red_point = int(contest.get("redPoint") or 0)
+        blue_point = int(contest.get("bluePoint") or 0)
+        if team_id == "RED":
+            return red_point - blue_point
+        if team_id == "BLUE":
+            return blue_point - red_point
+        return 0
 
     def _is_fixed_process_contest(self, context: GameContext, contest: dict[str, Any]) -> bool:
         if str(contest.get("objectKey") or "").startswith("PROCESS:"):

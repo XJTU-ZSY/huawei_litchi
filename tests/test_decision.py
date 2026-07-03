@@ -2013,6 +2013,75 @@ class DecisionTest(unittest.TestCase):
 
         self.assertEqual(engine.decide(context, snap), [{"action": "WINDOW_CARD", "contestId": "C1", "card": "ABSTAIN"}])
 
+    def test_high_id_covers_final_process_lead_after_opponent_abstains(self):
+        memory = GameMemory(2002)
+        context = memory.apply_start(START)
+        engine = DecisionEngine(memory)
+        contests = [
+            {
+                "contestId": "C1",
+                "contestType": "DOCK",
+                "redPlayerId": 1001,
+                "bluePlayerId": 2002,
+                "objectKey": "PROCESS:S02:TRANSFER",
+                "sourceActionTypes": {"1001": "PROCESS", "2002": "PROCESS"},
+                "roundIndex": 3,
+                "totalRounds": 3,
+                "redPoint": 0,
+                "bluePoint": 1,
+                "cards": {
+                    "R1:RED": "XIAN_GONG",
+                    "R1:BLUE": "XIAN_GONG",
+                    "R2:RED": "ABSTAIN",
+                    "R2:BLUE": "XIAN_GONG",
+                },
+            }
+        ]
+
+        snap = snapshot(
+            memory,
+            playerId=2002,
+            teamId="BLUE",
+            state="CONTESTING",
+            currentNodeId="S02",
+            contests=contests,
+            opponent_overrides={"playerId": 1001, "teamId": "RED", "currentNodeId": "S02"},
+        )
+
+        self.assertEqual(engine.decide(context, snap), [{"action": "WINDOW_CARD", "contestId": "C1", "card": "XIAN_GONG"}])
+
+    def test_high_id_banks_process_lead_before_final_window_round(self):
+        memory = GameMemory(2002)
+        context = memory.apply_start(START)
+        engine = DecisionEngine(memory)
+        contests = [
+            {
+                "contestId": "C1",
+                "contestType": "DOCK",
+                "redPlayerId": 1001,
+                "bluePlayerId": 2002,
+                "objectKey": "PROCESS:S02:TRANSFER",
+                "sourceActionTypes": {"1001": "PROCESS", "2002": "PROCESS"},
+                "roundIndex": 2,
+                "totalRounds": 3,
+                "redPoint": 0,
+                "bluePoint": 1,
+                "cards": {"R1:RED": "ABSTAIN", "R1:BLUE": "XIAN_GONG"},
+            }
+        ]
+
+        snap = snapshot(
+            memory,
+            playerId=2002,
+            teamId="BLUE",
+            state="CONTESTING",
+            currentNodeId="S02",
+            contests=contests,
+            opponent_overrides={"playerId": 1001, "teamId": "RED", "currentNodeId": "S02"},
+        )
+
+        self.assertEqual(engine.decide(context, snap), [{"action": "WINDOW_CARD", "contestId": "C1", "card": "ABSTAIN"}])
+
     def test_task_window_still_mirrors_xian_gong_when_no_counter_is_available(self):
         memory = GameMemory(2002)
         context = memory.apply_start(START)
