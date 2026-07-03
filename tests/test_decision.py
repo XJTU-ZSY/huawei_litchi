@@ -1199,6 +1199,34 @@ class DecisionTest(unittest.TestCase):
         )
         self.assertIn("before fixed process", engine.last_reason)
 
+    def test_process_node_defers_resource_gated_task_to_race_downstream_task(self):
+        memory, context, engine, nodes = self.make_replay_split_engine()
+        tasks = [
+            {"taskId": "T06_007", "taskTemplateId": "T06", "nodeId": "S04", "score": 30, "processRound": 3, "active": True},
+            {"taskId": "T08_009", "nodeId": "S05", "score": 30, "processRound": 4, "active": True},
+        ]
+
+        snap = snapshot(
+            memory,
+            round_no=85,
+            playerId=1002,
+            teamId="BLUE",
+            currentNodeId="S04",
+            nodes=nodes,
+            tasks=tasks,
+            opponent_overrides={
+                "playerId": 1001,
+                "teamId": "RED",
+                "currentNodeId": "S04",
+                "state": "IDLE",
+                "taskScore": 30,
+            },
+        )
+
+        self.assertEqual(engine.decide(context, snap), [{"action": "PROCESS", "targetNodeId": "S04"}])
+        self.assertIn("defer resource-gated task T06_007", engine.last_reason)
+        self.assertIn("T08_009", engine.last_reason)
+
     def test_process_node_contests_opponent_resource_unlock_before_fixed_process(self):
         memory, context, engine, nodes = self.make_replay_split_engine()
         nodes = [dict(node) for node in nodes]
@@ -1334,7 +1362,8 @@ class DecisionTest(unittest.TestCase):
     def test_process_node_claims_unlocked_current_task_before_fixed_process(self):
         memory, context, engine, nodes = self.make_replay_split_engine()
         tasks = [
-            {"taskId": "T06_007", "taskTemplateId": "T06", "nodeId": "S04", "score": 30, "processRound": 3, "active": True}
+            {"taskId": "T06_007", "taskTemplateId": "T06", "nodeId": "S04", "score": 30, "processRound": 3, "active": True},
+            {"taskId": "T08_009", "nodeId": "S05", "score": 30, "processRound": 4, "active": True},
         ]
 
         snap = snapshot(
