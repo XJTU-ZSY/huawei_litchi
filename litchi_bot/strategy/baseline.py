@@ -36,6 +36,7 @@ BONUS_TASK_MAX_DETOUR_ROUNDS = 60
 PROCESS_NODE_RESOURCE_CONTEST_MIN_TASK_SCORE = 30
 OPPONENT_RACE_BLOCK_MARGIN_ROUNDS = 5
 OPPONENT_RACE_MIN_TASK_SCORE = 30
+CONTESTED_RESOURCE_TASK_MIN_SCORE = 30
 
 
 class BaselineStrategy:
@@ -722,15 +723,47 @@ class BaselineStrategy:
             if current_id and (current_id, resource_type) in self.memory.contested_resources:
                 continue
             if int(stock.get(resource_type) or 0) > 0:
-                if resource_type in contested:
+                is_contested = resource_type in contested
+                if is_contested and not self._should_contest_current_resource_for_task(
+                    context, snapshot, current_id, resource_type
+                ):
                     continue
                 if not self._resource_has_score_or_tempo_value(context, snapshot, current_id, resource_type):
                     continue
-                self.last_reason = f"claim resource {resource_type} at {current}"
+                if is_contested:
+                    self.last_reason = f"contest resource {resource_type} at {current} for current task"
+                else:
+                    self.last_reason = f"claim resource {resource_type} at {current}"
                 return {"action": "CLAIM_RESOURCE", "targetNodeId": current_id, "resourceType": resource_type}
         if contested:
             self.last_reason = f"skip contested resources at {current}: {','.join(sorted(contested))}"
         return None
+
+    def _should_contest_current_resource_for_task(
+        self, context: GameContext, snapshot: GameSnapshot, current: str, resource_type: str
+    ) -> bool:
+        if not current or snapshot.phase == "RUSH":
+            return False
+        player = snapshot.self_player
+        if int(player.get("taskScore") or 0) >= TASK_SCORE_TARGET:
+            return False
+
+        resources = player.get("resources") or {}
+        for task in sorted(snapshot.tasks, key=self._task_sort_key):
+            if str(task.get("nodeId") or "") != current:
+                continue
+            if int(task.get("score") or 0) < CONTESTED_RESOURCE_TASK_MIN_SCORE:
+                continue
+            if not self._task_available_for_self(context, task, player, require_resources=False):
+                continue
+            if self._task_available_for_self(context, task, player):
+                continue
+            if not self._task_missing_resource_options_include(context, task, resources, resource_type):
+                continue
+            if not self._has_endgame_slack_for_task(context, snapshot, task):
+                continue
+            return True
+        return False
 
     def _resource_has_score_or_tempo_value(
         self, context: GameContext, snapshot: GameSnapshot, current: str, resource_type: str

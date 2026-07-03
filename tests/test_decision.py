@@ -796,6 +796,91 @@ class DecisionTest(unittest.TestCase):
 
         self.assertEqual(engine.decide(context, snap), [{"action": "MOVE", "targetNodeId": "S14"}])
 
+    def test_contests_current_resource_when_it_unlocks_high_value_current_task(self):
+        memory, context, engine, nodes = self.make_delivery_map_engine()
+        nodes = [dict(node) for node in nodes]
+        for node in nodes:
+            if node["nodeId"] == "S09":
+                node["resourceStock"] = {"FAST_HORSE": 1}
+        tasks = [
+            {
+                "taskId": "T06_006",
+                "nodeId": "S09",
+                "score": 30,
+                "processRound": 3,
+                "active": True,
+                "requiredResourceTypes": ["FAST_HORSE"],
+            }
+        ]
+
+        snap = snapshot(
+            memory,
+            round_no=218,
+            currentNodeId="S09",
+            taskScore=30,
+            nodes=nodes,
+            tasks=tasks,
+            opponent_overrides={
+                "currentNodeId": "S09",
+                "state": "PROCESSING",
+                "currentProcess": {
+                    "action": "CLAIM_RESOURCE",
+                    "objectKey": "RESOURCE:S09:FAST_HORSE",
+                    "targetNodeId": "S09",
+                    "resourceType": "FAST_HORSE",
+                    "remainRound": 1,
+                },
+            },
+        )
+
+        self.assertEqual(
+            engine.decide(context, snap),
+            [{"action": "CLAIM_RESOURCE", "targetNodeId": "S09", "resourceType": "FAST_HORSE"}],
+        )
+        self.assertIn("contest resource FAST_HORSE", engine.last_reason)
+
+    def test_does_not_contest_current_resource_for_low_value_task(self):
+        memory, context, engine, nodes = self.make_delivery_map_engine()
+        nodes = [dict(node) for node in nodes]
+        for node in nodes:
+            if node["nodeId"] == "S09":
+                node["resourceStock"] = {"FAST_HORSE": 1}
+        tasks = [
+            {
+                "taskId": "T12_LOW",
+                "nodeId": "S09",
+                "score": 15,
+                "processRound": 5,
+                "active": True,
+                "requiredResourceTypes": ["FAST_HORSE"],
+            }
+        ]
+
+        snap = snapshot(
+            memory,
+            round_no=218,
+            currentNodeId="S09",
+            taskScore=30,
+            nodes=nodes,
+            tasks=tasks,
+            opponent_overrides={
+                "currentNodeId": "S09",
+                "state": "PROCESSING",
+                "currentProcess": {
+                    "action": "CLAIM_RESOURCE",
+                    "objectKey": "RESOURCE:S09:FAST_HORSE",
+                    "targetNodeId": "S09",
+                    "resourceType": "FAST_HORSE",
+                    "remainRound": 1,
+                },
+            },
+        )
+
+        self.assertNotEqual(
+            engine.decide(context, snap),
+            [{"action": "CLAIM_RESOURCE", "targetNodeId": "S09", "resourceType": "FAST_HORSE"}],
+        )
+
     def test_endgame_preempts_optional_task_and_resource(self):
         memory, context, engine = self.make_engine()
         nodes = [
