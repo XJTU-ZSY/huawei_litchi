@@ -882,6 +882,8 @@ class BaselineStrategy:
         current = str(snapshot.self_player.get("currentNodeId") or "")
         if not current or not self._has_opponent_route_pressure(snapshot, current):
             return False
+        if self._should_take_current_horse_resource_against_busy_opponent(snapshot, current):
+            return False
 
         return (
             self._downstream_resource_free_task_on_endgame_path(
@@ -892,6 +894,18 @@ class BaselineStrategy:
             )
             is not None
         )
+
+    def _should_take_current_horse_resource_against_busy_opponent(
+        self,
+        snapshot: GameSnapshot,
+        current: str,
+    ) -> bool:
+        opponent = snapshot.opponent_player or {}
+        if str(opponent.get("currentNodeId") or "") != current:
+            return False
+        if str(opponent.get("state") or "") != "PROCESSING":
+            return False
+        return self._available_current_horse_resource(snapshot, current) is not None
 
     def _downstream_resource_free_task_on_endgame_path(
         self,

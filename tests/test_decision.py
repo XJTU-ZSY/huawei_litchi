@@ -346,7 +346,7 @@ class DecisionTest(unittest.TestCase):
         )
         self.assertIn("claim route-enabling SHORT_HORSE", engine.last_reason)
 
-    def test_processes_before_resource_gated_task_when_downstream_task_race_is_open(self):
+    def test_claims_current_horse_resource_before_process_against_busy_opponent(self):
         start = {
             "matchId": "m1",
             "round": 1,
@@ -388,8 +388,50 @@ class DecisionTest(unittest.TestCase):
             opponent_overrides={"currentNodeId": "S04", "state": "PROCESSING"},
         )
 
-        self.assertEqual(engine.decide(context, snap), [{"action": "PROCESS", "targetNodeId": "S04"}])
-        self.assertIn("process node S04", engine.last_reason)
+        self.assertEqual(
+            engine.decide(context, snap),
+            [{"action": "CLAIM_RESOURCE", "targetNodeId": "S04", "resourceType": "SHORT_HORSE"}],
+        )
+        self.assertIn("claim required resource SHORT_HORSE", engine.last_reason)
+
+    def test_does_not_claim_current_horse_resource_opponent_processing_same_resource(self):
+        memory, context, engine = self.make_engine()
+        nodes = [
+            {"nodeId": "S01", "start": True},
+            {"nodeId": "S02", "processType": "BOARD", "processRound": 3, "resourceStock": {"SHORT_HORSE": 1}},
+            {"nodeId": "S14"},
+            {"nodeId": "S15", "terminal": True},
+        ]
+        tasks = [
+            {
+                "taskId": "T06_006",
+                "taskTemplateId": "T06",
+                "nodeId": "S02",
+                "score": 30,
+                "active": True,
+            }
+        ]
+
+        action = engine.decide(
+            context,
+            snapshot(
+                memory,
+                currentNodeId="S02",
+                nodes=nodes,
+                tasks=tasks,
+                opponent_overrides={
+                    "currentNodeId": "S02",
+                    "state": "PROCESSING",
+                    "currentProcess": {
+                        "action": "CLAIM_RESOURCE",
+                        "resourceType": "SHORT_HORSE",
+                        "targetNodeId": "S02",
+                    },
+                },
+            ),
+        )
+
+        self.assertNotEqual(action, [{"action": "CLAIM_RESOURCE", "targetNodeId": "S02", "resourceType": "SHORT_HORSE"}])
 
     def test_defers_current_horse_resource_for_downstream_task_race(self):
         start = {
