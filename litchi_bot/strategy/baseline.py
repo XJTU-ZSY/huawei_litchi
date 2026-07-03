@@ -219,6 +219,23 @@ class BaselineStrategy:
             missing_resources = self._missing_task_resources(context, snapshot, task)
             if not missing_resources:
                 continue
+            if self._should_defer_horse_task_for_downstream_race(
+                context,
+                snapshot,
+                task,
+                extra_current_rounds=process_round,
+            ):
+                downstream_task = self._downstream_resource_free_task_on_endgame_path(
+                    context,
+                    snapshot,
+                    min_score=int(task.get("score") or 0),
+                    extra_current_rounds=process_round,
+                )
+                self.last_reason = (
+                    f"defer resource-gated task {task.get('taskId')} before process "
+                    f"for downstream task {downstream_task.get('taskId') if downstream_task else 'race'}"
+                )
+                continue
             resource_rounds = self._remote_task_resource_rounds(context, snapshot, task, str(current))
             if resource_rounds <= 0:
                 continue
@@ -589,6 +606,17 @@ class BaselineStrategy:
         for task in tasks:
             missing_resources = self._missing_task_resources(context, snapshot, task)
             if missing_resources:
+                if self._should_defer_horse_task_for_downstream_race(context, snapshot, task):
+                    downstream_task = self._downstream_resource_free_task_on_endgame_path(
+                        context,
+                        snapshot,
+                        min_score=int(task.get("score") or 0),
+                    )
+                    self.last_reason = (
+                        f"defer resource-gated task {task.get('taskId')} "
+                        f"for downstream task {downstream_task.get('taskId') if downstream_task else 'race'}"
+                    )
+                    continue
                 if allow_required_resource:
                     resource_action = self._claim_required_current_resource(
                         context,
@@ -830,6 +858,98 @@ class BaselineStrategy:
 
         self.last_reason = f"claim route-enabling {resource_type} for task {target_task.get('taskId')}"
         return {"action": "CLAIM_RESOURCE", "targetNodeId": str(current), "resourceType": resource_type}
+
+    def _should_defer_horse_task_for_downstream_race(
+        self,
+        context: GameContext,
+        snapshot: GameSnapshot,
+        task: dict[str, Any],
+        *,
+        extra_current_rounds: int = 0,
+    ) -> bool:
+        if snapshot.phase == "RUSH" or self._should_go_endgame(context, snapshot):
+            return False
+        if self._ordinary_task_base_score(context, snapshot) >= BASE_TASK_RESOURCE_SCORE:
+            return False
+        if not self._task_accepts_horse_resource(context, task):
+            return False
+        missing_resources = self._missing_task_resources(context, snapshot, task)
+        if not any(resource_type in HORSE_RESOURCE_TYPES for resource_type in missing_resources):
+            return False
+        if int(task.get("score") or 0) < DOWNSTREAM_RACE_MIN_TASK_SCORE:
+            return False
+
+        current = str(snapshot.self_player.get("currentNodeId") or "")
+        if not current or not self._has_opponent_route_pressure(snapshot, current):
+            return False
+
+        return (
+            self._downstream_resource_free_task_on_endgame_path(
+                context,
+                snapshot,
+                min_score=int(task.get("score") or 0),
+                extra_current_rounds=extra_current_rounds,
+            )
+            is not None
+        )
+
+    def _downstream_resource_free_task_on_endgame_path(
+        self,
+        context: GameContext,
+        snapshot: GameSnapshot,
+        *,
+        min_score: int,
+        extra_current_rounds: int = 0,
+    ) -> dict[str, Any] | None:
+        current = str(snapshot.self_player.get("currentNodeId") or "")
+        if not current:
+            return None
+        target = context.terminal_node_id if snapshot.self_player.get("verified") else context.gate_node_id
+        blocked = self._blocked_nodes(context, snapshot)
+        path = context.graph.shortest_path(current, target, blocked=blocked)
+        if not path:
+            path = context.graph.shortest_path(current, target)
+        if len(path) < 2:
+            return None
+
+        for task in sorted(snapshot.tasks, key=self._task_sort_key):
+            if int(task.get("score") or 0) < min_score:
+                continue
+            if not self._task_available_for_self(context, task):
+                continue
+            if self._task_claim_skipped(context, snapshot, task):
+                continue
+            if self._missing_task_resources(context, snapshot, task):
+                continue
+            node_id = str(task.get("nodeId") or "")
+            if not node_id or node_id == current or node_id not in path[1:]:
+                continue
+            node_index = path.index(node_id)
+            travel_rounds = context.graph.path_movement_rounds(path[: node_index + 1])
+            if travel_rounds is None or travel_rounds > DOWNSTREAM_RACE_MAX_TRAVEL_ROUNDS:
+                continue
+            if not self._can_finish_after_remote_task(
+                context,
+                snapshot,
+                task,
+                node_id,
+                extra_current_rounds + travel_rounds,
+            ):
+                continue
+            return task
+        return None
+
+    @staticmethod
+    def _has_opponent_route_pressure(snapshot: GameSnapshot, current: str) -> bool:
+        opponent = snapshot.opponent_player or {}
+        if opponent.get("delivered"):
+            return False
+        if str(opponent.get("state") or "") in {"DELIVERED", "RETIRED"}:
+            return False
+        return current in {
+            str(opponent.get("currentNodeId") or ""),
+            str(opponent.get("nextNodeId") or ""),
+        }
 
     def _nearest_horse_transfer_task(self, context: GameContext, snapshot: GameSnapshot) -> dict[str, Any] | None:
         current = str(snapshot.self_player.get("currentNodeId") or "")
@@ -1190,6 +1310,12 @@ class BaselineStrategy:
         skipped: list[str] = []
         for resource_type in RESOURCE_PRIORITY:
             if int(stock.get(resource_type) or 0) > 0:
+                if resource_type in HORSE_RESOURCE_TYPES and self._should_defer_current_horse_resource_for_downstream_race(
+                    context,
+                    snapshot,
+                ):
+                    skipped.append(f"{resource_type}:downstream-task-race")
+                    continue
                 if self._low_yield_resource_after_base_score(context, snapshot, resource_type):
                     skipped.append(f"{resource_type}:base-task-score")
                     continue
@@ -1210,6 +1336,16 @@ class BaselineStrategy:
         if skipped:
             self.last_reason = "skip resource " + ",".join(skipped)
         return None
+
+    def _should_defer_current_horse_resource_for_downstream_race(
+        self,
+        context: GameContext,
+        snapshot: GameSnapshot,
+    ) -> bool:
+        for task in self._current_available_tasks(context, snapshot):
+            if self._should_defer_horse_task_for_downstream_race(context, snapshot, task):
+                return True
+        return False
 
     def _low_yield_resource_after_base_score(
         self,
@@ -1357,6 +1493,8 @@ class BaselineStrategy:
                 continue
             node_id = str(task.get("nodeId") or "")
             if not node_id or node_id in blocked:
+                continue
+            if node_id == str(current) and self._should_defer_horse_task_for_downstream_race(context, snapshot, task):
                 continue
             path = context.graph.shortest_path(str(current), node_id, blocked=blocked)
             if not path:

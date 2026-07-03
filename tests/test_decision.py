@@ -346,6 +346,124 @@ class DecisionTest(unittest.TestCase):
         )
         self.assertIn("claim route-enabling SHORT_HORSE", engine.last_reason)
 
+    def test_processes_before_resource_gated_task_when_downstream_task_race_is_open(self):
+        start = {
+            "matchId": "m1",
+            "round": 1,
+            "durationRound": 600,
+            "players": [{"playerId": 1001, "teamId": "RED"}, {"playerId": 2002, "teamId": "BLUE"}],
+            "map": {"gameplay": {"roles": {"startNodeId": "S01", "gateNodeId": "S14", "terminalNodeIds": ["S15"]}}},
+            "nodes": [
+                {"nodeId": "S04", "processType": "BOARD", "processRound": 7},
+                {"nodeId": "S05"},
+                {"nodeId": "S14"},
+                {"nodeId": "S15", "terminal": True},
+            ],
+            "edges": [
+                {"edgeId": "E1", "fromNodeId": "S04", "toNodeId": "S05", "routeType": "WATER", "distance": 44},
+                {"edgeId": "E2", "fromNodeId": "S05", "toNodeId": "S14", "routeType": "ROAD", "distance": 1},
+                {"edgeId": "E3", "fromNodeId": "S14", "toNodeId": "S15", "routeType": "ROAD", "distance": 1},
+            ],
+            "taskTemplates": [{"taskTemplateId": "T06", "requiredResourceTypes": ["FAST_HORSE"]}],
+        }
+        memory = GameMemory(1001)
+        context = memory.apply_start(start)
+        engine = DecisionEngine(memory)
+        nodes = [
+            {"nodeId": "S04", "processType": "BOARD", "processRound": 7, "resourceStock": {"SHORT_HORSE": 1}},
+            {"nodeId": "S05"},
+            {"nodeId": "S14"},
+            {"nodeId": "S15", "terminal": True},
+        ]
+        tasks = [
+            {"taskId": "T06_007", "taskTemplateId": "T06", "nodeId": "S04", "score": 30, "active": True},
+            {"taskId": "T08_009", "nodeId": "S05", "score": 30, "processRound": 4, "active": True},
+        ]
+
+        snap = snapshot(
+            memory,
+            currentNodeId="S04",
+            nodes=nodes,
+            tasks=tasks,
+            opponent_overrides={"currentNodeId": "S04", "state": "PROCESSING"},
+        )
+
+        self.assertEqual(engine.decide(context, snap), [{"action": "PROCESS", "targetNodeId": "S04"}])
+        self.assertIn("process node S04", engine.last_reason)
+
+    def test_defers_current_horse_resource_for_downstream_task_race(self):
+        start = {
+            "matchId": "m1",
+            "round": 1,
+            "durationRound": 600,
+            "players": [{"playerId": 1001, "teamId": "RED"}, {"playerId": 2002, "teamId": "BLUE"}],
+            "map": {"gameplay": {"roles": {"startNodeId": "S01", "gateNodeId": "S14", "terminalNodeIds": ["S15"]}}},
+            "nodes": [
+                {"nodeId": "S09"},
+                {"nodeId": "S10"},
+                {"nodeId": "S14"},
+                {"nodeId": "S15", "terminal": True},
+            ],
+            "edges": [
+                {"edgeId": "E1", "fromNodeId": "S09", "toNodeId": "S10", "routeType": "ROAD", "distance": 40},
+                {"edgeId": "E2", "fromNodeId": "S10", "toNodeId": "S14", "routeType": "ROAD", "distance": 1},
+                {"edgeId": "E3", "fromNodeId": "S14", "toNodeId": "S15", "routeType": "ROAD", "distance": 1},
+            ],
+            "taskTemplates": [{"taskTemplateId": "T06", "requiredResourceTypes": ["FAST_HORSE"]}],
+        }
+        memory = GameMemory(1001)
+        context = memory.apply_start(start)
+        engine = DecisionEngine(memory)
+        nodes = [
+            {"nodeId": "S09", "resourceStock": {"FAST_HORSE": 1}},
+            {"nodeId": "S10"},
+            {"nodeId": "S14"},
+            {"nodeId": "S15", "terminal": True},
+        ]
+        tasks = [
+            {"taskId": "T06_006", "taskTemplateId": "T06", "nodeId": "S09", "score": 30, "active": True},
+            {"taskId": "T02_003", "nodeId": "S10", "score": 30, "processRound": 4, "active": True},
+        ]
+
+        snap = snapshot(
+            memory,
+            currentNodeId="S09",
+            nodes=nodes,
+            tasks=tasks,
+            opponent_overrides={"currentNodeId": "S05", "nextNodeId": "S09", "state": "MOVING"},
+        )
+
+        self.assertEqual(engine.decide(context, snap), [{"action": "MOVE", "targetNodeId": "S10"}])
+        self.assertIn("toward S10", engine.last_reason)
+
+    def test_keeps_current_horse_resource_without_opponent_route_pressure(self):
+        memory, context, engine = self.make_engine()
+        nodes = [
+            {"nodeId": "S01", "start": True},
+            {"nodeId": "S02", "resourceStock": {"FAST_HORSE": 1}},
+            {"nodeId": "S14"},
+            {"nodeId": "S15", "terminal": True},
+        ]
+        tasks = [
+            {"taskId": "T06_006", "taskTemplateId": "T06", "nodeId": "S02", "score": 30, "active": True},
+            {"taskId": "T02_003", "nodeId": "S14", "score": 30, "active": True},
+        ]
+
+        self.assertEqual(
+            engine.decide(
+                context,
+                snapshot(
+                    memory,
+                    currentNodeId="S02",
+                    nodes=nodes,
+                    tasks=tasks,
+                    opponent_overrides={"currentNodeId": "S09", "state": "IDLE"},
+                ),
+            ),
+            [{"action": "CLAIM_RESOURCE", "targetNodeId": "S02", "resourceType": "FAST_HORSE"}],
+        )
+        self.assertIn("claim required horse resource FAST_HORSE", engine.last_reason)
+
     def test_task_destination_uses_movement_rounds_not_hop_count(self):
         start = {
             "matchId": "m1",
