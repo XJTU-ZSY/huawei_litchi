@@ -109,12 +109,15 @@ class GameMemory:
         )
 
     def _record_events(self, events: list[dict[str, Any]], current_node_id: Any = None) -> None:
+        last_resource_claim_complete: dict[str, Any] | None = None
         for event in events:
             payload = event.get("payload") or {}
             if payload.get("playerId") is not None and not same_player_id(payload.get("playerId"), self.player_id):
                 continue
             event_type = event.get("type")
             if event_type == "PROCESS_COMPLETE":
+                if self._is_resource_claim_process_complete(payload):
+                    last_resource_claim_complete = payload
                 node_id = payload.get("targetNodeId") or payload.get("nodeId")
                 if node_id and self._is_fixed_node_process_complete(payload):
                     self.completed_process_nodes.add(str(node_id))
@@ -129,7 +132,7 @@ class GameMemory:
                 self._record_resource_contest(payload, current_node_id)
             elif event_type in {"ACTION_REJECTED", "INVALID_ACTION"}:
                 self.rejected_actions.append(event)
-                self._recover_from_rejection(payload, current_node_id)
+                self._recover_from_rejection(payload, current_node_id, fallback_payload=last_resource_claim_complete)
 
     def _record_action_results(self, action_results: list[dict[str, Any]], current_node_id: Any = None) -> None:
         for result in action_results:
@@ -168,6 +171,12 @@ class GameMemory:
         object_key = str(payload.get("objectKey") or "")
         return action == "PROCESS" or object_key.startswith("PROCESS:")
 
+    @staticmethod
+    def _is_resource_claim_process_complete(payload: dict[str, Any]) -> bool:
+        action = str(payload.get("action") or "").upper()
+        object_key = str(payload.get("objectKey") or "")
+        return action == "CLAIM_RESOURCE" or object_key.startswith("RESOURCE:")
+
     def _record_process_contest(self, payload: dict[str, Any], current_node_id: Any = None) -> None:
         if str(payload.get("action") or "").upper() != "PROCESS":
             return
@@ -181,18 +190,76 @@ class GameMemory:
             node_key = str(node_id)
             self.process_contest_counts[node_key] = self.process_contest_counts.get(node_key, 0) + 1
 
-    def _recover_from_rejection(self, payload: dict[str, Any], current_node_id: Any = None) -> None:
-        if str(payload.get("errorCode") or "").upper() != "PROCESS_REQUIRED":
+    def _recover_from_rejection(
+        self,
+        payload: dict[str, Any],
+        current_node_id: Any = None,
+        *,
+        fallback_payload: dict[str, Any] | None = None,
+    ) -> None:
+        error_code = str(payload.get("errorCode") or "").upper()
+        action = str(payload.get("action") or "").upper()
+        if error_code == "RESOURCE_NOT_ENOUGH" and action == "CLAIM_RESOURCE":
+            self._record_depleted_resource(payload, current_node_id, fallback_payload=fallback_payload)
+            return
+        if error_code != "PROCESS_REQUIRED":
             return
         node_id = payload.get("targetNodeId") or payload.get("currentNodeId") or payload.get("nodeId") or current_node_id
         if node_id:
             self.completed_process_nodes.discard(str(node_id))
-        if str(payload.get("action") or "").upper() == "CLAIM_TASK":
+        if action == "CLAIM_TASK":
             task_id = payload.get("taskId")
             if task_id:
                 self.process_required_task_ids.add(str(task_id))
             if node_id:
                 self.process_required_task_nodes.add(str(node_id))
+
+    def _record_depleted_resource(
+        self,
+        payload: dict[str, Any],
+        current_node_id: Any = None,
+        *,
+        fallback_payload: dict[str, Any] | None = None,
+    ) -> None:
+        node_id = (
+            payload.get("targetNodeId")
+            or payload.get("currentNodeId")
+            or payload.get("nodeId")
+            or self._resource_node_from_payload(fallback_payload)
+            or current_node_id
+        )
+        if not node_id:
+            return
+        node_key = str(node_id)
+        resource_type = payload.get("resourceType") or self._resource_type_from_payload(fallback_payload)
+        if resource_type:
+            self.contested_resources.add((node_key, str(resource_type)))
+        else:
+            self.contested_resource_nodes.add(node_key)
+
+    @staticmethod
+    def _resource_node_from_payload(payload: dict[str, Any] | None) -> str | None:
+        if not payload:
+            return None
+        node_id = payload.get("targetNodeId") or payload.get("currentNodeId") or payload.get("nodeId")
+        if node_id:
+            return str(node_id)
+        parts = str(payload.get("objectKey") or "").split(":")
+        if len(parts) >= 3 and parts[0] == "RESOURCE":
+            return parts[1]
+        return None
+
+    @staticmethod
+    def _resource_type_from_payload(payload: dict[str, Any] | None) -> str | None:
+        if not payload:
+            return None
+        resource_type = payload.get("resourceType")
+        if resource_type:
+            return str(resource_type)
+        parts = str(payload.get("objectKey") or "").split(":")
+        if len(parts) >= 3 and parts[0] == "RESOURCE":
+            return parts[2]
+        return None
 
     @staticmethod
     def _find_start_node(nodes: list[dict[str, Any]]) -> str | None:

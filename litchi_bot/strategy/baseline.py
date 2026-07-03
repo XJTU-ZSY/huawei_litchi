@@ -722,8 +722,13 @@ class BaselineStrategy:
         for resource_type in RESOURCE_PRIORITY:
             if current_id and (current_id, resource_type) in self.memory.contested_resources:
                 continue
-            if int(stock.get(resource_type) or 0) > 0:
+            stock_count = self._resource_count(stock, resource_type)
+            if stock_count > 0:
                 is_contested = resource_type in contested
+                if is_contested and stock_count <= 1:
+                    if current_id:
+                        self.memory.contested_resources.add((current_id, resource_type))
+                    continue
                 if is_contested and not self._should_contest_current_resource_for_task(
                     context, snapshot, current_id, resource_type
                 ):

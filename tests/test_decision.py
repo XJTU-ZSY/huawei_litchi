@@ -718,6 +718,33 @@ class DecisionTest(unittest.TestCase):
         self.assertIn("S02", memory.contested_resource_nodes)
         self.assertEqual(engine.decide(context, snap), [{"action": "MOVE", "targetNodeId": "S14"}])
 
+    def test_resource_not_enough_rejection_records_depleted_resource(self):
+        memory, context, engine = self.make_engine()
+        nodes = [
+            {"nodeId": "S01", "start": True},
+            {"nodeId": "S02", "resourceStock": {"FAST_HORSE": 1}},
+            {"nodeId": "S14"},
+            {"nodeId": "S15", "terminal": True},
+        ]
+        resource_complete = {
+            "type": "PROCESS_COMPLETE",
+            "payload": {
+                "playerId": 1001,
+                "action": "CLAIM_RESOURCE",
+                "objectKey": "RESOURCE:S02:FAST_HORSE",
+                "targetNodeId": "S02",
+            },
+        }
+        resource_rejected = {
+            "type": "ACTION_REJECTED",
+            "payload": {"playerId": 1001, "action": "CLAIM_RESOURCE", "errorCode": "RESOURCE_NOT_ENOUGH"},
+        }
+
+        snap = snapshot(memory, currentNodeId="S02", nodes=nodes, events=[resource_complete, resource_rejected])
+
+        self.assertIn(("S02", "FAST_HORSE"), memory.contested_resources)
+        self.assertEqual(engine.decide(context, snap), [{"action": "MOVE", "targetNodeId": "S14"}])
+
     def test_resource_contest_on_other_node_does_not_skip_current_resource(self):
         memory, context, engine = self.make_engine()
         nodes = [
@@ -801,7 +828,7 @@ class DecisionTest(unittest.TestCase):
         nodes = [dict(node) for node in nodes]
         for node in nodes:
             if node["nodeId"] == "S09":
-                node["resourceStock"] = {"FAST_HORSE": 1}
+                node["resourceStock"] = {"FAST_HORSE": 2}
         tasks = [
             {
                 "taskId": "T06_006",
@@ -810,7 +837,8 @@ class DecisionTest(unittest.TestCase):
                 "processRound": 3,
                 "active": True,
                 "requiredResourceTypes": ["FAST_HORSE"],
-            }
+            },
+            {"taskId": "T02_003", "nodeId": "S10", "score": 30, "processRound": 4, "active": True},
         ]
 
         snap = snapshot(
@@ -838,6 +866,47 @@ class DecisionTest(unittest.TestCase):
             [{"action": "CLAIM_RESOURCE", "targetNodeId": "S09", "resourceType": "FAST_HORSE"}],
         )
         self.assertIn("contest resource FAST_HORSE", engine.last_reason)
+
+    def test_does_not_contest_singleton_current_resource_opponent_already_claiming(self):
+        memory, context, engine, nodes = self.make_delivery_map_engine()
+        nodes = [dict(node) for node in nodes]
+        for node in nodes:
+            if node["nodeId"] == "S09":
+                node["resourceStock"] = {"FAST_HORSE": 1}
+        tasks = [
+            {
+                "taskId": "T06_006",
+                "nodeId": "S09",
+                "score": 30,
+                "processRound": 3,
+                "active": True,
+                "requiredResourceTypes": ["FAST_HORSE"],
+            },
+            {"taskId": "T02_003", "nodeId": "S10", "score": 30, "processRound": 4, "active": True},
+        ]
+
+        snap = snapshot(
+            memory,
+            round_no=218,
+            currentNodeId="S09",
+            taskScore=30,
+            nodes=nodes,
+            tasks=tasks,
+            opponent_overrides={
+                "currentNodeId": "S09",
+                "state": "PROCESSING",
+                "currentProcess": {
+                    "action": "CLAIM_RESOURCE",
+                    "objectKey": "RESOURCE:S09:FAST_HORSE",
+                    "targetNodeId": "S09",
+                    "resourceType": "FAST_HORSE",
+                    "remainRound": 1,
+                },
+            },
+        )
+
+        self.assertEqual(engine.decide(context, snap), [{"action": "MOVE", "targetNodeId": "S10"}])
+        self.assertNotIn("contest resource FAST_HORSE", engine.last_reason)
 
     def test_does_not_contest_current_resource_for_low_value_task(self):
         memory, context, engine, nodes = self.make_delivery_map_engine()
