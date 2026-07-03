@@ -696,6 +696,88 @@ class DecisionTest(unittest.TestCase):
             [{"action": "CLAIM_RESOURCE", "targetNodeId": "S02", "resourceType": "PASS_TOKEN"}],
         )
 
+    def test_defers_current_resource_gated_task_to_race_downstream_task(self):
+        memory, context, engine, nodes = self.make_delivery_map_engine()
+        nodes = [dict(node) for node in nodes]
+        for node in nodes:
+            if node["nodeId"] == "S09":
+                node["resourceStock"] = {"FAST_HORSE": 1}
+        tasks = [
+            {
+                "taskId": "T06_006",
+                "taskTemplateId": "T06",
+                "nodeId": "S09",
+                "score": 30,
+                "processType": "HORSE_TRANSFER",
+                "processRound": 3,
+                "requiredResourceTypes": ["FAST_HORSE"],
+                "active": True,
+            },
+            {"taskId": "T11_011", "nodeId": "S10", "score": 30, "processRound": 4, "active": True},
+        ]
+
+        snap = snapshot(
+            memory,
+            round_no=214,
+            currentNodeId="S09",
+            taskScore=60,
+            nodes=nodes,
+            tasks=tasks,
+            opponent_overrides={
+                "playerId": 2002,
+                "currentNodeId": "S09",
+                "nextNodeId": "S10",
+                "state": "MOVING",
+                "edgeProgressMs": 2000,
+                "edgeTotalMs": 55200,
+            },
+        )
+
+        self.assertEqual(engine.decide(context, snap), [{"action": "MOVE", "targetNodeId": "S10"}])
+        self.assertIn("defer resource-gated task T06_006", engine.last_reason)
+
+    def test_keeps_current_resource_gated_task_when_downstream_race_is_lost(self):
+        memory, context, engine, nodes = self.make_delivery_map_engine()
+        nodes = [dict(node) for node in nodes]
+        for node in nodes:
+            if node["nodeId"] == "S09":
+                node["resourceStock"] = {"FAST_HORSE": 1}
+        tasks = [
+            {
+                "taskId": "T06_006",
+                "taskTemplateId": "T06",
+                "nodeId": "S09",
+                "score": 30,
+                "processType": "HORSE_TRANSFER",
+                "processRound": 3,
+                "requiredResourceTypes": ["FAST_HORSE"],
+                "active": True,
+            },
+            {"taskId": "T11_011", "nodeId": "S10", "score": 30, "processRound": 4, "active": True},
+        ]
+
+        snap = snapshot(
+            memory,
+            round_no=214,
+            currentNodeId="S09",
+            taskScore=60,
+            nodes=nodes,
+            tasks=tasks,
+            opponent_overrides={
+                "playerId": 2002,
+                "currentNodeId": "S09",
+                "nextNodeId": "S10",
+                "state": "MOVING",
+                "edgeProgressMs": 50000,
+                "edgeTotalMs": 55200,
+            },
+        )
+
+        self.assertEqual(
+            engine.decide(context, snap),
+            [{"action": "CLAIM_RESOURCE", "targetNodeId": "S09", "resourceType": "FAST_HORSE"}],
+        )
+
     def test_resource_contest_created_skips_node_resources(self):
         memory, context, engine = self.make_engine()
         nodes = [

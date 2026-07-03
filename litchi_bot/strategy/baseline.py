@@ -50,6 +50,7 @@ class BaselineStrategy:
         self.window_selector = WindowCardSelector()
         self.last_reason = "init"
         self._next_process_reason: str | None = None
+        self._deferred_resource_task_ids: set[str] = set()
 
     def decide(self, context: GameContext, snapshot: GameSnapshot) -> list[dict[str, Any]]:
         actions: list[dict[str, Any]] = []
@@ -63,6 +64,7 @@ class BaselineStrategy:
 
     def _main_action(self, context: GameContext, snapshot: GameSnapshot) -> dict[str, Any] | None:
         self._next_process_reason = None
+        self._deferred_resource_task_ids = set()
         player = snapshot.self_player
         state = str(player.get("state") or "IDLE")
         current = player.get("currentNodeId")
@@ -994,6 +996,10 @@ class BaselineStrategy:
                     if current_id:
                         self.memory.contested_resources.add((current_id, resource_type))
                     continue
+                if not is_contested and self._should_defer_current_resource_for_downstream_race(
+                    context, snapshot, current_id, resource_type
+                ):
+                    continue
                 if is_contested and not self._should_contest_current_resource_for_task(
                     context, snapshot, current_id, resource_type
                 ):
@@ -1008,6 +1014,37 @@ class BaselineStrategy:
         if contested:
             self.last_reason = f"skip contested resources at {current}: {','.join(sorted(contested))}"
         return None
+
+    def _should_defer_current_resource_for_downstream_race(
+        self, context: GameContext, snapshot: GameSnapshot, current: str, resource_type: str
+    ) -> bool:
+        if not current:
+            return False
+        player = snapshot.self_player
+        resources = player.get("resources") or {}
+        for task in sorted(snapshot.tasks, key=self._task_sort_key):
+            task_id = str(task.get("taskId") or "")
+            if not task_id or str(task.get("nodeId") or "") != current:
+                continue
+            if task_id in self._deferred_resource_task_ids:
+                continue
+            if self._task_available_for_self(context, task, player):
+                continue
+            if not self._task_available_for_self(context, task, player, require_resources=False):
+                continue
+            if not self._task_missing_resource_options_include(context, task, resources, resource_type):
+                continue
+            if not self._has_endgame_slack_for_task(context, snapshot, task):
+                continue
+            if not self._should_defer_resource_gated_task_for_downstream_race(context, snapshot, current, task):
+                continue
+
+            self._deferred_resource_task_ids.add(task_id)
+            self.last_reason = self._next_process_reason or (
+                f"defer resource-gated task {task_id} to race downstream task"
+            )
+            return True
+        return False
 
     def _should_contest_current_resource_for_task(
         self, context: GameContext, snapshot: GameSnapshot, current: str, resource_type: str
@@ -1051,6 +1088,9 @@ class BaselineStrategy:
         resources = player.get("resources") or {}
         blocked = self._blocked_nodes(context, snapshot)
         for task in sorted(snapshot.tasks, key=self._task_sort_key):
+            task_id = str(task.get("taskId") or "")
+            if task_id and task_id in self._deferred_resource_task_ids:
+                continue
             if not self._task_available_for_self(context, task, player, require_resources=False):
                 continue
             if self._task_available_for_self(context, task, player):
@@ -1121,9 +1161,13 @@ class BaselineStrategy:
                     self.last_reason = f"detour to bonus task node {waypoint} before {target}"
                 return waypoint
             if task_score < TASK_SCORE_TARGET:
-                self.last_reason = f"go to task node {target}"
+                target_reason = f"go to task node {target}"
             else:
-                self.last_reason = f"go to bonus task node {target}"
+                target_reason = f"go to bonus task node {target}"
+            if self.last_reason.startswith("defer resource-gated task"):
+                self.last_reason = f"{self.last_reason}; {target_reason}"
+            else:
+                self.last_reason = target_reason
             return target
         target = context.terminal_node_id if player.get("verified") else context.gate_node_id
         self.last_reason = f"default endgame target {target}"
@@ -1297,6 +1341,9 @@ class BaselineStrategy:
     def _task_routeable_for_self(
         self, context: GameContext, snapshot: GameSnapshot, task: dict[str, Any]
     ) -> bool:
+        task_id = str(task.get("taskId") or "")
+        if task_id and task_id in self._deferred_resource_task_ids:
+            return False
         if self._task_available_for_self(context, task, snapshot.self_player):
             return True
         if not self._task_available_for_self(context, task, snapshot.self_player, require_resources=False):
@@ -1412,7 +1459,13 @@ class BaselineStrategy:
         next_node = path[1]
         movement_reason = f"move from {current} to {next_node} toward {target}"
         if self.last_reason.startswith(
-            ("detour to bonus task node", "follow direct corridor task node", "go to bonus task node", "go to task node")
+            (
+                "defer resource-gated task",
+                "detour to bonus task node",
+                "follow direct corridor task node",
+                "go to bonus task node",
+                "go to task node",
+            )
         ):
             self.last_reason = f"{self.last_reason}; {movement_reason}"
         else:
