@@ -650,6 +650,105 @@ class DecisionTest(unittest.TestCase):
         self.assertEqual(engine.decide(context, snap), [{"action": "PROCESS", "targetNodeId": "S02"}])
         self.assertNotIn("wait for opponent", engine.last_reason)
 
+    def test_terminal_corridor_process_does_not_idle_yield_after_base_tasks(self):
+        start = {
+            "matchId": "m1",
+            "round": 1,
+            "durationRound": 600,
+            "players": [{"playerId": 1001, "teamId": "RED"}, {"playerId": 2002, "teamId": "BLUE"}],
+            "map": {
+                "gameplay": {
+                    "roles": {
+                        "startNodeId": "S01",
+                        "gateNodeId": "S14",
+                        "terminalNodeIds": ["S15"],
+                        "rushExcludedNodeIds": ["S13"],
+                    }
+                }
+            },
+            "nodes": [
+                {"nodeId": "S01", "start": True},
+                {"nodeId": "S13", "processType": "PALACE_TRANSFER", "processRound": 5},
+                {"nodeId": "S14", "processRound": 6},
+                {"nodeId": "S15", "terminal": True},
+            ],
+            "edges": [
+                {"edgeId": "E1", "fromNodeId": "S13", "toNodeId": "S14", "routeType": "ROAD", "distance": 18},
+                {"edgeId": "E2", "fromNodeId": "S14", "toNodeId": "S15", "routeType": "ROAD", "distance": 10},
+            ],
+        }
+        memory = GameMemory(1001)
+        context = memory.apply_start(start)
+        engine = DecisionEngine(memory)
+        tasks = [
+            {"taskId": "DONE_1", "nodeId": "S04", "score": 30, "completed": True, "ownerPlayerId": 1001},
+            {"taskId": "DONE_2", "nodeId": "S09", "score": 30, "completed": True, "ownerPlayerId": 1001},
+            {"taskId": "DONE_3", "nodeId": "S10", "score": 30, "completed": True, "ownerPlayerId": 1001},
+            {"taskId": "T13_013", "nodeId": "S13", "score": 15, "active": False, "completed": True, "ownerPlayerId": 2002},
+        ]
+
+        snap = snapshot(
+            memory,
+            currentNodeId="S13",
+            taskScore=80,
+            nodes=start["nodes"],
+            tasks=tasks,
+            round_no=418,
+            opponent_overrides={"playerId": 2002, "currentNodeId": "S13", "state": "IDLE", "taskScore": 80},
+        )
+
+        self.assertEqual(engine.decide(context, snap), [{"action": "PROCESS", "targetNodeId": "S13"}])
+        self.assertNotIn("yield process node", engine.last_reason)
+
+    def test_terminal_corridor_process_can_yield_before_base_tasks(self):
+        start = {
+            "matchId": "m1",
+            "round": 1,
+            "durationRound": 600,
+            "players": [{"playerId": 1001, "teamId": "RED"}, {"playerId": 2002, "teamId": "BLUE"}],
+            "map": {
+                "gameplay": {
+                    "roles": {
+                        "startNodeId": "S01",
+                        "gateNodeId": "S14",
+                        "terminalNodeIds": ["S15"],
+                        "rushExcludedNodeIds": ["S13"],
+                    }
+                }
+            },
+            "nodes": [
+                {"nodeId": "S01", "start": True},
+                {"nodeId": "S13", "processType": "PALACE_TRANSFER", "processRound": 5},
+                {"nodeId": "S14", "processRound": 6},
+                {"nodeId": "S15", "terminal": True},
+            ],
+            "edges": [
+                {"edgeId": "E1", "fromNodeId": "S13", "toNodeId": "S14", "routeType": "ROAD", "distance": 18},
+                {"edgeId": "E2", "fromNodeId": "S14", "toNodeId": "S15", "routeType": "ROAD", "distance": 10},
+            ],
+        }
+        memory = GameMemory(1001)
+        context = memory.apply_start(start)
+        engine = DecisionEngine(memory)
+        tasks = [
+            {"taskId": "DONE_1", "nodeId": "S04", "score": 30, "completed": True, "ownerPlayerId": 1001},
+            {"taskId": "DONE_2", "nodeId": "S09", "score": 30, "completed": True, "ownerPlayerId": 1001},
+            {"taskId": "T13_013", "nodeId": "S13", "score": 15, "active": False, "completed": True, "ownerPlayerId": 2002},
+        ]
+
+        snap = snapshot(
+            memory,
+            currentNodeId="S13",
+            taskScore=60,
+            nodes=start["nodes"],
+            tasks=tasks,
+            round_no=418,
+            opponent_overrides={"playerId": 2002, "currentNodeId": "S13", "state": "IDLE", "taskScore": 80},
+        )
+
+        self.assertEqual(engine.decide(context, snap), [])
+        self.assertIn("yield process node S13", engine.last_reason)
+
     def test_desyncs_early_fixed_process_without_current_task_against_idle_opponent(self):
         memory, context, engine = self.make_engine()
         nodes = [

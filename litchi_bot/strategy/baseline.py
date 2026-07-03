@@ -403,6 +403,9 @@ class BaselineStrategy:
 
         current_key = str(current)
         if opponent_state == "IDLE":
+            if self._should_force_terminal_corridor_process(context, snapshot, current_key):
+                self._clear_process_yield(current_key)
+                return False
             if early_desync and self._has_reachable_high_value_task_after_process(context, snapshot):
                 self._clear_process_yield(current_key)
                 return False
@@ -437,6 +440,32 @@ class BaselineStrategy:
             return True
         object_key = str(process.get("objectKey") or "")
         return object_key.startswith(f"PROCESS:{current_node_id}:")
+
+    def _should_force_terminal_corridor_process(
+        self,
+        context: GameContext,
+        snapshot: GameSnapshot,
+        current_node_id: str,
+    ) -> bool:
+        if self._ordinary_task_base_score(context, snapshot) < BASE_TASK_RESOURCE_SCORE:
+            return False
+        if self._should_compete_for_task_gated_process(context, snapshot):
+            return False
+        if self._has_reachable_high_value_task_after_process(context, snapshot):
+            return False
+
+        gameplay = (context.raw_start.get("map") or {}).get("gameplay") or {}
+        roles = gameplay.get("roles") or {}
+        rush_excluded = {str(node_id) for node_id in roles.get("rushExcludedNodeIds") or []}
+        if current_node_id not in rush_excluded:
+            return False
+
+        target = context.terminal_node_id if snapshot.self_player.get("verified") else context.gate_node_id
+        blocked = self._blocked_nodes(context, snapshot)
+        path = context.graph.shortest_path(current_node_id, target, blocked=blocked)
+        if not path:
+            path = context.graph.shortest_path(current_node_id, target)
+        return len(path) >= 2
 
     def _should_compete_for_task_gated_process(self, context: GameContext, snapshot: GameSnapshot) -> bool:
         if self._ordinary_task_base_score(context, snapshot) >= TASK_GATED_PROCESS_TARGET_SCORE:
