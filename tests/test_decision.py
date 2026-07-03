@@ -1546,6 +1546,57 @@ class DecisionTest(unittest.TestCase):
         )
         self.assertEqual(engine.decide(context, snap), [{"action": "WINDOW_CARD", "contestId": "C1", "card": "BING_ZHENG"}])
 
+    def test_fixed_process_window_uses_bing_zheng_when_xian_gong_is_not_safe(self):
+        memory, context, engine = self.make_engine()
+        contests = [
+            {
+                "contestId": "C1",
+                "contestType": "DOCK",
+                "targetNodeId": "S13",
+                "redPlayerId": 1001,
+                "bluePlayerId": 2002,
+                "objectKey": "PROCESS:S13:PALACE_TRANSFER",
+                "sourceActionTypes": {"1001": "PROCESS", "2002": "PROCESS"},
+                "roundIndex": 2,
+            }
+        ]
+        snap = snapshot(
+            memory,
+            state="CONTESTING",
+            currentNodeId="S13",
+            freshness=77,
+            goodFruit=95,
+            guardActionPoint=4,
+            contests=contests,
+        )
+
+        self.assertEqual(engine.decide(context, snap), [{"action": "WINDOW_CARD", "contestId": "C1", "card": "BING_ZHENG"}])
+
+    def test_fixed_process_window_abstains_without_bing_zheng_budget(self):
+        memory, context, engine = self.make_engine()
+        contests = [
+            {
+                "contestId": "C1",
+                "contestType": "DOCK",
+                "targetNodeId": "S13",
+                "redPlayerId": 1001,
+                "bluePlayerId": 2002,
+                "objectKey": "PROCESS:S13:PALACE_TRANSFER",
+                "sourceActionTypes": {"1001": "PROCESS", "2002": "PROCESS"},
+            }
+        ]
+        snap = snapshot(
+            memory,
+            state="CONTESTING",
+            currentNodeId="S13",
+            freshness=77,
+            goodFruit=95,
+            guardActionPoint=0,
+            contests=contests,
+        )
+
+        self.assertEqual(engine.decide(context, snap), [{"action": "WINDOW_CARD", "contestId": "C1", "card": "ABSTAIN"}])
+
     def test_task_window_preserves_only_horse_resource_for_t06(self):
         memory, context, engine = self.make_engine()
         contests = [
