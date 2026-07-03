@@ -1420,6 +1420,59 @@ class DecisionTest(unittest.TestCase):
         self.assertEqual(engine.decide(context, snap), [{"action": "MOVE", "targetNodeId": "S12"}])
         self.assertIn("toward S07", engine.last_reason)
 
+    def test_endgame_uses_ice_box_before_moving(self):
+        memory, context, engine = self.make_engine()
+        nodes = [
+            {"nodeId": "S01", "start": True},
+            {"nodeId": "S13"},
+            {"nodeId": "S14", "processRound": 6},
+            {"nodeId": "S15", "terminal": True},
+        ]
+        snap = snapshot(
+            memory,
+            currentNodeId="S13",
+            resources={"ICE_BOX": 2},
+            freshness=74.7,
+            nodes=nodes,
+            round_no=436,
+        )
+
+        self.assertEqual(engine.decide(context, snap), [{"action": "USE_RESOURCE", "resourceType": "ICE_BOX"}])
+        self.assertIn("use ICE_BOX", engine.last_reason)
+
+    def test_endgame_does_not_waste_ice_box_when_freshness_is_high(self):
+        memory, context, engine = self.make_engine()
+        nodes = [
+            {"nodeId": "S01", "start": True},
+            {"nodeId": "S13"},
+            {"nodeId": "S14", "processRound": 6},
+            {"nodeId": "S15", "terminal": True},
+        ]
+        snap = snapshot(
+            memory,
+            currentNodeId="S13",
+            resources={"ICE_BOX": 1},
+            freshness=95,
+            nodes=nodes,
+            round_no=436,
+        )
+
+        self.assertEqual(engine.decide(context, snap), [{"action": "MOVE", "targetNodeId": "S14"}])
+
+    def test_moving_with_ice_box_continues_to_next_node(self):
+        memory, context, engine = self.make_engine()
+        snap = snapshot(
+            memory,
+            state="MOVING",
+            currentNodeId="S13",
+            nextNodeId="S14",
+            resources={"ICE_BOX": 1},
+            freshness=70,
+            round_no=436,
+        )
+
+        self.assertEqual(engine.decide(context, snap), [{"action": "MOVE", "targetNodeId": "S14"}])
+
     def test_endgame_claims_safe_current_task_before_moving(self):
         memory, context, engine = self.make_engine()
         nodes = [

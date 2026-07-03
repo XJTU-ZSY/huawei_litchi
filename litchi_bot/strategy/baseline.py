@@ -37,6 +37,7 @@ DELIVERY_SUBMIT_BUFFER_ROUNDS = 2
 BREAK_ORDER_BAD_FRUIT_COST = 2
 XIAN_GONG_MIN_FRESHNESS = 80
 XIAN_GONG_MIN_GOOD_FRUIT = 30
+ENDGAME_ICE_BOX_FRESHNESS_CAP = 90.0
 
 
 class BaselineStrategy:
@@ -107,6 +108,10 @@ class BaselineStrategy:
         endgame_task_action = self._claim_safe_current_task_before_endgame(context, snapshot)
         if endgame_task_action is not None:
             return endgame_task_action
+
+        endgame_resource_action = self._use_endgame_resource(context, snapshot)
+        if endgame_resource_action is not None:
+            return endgame_resource_action
 
         if self._should_go_endgame(context, snapshot):
             target = context.terminal_node_id if player.get("verified") else context.gate_node_id
@@ -700,6 +705,22 @@ class BaselineStrategy:
             self.last_reason = f"skip endgame task {task.get('taskId')} due delivery budget"
             return None
         return self._claim_current_task(context, snapshot, allow_required_resource=False)
+
+    def _use_endgame_resource(self, context: GameContext, snapshot: GameSnapshot) -> dict[str, Any] | None:
+        if not self._should_go_endgame(context, snapshot):
+            return None
+        player = snapshot.self_player
+        current = player.get("currentNodeId")
+        if not current or current in {context.gate_node_id, context.terminal_node_id}:
+            return None
+        resources = player.get("resources") or {}
+        if int(resources.get("ICE_BOX") or 0) <= 0:
+            return None
+        freshness = float(player.get("freshness") or 0)
+        if freshness <= 0 or freshness >= ENDGAME_ICE_BOX_FRESHNESS_CAP:
+            return None
+        self.last_reason = f"use ICE_BOX before endgame from {current}"
+        return {"action": "USE_RESOURCE", "resourceType": "ICE_BOX"}
 
     def _claim_route_enabling_resource_before_task(
         self,
