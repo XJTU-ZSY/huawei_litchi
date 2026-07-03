@@ -895,6 +895,47 @@ class DecisionTest(unittest.TestCase):
         self.assertEqual(engine.decide(context, snap), [{"action": "MOVE", "targetNodeId": "S04"}])
         self.assertIn("toward S04", engine.last_reason)
 
+    def test_replay_split_avoids_s04_when_opponent_is_ahead_to_process_node(self):
+        memory, context, engine, nodes = self.make_replay_split_engine()
+        tasks = [
+            {"taskId": "T01_001", "nodeId": "S03", "score": 30, "processRound": 3, "active": True},
+            {"taskId": "T02_002", "nodeId": "S07", "score": 30, "processRound": 4, "active": True},
+            {"taskId": "T06_007", "taskTemplateId": "T06", "nodeId": "S04", "score": 30, "processRound": 3, "active": True},
+            {"taskId": "T08_008", "nodeId": "S04", "score": 30, "processRound": 4, "active": True},
+            {"taskId": "T08_009", "nodeId": "S05", "score": 30, "processRound": 4, "active": True},
+            {
+                "taskId": "T06_006",
+                "taskTemplateId": "T06",
+                "nodeId": "S09",
+                "score": 30,
+                "processRound": 3,
+                "active": True,
+            },
+        ]
+
+        snap = snapshot(
+            memory,
+            round_no=55,
+            playerId=1002,
+            teamId="BLUE",
+            currentNodeId="S02",
+            nodes=nodes,
+            tasks=tasks,
+            opponent_overrides={
+                "playerId": 1001,
+                "teamId": "RED",
+                "state": "MOVING",
+                "currentNodeId": "S02",
+                "nextNodeId": "S04",
+                "edgeProgressMs": 5000,
+                "edgeTotalMs": 27600,
+            },
+        )
+
+        action = engine.decide(context, snap)
+        self.assertEqual(action, [{"action": "MOVE", "targetNodeId": "S03"}])
+        self.assertNotEqual(action, [{"action": "MOVE", "targetNodeId": "S04"}])
+
     def test_horse_transfer_task_accepts_short_horse_requirement_option(self):
         memory, context, engine, nodes = self.make_replay_split_engine()
         memory.completed_process_nodes.add("S04")

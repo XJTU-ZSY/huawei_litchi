@@ -34,6 +34,8 @@ TASK_CLUSTER_LOOKAHEAD_ROUNDS = 90
 BONUS_TASK_MIN_SCORE = 30
 BONUS_TASK_MAX_DETOUR_ROUNDS = 60
 PROCESS_NODE_RESOURCE_CONTEST_MIN_TASK_SCORE = 30
+OPPONENT_RACE_BLOCK_MARGIN_ROUNDS = 3
+OPPONENT_RACE_MIN_TASK_SCORE = 30
 
 
 class BaselineStrategy:
@@ -1082,7 +1084,111 @@ class BaselineStrategy:
                 blocked.add(node_id)
         blocked.discard(context.gate_node_id)
         blocked.discard(context.terminal_node_id)
+        blocked.update(self._opponent_race_blocked_nodes(context, snapshot, blocked))
         return blocked
+
+    def _opponent_race_blocked_nodes(
+        self, context: GameContext, snapshot: GameSnapshot, blocked: set[str]
+    ) -> set[str]:
+        if snapshot.phase != "NORMAL" or snapshot.round_no >= self._hard_endgame_round(context):
+            return set()
+        player = snapshot.self_player
+        opponent = snapshot.opponent_player or {}
+        opponent_state = str(opponent.get("state") or "")
+        if opponent.get("delivered") or opponent_state in {"DELIVERED", "RETIRED"}:
+            return set()
+
+        target = self._opponent_race_target(opponent)
+        if not target or target in {context.gate_node_id, context.terminal_node_id}:
+            return set()
+        if target == str(player.get("currentNodeId") or ""):
+            return set()
+        node = snapshot.nodes_by_id.get(target, {})
+        if not self._rich_process_node_for_race(context, snapshot, target, node):
+            return set()
+
+        self_rounds = self._player_arrival_rounds_to_node(context, player, target, blocked)
+        opponent_rounds = self._player_arrival_rounds_to_node(context, opponent, target, blocked)
+        if self_rounds is None or opponent_rounds is None:
+            return set()
+        if opponent_rounds + OPPONENT_RACE_BLOCK_MARGIN_ROUNDS < self_rounds:
+            return {target}
+        return set()
+
+    @staticmethod
+    def _opponent_race_target(opponent: dict[str, Any]) -> str | None:
+        next_node = opponent.get("nextNodeId")
+        if next_node:
+            return str(next_node)
+        current = opponent.get("currentNodeId")
+        return str(current) if current else None
+
+    def _rich_process_node_for_race(
+        self, context: GameContext, snapshot: GameSnapshot, node_id: str, node: dict[str, Any]
+    ) -> bool:
+        if not node.get("processType") or int(node.get("processRound") or 0) <= 0:
+            return False
+        for task in snapshot.tasks:
+            if str(task.get("nodeId") or "") != node_id:
+                continue
+            if int(task.get("score") or 0) < OPPONENT_RACE_MIN_TASK_SCORE:
+                continue
+            if self._task_available_for_self(context, task, snapshot.self_player, require_resources=False):
+                return True
+
+        stock = node.get("resourceStock") or {}
+        for resource_type in RESOURCE_PRIORITY:
+            if self._resource_count(stock, resource_type) <= 0:
+                continue
+            if resource_type in ALWAYS_CLAIM_RESOURCE_TYPES:
+                return True
+            if self._resource_can_unlock_node_task(context, snapshot, node_id, resource_type):
+                return True
+        return False
+
+    def _resource_can_unlock_node_task(
+        self, context: GameContext, snapshot: GameSnapshot, node_id: str, resource_type: str
+    ) -> bool:
+        resources = snapshot.self_player.get("resources") or {}
+        for task in snapshot.tasks:
+            if str(task.get("nodeId") or "") != node_id:
+                continue
+            if int(task.get("score") or 0) < OPPONENT_RACE_MIN_TASK_SCORE:
+                continue
+            if not self._task_available_for_self(context, task, snapshot.self_player, require_resources=False):
+                continue
+            if self._task_available_for_self(context, task, snapshot.self_player):
+                continue
+            if self._task_missing_resource_options_include(context, task, resources, resource_type):
+                return True
+        return False
+
+    def _player_arrival_rounds_to_node(
+        self, context: GameContext, player: dict[str, Any], target: str, blocked: set[str]
+    ) -> int | None:
+        current = str(player.get("currentNodeId") or "")
+        if not current:
+            return None
+        state = str(player.get("state") or "")
+        next_node = player.get("nextNodeId")
+        elapsed = 0
+        start = current
+        if state in {"MOVING", "WAITING"} and next_node:
+            remaining = self._current_edge_remaining_rounds(player)
+            elapsed = 0 if remaining is None else remaining
+            start = str(next_node)
+            if start == target:
+                return elapsed
+        elif current == target:
+            return 0
+
+        path = context.graph.shortest_path(start, target, blocked=blocked)
+        if not path:
+            return None
+        cost = context.graph.path_cost(path)
+        if cost is None:
+            return None
+        return elapsed + ceil(cost / ROUND_MS)
 
     def _should_go_endgame(self, context: GameContext, snapshot: GameSnapshot) -> bool:
         player = snapshot.self_player
