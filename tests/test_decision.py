@@ -1547,6 +1547,85 @@ class DecisionTest(unittest.TestCase):
         self.assertEqual(engine.decide(context, snap), [{"action": "PROCESS", "targetNodeId": "S11"}])
         self.assertIn("process node S11", engine.last_reason)
 
+    def test_defers_low_value_current_task_to_race_downstream_milestone_task(self):
+        memory, context, engine, nodes = self.make_delivery_map_engine()
+        tasks = [
+            {"taskId": "T12_012", "nodeId": "S11", "score": 15, "processRound": 5, "active": True},
+            {"taskId": "T13_013", "nodeId": "S13", "score": 15, "processRound": 5, "active": True},
+        ]
+
+        snap = snapshot(
+            memory,
+            round_no=332,
+            currentNodeId="S11",
+            taskScore=80,
+            nodes=nodes,
+            tasks=tasks,
+            opponent_overrides={
+                "playerId": 2002,
+                "currentNodeId": "S10",
+                "nextNodeId": "S11",
+                "state": "MOVING",
+                "edgeProgressMs": 48000,
+                "edgeTotalMs": 49680,
+            },
+        )
+
+        self.assertEqual(engine.decide(context, snap), [{"action": "PROCESS", "targetNodeId": "S11"}])
+        self.assertIn("defer low-value task T12_012", engine.last_reason)
+
+    def test_claims_low_value_current_task_when_opponent_cannot_win_downstream_race(self):
+        memory, context, engine, nodes = self.make_delivery_map_engine()
+        tasks = [
+            {"taskId": "T12_012", "nodeId": "S11", "score": 15, "processRound": 5, "active": True},
+            {"taskId": "T13_013", "nodeId": "S13", "score": 15, "processRound": 5, "active": True},
+        ]
+
+        snap = snapshot(
+            memory,
+            round_no=332,
+            currentNodeId="S11",
+            taskScore=80,
+            nodes=nodes,
+            tasks=tasks,
+            opponent_overrides={
+                "playerId": 2002,
+                "currentNodeId": "S10",
+                "nextNodeId": "S11",
+                "state": "MOVING",
+                "edgeProgressMs": 0,
+                "edgeTotalMs": 49680,
+            },
+        )
+
+        self.assertEqual(engine.decide(context, snap), [{"action": "CLAIM_TASK", "taskId": "T12_012"}])
+
+    def test_does_not_defer_high_value_current_task_for_downstream_denial(self):
+        memory, context, engine, nodes = self.make_delivery_map_engine()
+        tasks = [
+            {"taskId": "T11_011", "nodeId": "S11", "score": 30, "processRound": 4, "active": True},
+            {"taskId": "T13_013", "nodeId": "S13", "score": 15, "processRound": 5, "active": True},
+        ]
+
+        snap = snapshot(
+            memory,
+            round_no=332,
+            currentNodeId="S11",
+            taskScore=80,
+            nodes=nodes,
+            tasks=tasks,
+            opponent_overrides={
+                "playerId": 2002,
+                "currentNodeId": "S10",
+                "nextNodeId": "S11",
+                "state": "MOVING",
+                "edgeProgressMs": 48000,
+                "edgeTotalMs": 49680,
+            },
+        )
+
+        self.assertEqual(engine.decide(context, snap), [{"action": "CLAIM_TASK", "taskId": "T11_011"}])
+
     def test_task_contesting_prefers_xian_gong_to_break_bing_mirror(self):
         memory, context, engine = self.make_engine()
         contests = [{"contestId": "C1", "contestType": "TASK", "redPlayerId": 1001, "bluePlayerId": 2002, "roundIndex": 1}]

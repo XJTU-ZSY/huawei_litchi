@@ -37,6 +37,9 @@ PROCESS_NODE_RESOURCE_CONTEST_MIN_TASK_SCORE = 30
 OPPONENT_RACE_BLOCK_MARGIN_ROUNDS = 5
 OPPONENT_RACE_MIN_TASK_SCORE = 30
 CONTESTED_RESOURCE_TASK_MIN_SCORE = 30
+DOWNSTREAM_DENIAL_MAX_CURRENT_TASK_SCORE = 15
+DOWNSTREAM_DENIAL_MIN_PLAYER_TASK_SCORE = 60
+DOWNSTREAM_DENIAL_RACE_MARGIN_ROUNDS = 2
 
 
 class BaselineStrategy:
@@ -44,6 +47,7 @@ class BaselineStrategy:
         self.memory = memory
         self.window_selector = WindowCardSelector()
         self.last_reason = "init"
+        self._next_process_reason: str | None = None
 
     def decide(self, context: GameContext, snapshot: GameSnapshot) -> list[dict[str, Any]]:
         actions: list[dict[str, Any]] = []
@@ -56,6 +60,7 @@ class BaselineStrategy:
         return actions
 
     def _main_action(self, context: GameContext, snapshot: GameSnapshot) -> dict[str, Any] | None:
+        self._next_process_reason = None
         player = snapshot.self_player
         state = str(player.get("state") or "IDLE")
         current = player.get("currentNodeId")
@@ -158,7 +163,10 @@ class BaselineStrategy:
         process_type = node.get("processType")
         process_round = int(node.get("processRound") or 0)
         if process_type and process_round > 0 and current not in {context.gate_node_id, context.terminal_node_id}:
-            self.last_reason = f"process node {current}"
+            if self._next_process_reason:
+                self.last_reason = f"{self._next_process_reason}; process node {current}"
+            else:
+                self.last_reason = f"process node {current}"
             return {"action": "PROCESS", "targetNodeId": str(current)}
         return None
 
@@ -204,9 +212,112 @@ class BaselineStrategy:
                 continue
             if not self._has_endgame_slack_for_process_node_task(context, snapshot, node, task):
                 continue
+            if self._should_defer_low_value_task_for_downstream_denial(context, snapshot, current_id, task):
+                continue
             self.last_reason = f"claim process-node task {task.get('taskId')} before fixed process"
             return {"action": "CLAIM_TASK", "taskId": task["taskId"]}
         return None
+
+    def _should_defer_low_value_task_for_downstream_denial(
+        self, context: GameContext, snapshot: GameSnapshot, current_id: str, task: dict[str, Any]
+    ) -> bool:
+        if snapshot.phase == "RUSH" or snapshot.round_no >= self._hard_endgame_round(context):
+            return False
+        player_score = int(snapshot.self_player.get("taskScore") or 0)
+        if player_score < DOWNSTREAM_DENIAL_MIN_PLAYER_TASK_SCORE:
+            return False
+        task_score = int(task.get("score") or 0)
+        if task_score <= 0 or task_score > DOWNSTREAM_DENIAL_MAX_CURRENT_TASK_SCORE:
+            return False
+
+        target = self._downstream_denial_target(context, snapshot, current_id, task_score)
+        if target is None:
+            return False
+        downstream_task, self_without_current, opponent_rounds = target
+        current_task_rounds = int(task.get("processRound") or 0)
+        self_with_current = self_without_current + current_task_rounds
+        if opponent_rounds >= self_with_current:
+            return False
+        if self_without_current > opponent_rounds + DOWNSTREAM_DENIAL_RACE_MARGIN_ROUNDS:
+            return False
+
+        self._next_process_reason = (
+            f"defer low-value task {task.get('taskId')} to contest downstream task "
+            f"{downstream_task.get('taskId')}"
+        )
+        return True
+
+    def _downstream_denial_target(
+        self, context: GameContext, snapshot: GameSnapshot, current_id: str, min_score: int
+    ) -> tuple[dict[str, Any], int, int] | None:
+        path_to_gate = self._path_to(context, snapshot, current_id, context.gate_node_id)
+        if len(path_to_gate) < 3:
+            return None
+        downstream_nodes = set(path_to_gate[1:-1])
+        best: tuple[tuple[int, int], dict[str, Any], int, int] | None = None
+
+        for candidate in sorted(snapshot.tasks, key=self._task_sort_key):
+            score = int(candidate.get("score") or 0)
+            if score < min_score:
+                continue
+            if not self._task_available_for_self(context, candidate, snapshot.self_player):
+                continue
+            node_id = str(candidate.get("nodeId") or "")
+            if node_id not in downstream_nodes:
+                continue
+            if not self._has_endgame_slack_for_task(context, snapshot, candidate):
+                continue
+
+            self_rounds = self._self_arrival_rounds_to_downstream_task(context, snapshot, current_id, node_id)
+            opponent_rounds = self._opponent_arrival_rounds_to_downstream_task(context, snapshot, node_id)
+            if self_rounds is None or opponent_rounds is None:
+                continue
+            key = (score, -self_rounds)
+            if best is None or key > best[0]:
+                best = (key, candidate, self_rounds, opponent_rounds)
+
+        if best is None:
+            return None
+        _, task, self_rounds, opponent_rounds = best
+        return task, self_rounds, opponent_rounds
+
+    def _self_arrival_rounds_to_downstream_task(
+        self, context: GameContext, snapshot: GameSnapshot, current_id: str, target_node_id: str
+    ) -> int | None:
+        path = self._path_to(context, snapshot, current_id, target_node_id)
+        if not path:
+            return None
+        return self._path_rounds(context, snapshot, path, self.memory.completed_process_nodes)
+
+    def _opponent_arrival_rounds_to_downstream_task(
+        self, context: GameContext, snapshot: GameSnapshot, target_node_id: str
+    ) -> int | None:
+        opponent = snapshot.opponent_player or {}
+        if opponent.get("delivered"):
+            return None
+        current = str(opponent.get("currentNodeId") or "")
+        if not current:
+            return None
+        state = str(opponent.get("state") or "")
+        elapsed = 0
+        start = current
+        next_node = opponent.get("nextNodeId")
+        if state in {"MOVING", "WAITING"} and next_node:
+            remaining = self._current_edge_remaining_rounds(opponent)
+            elapsed = 0 if remaining is None else remaining
+            start = str(next_node)
+            if start == target_node_id:
+                return elapsed
+        elif current == target_node_id:
+            return 0
+
+        path = context.graph.shortest_path(start, target_node_id)
+        if not path:
+            return None
+        path_rounds = self._path_rounds(context, snapshot, path, set())
+        if path_rounds is None:
+            return None
+        return elapsed + path_rounds
 
     def _claim_process_node_resource_before_process(
         self, context: GameContext, snapshot: GameSnapshot
