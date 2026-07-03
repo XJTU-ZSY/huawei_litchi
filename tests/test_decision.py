@@ -586,7 +586,70 @@ class DecisionTest(unittest.TestCase):
         )
         self.assertIn("before process S02", engine.last_reason)
 
-    def test_required_current_resource_before_process_avoids_idle_opponent_contest(self):
+    def test_required_current_resource_before_process_contests_low_base_current_t06_horse(self):
+        start = {
+            "matchId": "m1",
+            "round": 1,
+            "durationRound": 600,
+            "players": [{"playerId": 1001, "teamId": "RED"}, {"playerId": 2002, "teamId": "BLUE"}],
+            "map": {"gameplay": {"roles": {"startNodeId": "S01", "gateNodeId": "S14", "terminalNodeIds": ["S15"]}}},
+            "nodes": [
+                {"nodeId": "S01", "start": True},
+                {"nodeId": "S04"},
+                {"nodeId": "S14", "processRound": 6},
+                {"nodeId": "S15", "terminal": True},
+            ],
+            "edges": [
+                {"edgeId": "E1", "fromNodeId": "S04", "toNodeId": "S14", "routeType": "ROAD", "distance": 1},
+                {"edgeId": "E2", "fromNodeId": "S14", "toNodeId": "S15", "routeType": "ROAD", "distance": 1},
+            ],
+            "taskTemplates": [{"taskTemplateId": "T06", "requiredResourceTypes": ["FAST_HORSE"]}],
+        }
+        memory = GameMemory(1001)
+        context = memory.apply_start(start)
+        engine = DecisionEngine(memory)
+        nodes = [
+            {"nodeId": "S01", "start": True},
+            {"nodeId": "S04", "processType": "BOARD", "processRound": 7, "resourceStock": {"SHORT_HORSE": 1}},
+            {"nodeId": "S14", "processRound": 6},
+            {"nodeId": "S15", "terminal": True},
+        ]
+        tasks = [
+            {
+                "taskId": "T06_007",
+                "taskTemplateId": "T06",
+                "nodeId": "S04",
+                "score": 30,
+                "processRound": 3,
+                "active": True,
+            },
+            {
+                "taskId": "T08_008",
+                "taskTemplateId": "T08",
+                "nodeId": "S04",
+                "score": 30,
+                "active": False,
+                "completed": True,
+                "ownerPlayerId": 1001,
+            },
+        ]
+
+        action = engine.decide(
+            context,
+            snapshot(
+                memory,
+                currentNodeId="S04",
+                taskScore=30,
+                nodes=nodes,
+                tasks=tasks,
+                opponent_overrides={"currentNodeId": "S04", "state": "IDLE"},
+            ),
+        )
+
+        self.assertEqual(action, [{"action": "CLAIM_RESOURCE", "targetNodeId": "S04", "resourceType": "SHORT_HORSE"}])
+        self.assertIn("contest required horse resource SHORT_HORSE", engine.last_reason)
+
+    def test_required_current_resource_before_process_avoids_idle_opponent_contest_after_base_score(self):
         memory, context, engine = self.make_engine()
         nodes = [
             {"nodeId": "S01", "start": True},
@@ -609,6 +672,7 @@ class DecisionTest(unittest.TestCase):
             snapshot(
                 memory,
                 currentNodeId="S02",
+                taskScore=90,
                 nodes=nodes,
                 tasks=tasks,
                 opponent_overrides={"currentNodeId": "S02", "state": "IDLE"},

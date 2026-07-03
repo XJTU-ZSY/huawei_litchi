@@ -241,11 +241,37 @@ class BaselineStrategy:
                 continue
             resource_type = str(resource_action.get("resourceType") or "")
             if self._would_start_idle_resource_contest(snapshot, current, resource_type):
-                self.last_reason = f"skip required resource {resource_type} at {current}: opponent contest risk"
-                continue
+                if not self._should_contest_required_horse_resource_for_current_task(
+                    context,
+                    snapshot,
+                    task,
+                    resource_type,
+                ):
+                    self.last_reason = f"skip required resource {resource_type} at {current}: opponent contest risk"
+                    continue
+                self.last_reason = (
+                    f"contest required horse resource {resource_type} for current task "
+                    f"{task.get('taskId')} before process {current}"
+                )
+                return resource_action
             self.last_reason = f"claim required resource {resource_type} for current task {task.get('taskId')} before process {current}"
             return resource_action
         return None
+
+    def _should_contest_required_horse_resource_for_current_task(
+        self,
+        context: GameContext,
+        snapshot: GameSnapshot,
+        task: dict[str, Any],
+        resource_type: str,
+    ) -> bool:
+        if resource_type not in HORSE_RESOURCE_TYPES:
+            return False
+        if not self._task_accepts_horse_resource(context, task):
+            return False
+        if int(task.get("score") or 0) < DOWNSTREAM_RACE_MIN_TASK_SCORE:
+            return False
+        return self._ordinary_task_base_score(context, snapshot) < BASE_TASK_RESOURCE_SCORE
 
     def _downstream_replacement_task_after_process(
         self,
