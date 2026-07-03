@@ -1548,6 +1548,67 @@ class DecisionTest(unittest.TestCase):
 
         self.assertEqual(engine.decide(context, snap), [{"action": "WINDOW_CARD", "contestId": "C1", "card": "XIAN_GONG"}])
 
+    def test_fixed_process_window_uses_bing_when_only_guard_card_is_affordable(self):
+        memory, context, engine, nodes = self.make_replay_split_engine()
+        contests = [
+            {
+                "contestId": "C1",
+                "contestType": "DOCK",
+                "redPlayerId": 1001,
+                "bluePlayerId": 1002,
+                "objectKey": "PROCESS:S13:PALACE_TRANSFER",
+                "sourceActionTypes": {"1001": "PROCESS", "1002": "PROCESS"},
+            }
+        ]
+
+        snap = snapshot(
+            memory,
+            round_no=408,
+            playerId=1002,
+            teamId="BLUE",
+            state="CONTESTING",
+            currentNodeId="S13",
+            freshness=75,
+            goodFruit=95,
+            taskScore=80,
+            nodes=nodes,
+            contests=contests,
+            opponent_overrides={"playerId": 1001, "teamId": "RED", "currentNodeId": "S13"},
+        )
+
+        self.assertEqual(engine.decide(context, snap), [{"action": "WINDOW_CARD", "contestId": "C1", "card": "BING_ZHENG"}])
+
+    def test_fixed_process_window_abstains_when_guard_card_is_not_affordable(self):
+        memory, context, engine, nodes = self.make_replay_split_engine()
+        contests = [
+            {
+                "contestId": "C1",
+                "contestType": "DOCK",
+                "redPlayerId": 1001,
+                "bluePlayerId": 1002,
+                "objectKey": "PROCESS:S13:PALACE_TRANSFER",
+                "sourceActionTypes": {"1001": "PROCESS", "1002": "PROCESS"},
+            }
+        ]
+
+        snap = snapshot(
+            memory,
+            round_no=408,
+            playerId=1002,
+            teamId="BLUE",
+            state="CONTESTING",
+            currentNodeId="S13",
+            freshness=75,
+            goodFruit=95,
+            guardActionPoint=0,
+            taskScore=80,
+            nodes=nodes,
+            contests=contests,
+            opponent_overrides={"playerId": 1001, "teamId": "RED", "currentNodeId": "S13"},
+        )
+
+        self.assertEqual(engine.decide(context, snap), [{"action": "WINDOW_CARD", "contestId": "C1", "card": "ABSTAIN"}])
+
     def test_late_fixed_process_window_still_abstains_after_xian_gong(self):
         memory, context, engine, nodes = self.make_replay_split_engine()
         contests = [

@@ -67,6 +67,8 @@ class WindowCardSelector:
             return "QIANG_XING"
         if "XIAN_GONG" in affordable:
             return "XIAN_GONG"
+        if "BING_ZHENG" in affordable and self._is_fixed_process_contest(context, contest):
+            return "BING_ZHENG"
         return "ABSTAIN"
 
     def _low_value_process_card(
