@@ -117,7 +117,7 @@ class WindowCardSelector:
         if snapshot.phase != "NORMAL" or snapshot.round_no > PROCESS_CORRIDOR_MAX_ROUND:
             return False
         player = snapshot.self_player
-        if int(player.get("taskScore") or 0) <= 0 or int(player.get("taskScore") or 0) >= TASK_SCORE_TARGET:
+        if int(player.get("taskScore") or 0) >= TASK_SCORE_TARGET:
             return False
         process_node = self._process_node_from_contest(contest)
         current_node = str(player.get("currentNodeId") or "")
