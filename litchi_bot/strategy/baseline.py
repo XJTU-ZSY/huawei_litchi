@@ -28,6 +28,7 @@ LOW_VALUE_ROUTE_TASK_SCORE = 15
 FIXED_PROCESS_BUSY_STATES = {"PROCESSING", "VERIFYING", "RESTING", "CONTESTING"}
 IDLE_PROCESS_YIELD_LIMIT = 1
 DRAWN_PROCESS_PRESSURE_RETRY_LIMIT = 1
+DRAWN_PROCESS_YIELD_LIMIT = 2
 EARLY_PROCESS_RACE_TASK_SCORE = 90
 DOWNSTREAM_RACE_MIN_TASK_SCORE = 30
 DOWNSTREAM_RACE_MAX_TRAVEL_ROUNDS = 80
@@ -347,7 +348,7 @@ class BaselineStrategy:
                 self._clear_drawn_process(current_key)
                 return False
             yielded = self.memory.drawn_process_yield_counts.get(current_key, 0)
-            if yielded < 1:
+            if yielded < DRAWN_PROCESS_YIELD_LIMIT:
                 self.memory.drawn_process_yield_counts[current_key] = yielded + 1
                 self.last_reason = f"yield drawn process node {current_key} to opponent {opponent.get('playerId')}"
                 return True

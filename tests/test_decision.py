@@ -1059,6 +1059,76 @@ class DecisionTest(unittest.TestCase):
         self.assertEqual(engine.decide(context, snap), [])
         self.assertIn("yield drawn process node S02", engine.last_reason)
 
+    def test_drawn_terminal_corridor_process_yields_two_frames_before_retry(self):
+        start = {
+            "matchId": "m1",
+            "round": 1,
+            "durationRound": 600,
+            "players": [{"playerId": 1001, "teamId": "RED"}, {"playerId": 2002, "teamId": "BLUE"}],
+            "map": {
+                "gameplay": {
+                    "roles": {
+                        "startNodeId": "S01",
+                        "gateNodeId": "S14",
+                        "terminalNodeIds": ["S15"],
+                        "rushExcludedNodeIds": ["S13"],
+                    }
+                }
+            },
+            "nodes": [
+                {"nodeId": "S01", "start": True},
+                {"nodeId": "S13", "processType": "PALACE_TRANSFER", "processRound": 5},
+                {"nodeId": "S14", "processRound": 6},
+                {"nodeId": "S15", "terminal": True},
+            ],
+            "edges": [
+                {"edgeId": "E1", "fromNodeId": "S13", "toNodeId": "S14", "routeType": "ROAD", "distance": 18},
+                {"edgeId": "E2", "fromNodeId": "S14", "toNodeId": "S15", "routeType": "ROAD", "distance": 10},
+            ],
+        }
+        memory = GameMemory(1001)
+        context = memory.apply_start(start)
+        engine = DecisionEngine(memory)
+        memory.skipped_process_nodes.add("S13")
+        tasks = [
+            {"taskId": "DONE_1", "nodeId": "S04", "score": 30, "completed": True, "ownerPlayerId": 1001},
+            {"taskId": "DONE_2", "nodeId": "S05", "score": 30, "completed": True, "ownerPlayerId": 1001},
+            {"taskId": "DONE_3", "nodeId": "S09", "score": 30, "completed": True, "ownerPlayerId": 1001},
+            {"taskId": "DONE_4", "nodeId": "S10", "score": 30, "completed": True, "ownerPlayerId": 1001},
+        ]
+
+        first_yield = snapshot(
+            memory,
+            currentNodeId="S13",
+            nodes=start["nodes"],
+            tasks=tasks,
+            opponent_overrides={"playerId": 2002, "currentNodeId": "S13", "state": "IDLE"},
+            round_no=414,
+        )
+        self.assertEqual(engine.decide(context, first_yield), [])
+        self.assertEqual(memory.drawn_process_yield_counts["S13"], 1)
+
+        second_yield = snapshot(
+            memory,
+            currentNodeId="S13",
+            nodes=start["nodes"],
+            tasks=tasks,
+            opponent_overrides={"playerId": 2002, "currentNodeId": "S13", "state": "IDLE"},
+            round_no=415,
+        )
+        self.assertEqual(engine.decide(context, second_yield), [])
+        self.assertEqual(memory.drawn_process_yield_counts["S13"], 2)
+
+        retry = snapshot(
+            memory,
+            currentNodeId="S13",
+            nodes=start["nodes"],
+            tasks=tasks,
+            opponent_overrides={"playerId": 2002, "currentNodeId": "S13", "state": "IDLE"},
+            round_no=416,
+        )
+        self.assertEqual(engine.decide(context, retry), [{"action": "PROCESS", "targetNodeId": "S13"}])
+
     def test_process_completion_marks_fixed_node_done(self):
         memory, context, engine = self.make_engine()
         nodes = [
