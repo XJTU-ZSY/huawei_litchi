@@ -417,11 +417,26 @@ class BaselineStrategy:
             if early_desync:
                 self._clear_process_yield(current_key)
                 return False
+            if not self._opponent_processing_fixed_node(snapshot, current_key):
+                self._clear_process_yield(current_key)
+                return False
             self.last_reason = f"wait for opponent {opponent.get('playerId')} at process node {current}"
             return True
 
         self._clear_process_yield(current_key)
         return False
+
+    @staticmethod
+    def _opponent_processing_fixed_node(snapshot: GameSnapshot, current_node_id: str) -> bool:
+        opponent = snapshot.opponent_player or {}
+        process = opponent.get("currentProcess") or {}
+        if str(process.get("action") or "").upper() != "PROCESS":
+            return False
+        target_node_id = process.get("targetNodeId") or process.get("nodeId")
+        if target_node_id is not None and str(target_node_id) == current_node_id:
+            return True
+        object_key = str(process.get("objectKey") or "")
+        return object_key.startswith(f"PROCESS:{current_node_id}:")
 
     def _should_compete_for_task_gated_process(self, context: GameContext, snapshot: GameSnapshot) -> bool:
         if self._ordinary_task_base_score(context, snapshot) >= TASK_GATED_PROCESS_TARGET_SCORE:
