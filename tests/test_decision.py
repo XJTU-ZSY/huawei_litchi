@@ -2050,6 +2050,46 @@ class DecisionTest(unittest.TestCase):
 
         self.assertEqual(engine.decide(context, snap), [{"action": "WINDOW_CARD", "contestId": "C1", "card": "XIAN_GONG"}])
 
+    def test_final_process_lead_uses_bing_when_xian_gong_unaffordable(self):
+        memory = GameMemory(2002)
+        context = memory.apply_start(START)
+        engine = DecisionEngine(memory)
+        contests = [
+            {
+                "contestId": "C1",
+                "contestType": "DOCK",
+                "redPlayerId": 1001,
+                "bluePlayerId": 2002,
+                "objectKey": "PROCESS:S02:TRANSFER",
+                "sourceActionTypes": {"1001": "PROCESS", "2002": "PROCESS"},
+                "roundIndex": 3,
+                "totalRounds": 3,
+                "redPoint": 0,
+                "bluePoint": 1,
+                "cards": {
+                    "R1:RED": "BING_ZHENG",
+                    "R1:BLUE": "BING_ZHENG",
+                    "R2:RED": "ABSTAIN",
+                    "R2:BLUE": "BING_ZHENG",
+                },
+            }
+        ]
+
+        snap = snapshot(
+            memory,
+            playerId=2002,
+            teamId="BLUE",
+            state="CONTESTING",
+            currentNodeId="S02",
+            freshness=75,
+            goodFruit=95,
+            guardActionPoint=2,
+            contests=contests,
+            opponent_overrides={"playerId": 1001, "teamId": "RED", "currentNodeId": "S02"},
+        )
+
+        self.assertEqual(engine.decide(context, snap), [{"action": "WINDOW_CARD", "contestId": "C1", "card": "BING_ZHENG"}])
+
     def test_high_id_banks_process_lead_before_final_window_round(self):
         memory = GameMemory(2002)
         context = memory.apply_start(START)

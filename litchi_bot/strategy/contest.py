@@ -21,6 +21,7 @@ COUNTER_CARD_PREFERENCE = {
     "BING_ZHENG": ("XIAN_GONG", "BING_ZHENG", "ABSTAIN"),
     "ABSTAIN": ("BING_ZHENG", "XIAN_GONG", "YAN_DIE", "QIANG_XING"),
 }
+FINAL_PROCESS_LEAD_COVER_PREFERENCE = ("XIAN_GONG", "BING_ZHENG", "YAN_DIE", "QIANG_XING")
 
 
 class WindowCardSelector:
@@ -95,15 +96,16 @@ class WindowCardSelector:
     def _final_round_process_lead_cover_card(
         self, context: GameContext, contest: dict[str, Any], affordable: set[str]
     ) -> str | None:
-        if "XIAN_GONG" not in affordable:
-            return None
         if not self._should_defer_process_after_draw(context):
             return None
         if self._remaining_window_rounds(contest) != 1:
             return None
         if self._self_point_lead(context, contest) != 1:
             return None
-        return "XIAN_GONG"
+        for card in FINAL_PROCESS_LEAD_COVER_PREFERENCE:
+            if card in affordable:
+                return card
+        return None
 
     @staticmethod
     def _remaining_window_rounds(contest: dict[str, Any]) -> int | None:
