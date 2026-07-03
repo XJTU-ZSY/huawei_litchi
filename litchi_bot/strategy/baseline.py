@@ -598,7 +598,55 @@ class BaselineStrategy:
             return False
         if not self._opponent_can_pay_xian_gong(snapshot):
             return False
+        if self._should_contest_high_value_task_to_block_opponent_base(context, snapshot, task, current_tasks):
+            return False
         return not self._has_task_safe_qiang_xing_counter(context, snapshot, task)
+
+    def _should_contest_high_value_task_to_block_opponent_base(
+        self,
+        context: GameContext,
+        snapshot: GameSnapshot,
+        task: dict[str, Any],
+        current_tasks: list[dict[str, Any]],
+    ) -> bool:
+        if self._ordinary_task_base_score(context, snapshot) < BASE_TASK_RESOURCE_SCORE:
+            return False
+        if self._opponent_ordinary_task_base_score(context, snapshot) >= BASE_TASK_RESOURCE_SCORE:
+            return False
+        if int(task.get("score") or 0) < DOWNSTREAM_RACE_MIN_TASK_SCORE:
+            return False
+        if self._missing_task_resources(context, snapshot, task):
+            return False
+        if not self._can_finish_after_current_task(context, snapshot, task):
+            return False
+
+        task_score = int(task.get("score") or 0)
+        return any(
+            0 < int(alternate.get("score") or 0) <= LOW_VALUE_ROUTE_TASK_SCORE < task_score
+            and alternate is not task
+            and alternate.get("taskId") != task.get("taskId")
+            and not self._missing_task_resources(context, snapshot, alternate)
+            for alternate in current_tasks
+        )
+
+    def _opponent_ordinary_task_base_score(self, context: GameContext, snapshot: GameSnapshot) -> int:
+        opponent = snapshot.opponent_player or {}
+        opponent_id = opponent.get("playerId")
+        if opponent_id is None:
+            opponent_id = context.opponent_player_id
+        if opponent_id is None:
+            return BASE_TASK_RESOURCE_SCORE
+
+        completed_score = 0
+        for task in snapshot.tasks:
+            if not task.get("completed"):
+                continue
+            if str(task.get("ownerPlayerId") or "") != str(opponent_id):
+                continue
+            completed_score += int(task.get("score") or 0)
+        if completed_score:
+            return completed_score
+        return int(opponent.get("taskScore") or 0)
 
     def _has_direct_current_task_alternative(
         self,

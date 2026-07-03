@@ -198,6 +198,63 @@ class DecisionTest(unittest.TestCase):
 
         self.assertEqual(engine.decide(context, snap), [{"action": "CLAIM_TASK", "taskId": "T11_011"}])
 
+    def test_contests_high_value_same_node_task_to_block_below_base_opponent(self):
+        memory, context, engine = self.make_engine()
+        tasks = [
+            {"taskId": "DONE_SELF_1", "nodeId": "S04", "score": 30, "completed": True, "ownerPlayerId": 1001},
+            {"taskId": "DONE_SELF_2", "nodeId": "S05", "score": 30, "completed": True, "ownerPlayerId": 1001},
+            {"taskId": "DONE_SELF_3", "nodeId": "S09", "score": 30, "completed": True, "ownerPlayerId": 1001},
+            {"taskId": "DONE_OPP_1", "nodeId": "S04", "score": 30, "completed": True, "ownerPlayerId": 2002},
+            {"taskId": "DONE_OPP_2", "nodeId": "S10", "score": 30, "completed": True, "ownerPlayerId": 2002},
+            {"taskId": "T11_011", "nodeId": "S02", "score": 30, "processRound": 4, "active": True},
+            {"taskId": "T14_014", "nodeId": "S02", "score": 15, "processRound": 5, "active": True},
+        ]
+
+        snap = snapshot(
+            memory,
+            currentNodeId="S02",
+            taskScore=80,
+            tasks=tasks,
+            opponent_overrides={
+                "currentNodeId": "S02",
+                "state": "IDLE",
+                "freshness": 84,
+                "goodFruit": 94,
+                "taskScore": 60,
+            },
+        )
+
+        self.assertEqual(engine.decide(context, snap), [{"action": "CLAIM_TASK", "taskId": "T11_011"}])
+
+    def test_avoids_high_value_same_node_task_when_opponent_also_at_base(self):
+        memory, context, engine = self.make_engine()
+        tasks = [
+            {"taskId": "DONE_SELF_1", "nodeId": "S04", "score": 30, "completed": True, "ownerPlayerId": 1001},
+            {"taskId": "DONE_SELF_2", "nodeId": "S05", "score": 30, "completed": True, "ownerPlayerId": 1001},
+            {"taskId": "DONE_SELF_3", "nodeId": "S09", "score": 30, "completed": True, "ownerPlayerId": 1001},
+            {"taskId": "DONE_OPP_1", "nodeId": "S04", "score": 30, "completed": True, "ownerPlayerId": 2002},
+            {"taskId": "DONE_OPP_2", "nodeId": "S10", "score": 30, "completed": True, "ownerPlayerId": 2002},
+            {"taskId": "DONE_OPP_3", "nodeId": "S11", "score": 30, "completed": True, "ownerPlayerId": 2002},
+            {"taskId": "T11_011", "nodeId": "S02", "score": 30, "processRound": 4, "active": True},
+            {"taskId": "T14_014", "nodeId": "S02", "score": 15, "processRound": 5, "active": True},
+        ]
+
+        snap = snapshot(
+            memory,
+            currentNodeId="S02",
+            taskScore=80,
+            tasks=tasks,
+            opponent_overrides={
+                "currentNodeId": "S02",
+                "state": "IDLE",
+                "freshness": 84,
+                "goodFruit": 94,
+                "taskScore": 90,
+            },
+        )
+
+        self.assertEqual(engine.decide(context, snap), [{"action": "CLAIM_TASK", "taskId": "T14_014"}])
+
     def test_claims_required_resource_before_current_task(self):
         memory, context, engine = self.make_engine()
         nodes = [
