@@ -9,6 +9,11 @@ TASK_CONTEST_TYPES = {"TASK"}
 BING_CONTEST_TYPES = {"GATE", "TASK", "PASS", "OBSTACLE"}
 SPEED_BUFF_TYPES = {"FAST_HORSE", "SHORT_HORSE", "RUSH_SPEED"}
 WINDOW_CARDS = {"YAN_DIE", "QIANG_XING", "XIAN_GONG", "BING_ZHENG", "ABSTAIN"}
+ROUND_MS = 1000
+TASK_SCORE_TARGET = 90
+PROCESS_CORRIDOR_MIN_TASK_SCORE = 30
+PROCESS_CORRIDOR_MAX_ROUND = 220
+PROCESS_CORRIDOR_LOOKAHEAD_ROUNDS = 120
 COUNTER_CARD_PREFERENCE = {
     "YAN_DIE": ("BING_ZHENG", "XIAN_GONG", "YAN_DIE", "ABSTAIN"),
     "QIANG_XING": ("BING_ZHENG", "YAN_DIE", "QIANG_XING", "ABSTAIN"),
@@ -43,7 +48,7 @@ class WindowCardSelector:
         player = snapshot.self_player
         affordable = self._affordable_cards(player)
 
-        low_value_card = self._low_value_process_card(context, contest, affordable)
+        low_value_card = self._low_value_process_card(context, snapshot, contest, affordable)
         if low_value_card is not None:
             return low_value_card
 
@@ -65,7 +70,7 @@ class WindowCardSelector:
         return "ABSTAIN"
 
     def _low_value_process_card(
-        self, context: GameContext, contest: dict[str, Any], affordable: set[str]
+        self, context: GameContext, snapshot: GameSnapshot, contest: dict[str, Any], affordable: set[str]
     ) -> str | None:
         if not self._is_fixed_process_contest(context, contest):
             return None
@@ -75,6 +80,10 @@ class WindowCardSelector:
         if opponent_card == "XIAN_GONG" and "QIANG_XING" not in affordable and self._should_defer_process_after_draw(
             context
         ):
+            if "XIAN_GONG" in affordable and self._fixed_process_corridor_has_downstream_value(
+                context, snapshot, contest
+            ):
+                return None
             return "ABSTAIN"
         return None
 
@@ -101,6 +110,95 @@ class WindowCardSelector:
         if opponent_id is None:
             return False
         return self._player_tie_key(context.player_id) > self._player_tie_key(opponent_id)
+
+    def _fixed_process_corridor_has_downstream_value(
+        self, context: GameContext, snapshot: GameSnapshot, contest: dict[str, Any]
+    ) -> bool:
+        if snapshot.phase != "NORMAL" or snapshot.round_no > PROCESS_CORRIDOR_MAX_ROUND:
+            return False
+        player = snapshot.self_player
+        if int(player.get("taskScore") or 0) <= 0 or int(player.get("taskScore") or 0) >= TASK_SCORE_TARGET:
+            return False
+        process_node = self._process_node_from_contest(contest)
+        current_node = str(player.get("currentNodeId") or "")
+        if not process_node or process_node != current_node:
+            return False
+
+        for task in snapshot.tasks:
+            if int(task.get("score") or 0) < PROCESS_CORRIDOR_MIN_TASK_SCORE:
+                continue
+            if not self._task_is_open_for_self(context, task):
+                continue
+            task_node = str(task.get("nodeId") or "")
+            if not task_node or task_node == process_node:
+                continue
+            path = context.graph.shortest_path(process_node, task_node)
+            if not path:
+                continue
+            cost = context.graph.path_cost(path)
+            if cost is None or cost > PROCESS_CORRIDOR_LOOKAHEAD_ROUNDS * ROUND_MS:
+                continue
+            if self._task_requirements_available(context, snapshot, task):
+                return True
+        return False
+
+    @staticmethod
+    def _process_node_from_contest(contest: dict[str, Any]) -> str | None:
+        object_key = str(contest.get("objectKey") or "")
+        parts = object_key.split(":")
+        if len(parts) >= 2 and parts[0] == "PROCESS" and parts[1]:
+            return parts[1]
+        target = contest.get("targetNodeId")
+        return str(target) if target else None
+
+    def _task_is_open_for_self(self, context: GameContext, task: dict[str, Any]) -> bool:
+        if not task.get("taskId") or task.get("completed") or task.get("failed"):
+            return False
+        if task.get("active") is False:
+            return False
+        owner = task.get("ownerPlayerId")
+        if owner not in (None, 0, "0") and str(owner) != str(context.player_id):
+            return False
+        protection = task.get("protectionPlayerId")
+        if protection not in (None, 0, "0") and str(protection) != str(context.player_id):
+            return False
+        return True
+
+    def _task_requirements_available(
+        self, context: GameContext, snapshot: GameSnapshot, task: dict[str, Any]
+    ) -> bool:
+        requirements = self._task_required_resources(context, task)
+        if not requirements:
+            return True
+        task_node = str(task.get("nodeId") or "")
+        stock = snapshot.nodes_by_id.get(task_node, {}).get("resourceStock") or {}
+        resources = snapshot.self_player.get("resources") or {}
+        for required in requirements:
+            options = self._resource_options_for_requirement(str(required))
+            if any(self._resource_count(resources, option) > 0 for option in options):
+                continue
+            if not any(self._resource_count(stock, option) > 0 for option in options):
+                return False
+        return True
+
+    def _task_required_resources(self, context: GameContext, task: dict[str, Any]) -> list[str]:
+        direct = task.get("requiredResourceTypes")
+        if isinstance(direct, list) and direct:
+            return [str(value) for value in direct]
+        template_id = str(task.get("taskTemplateId") or "")
+        if not template_id:
+            return []
+        for template in context.raw_start.get("taskTemplates") or []:
+            if str(template.get("taskTemplateId") or "") == template_id:
+                values = template.get("requiredResourceTypes") or []
+                return [str(value) for value in values]
+        return []
+
+    @staticmethod
+    def _resource_options_for_requirement(required: str) -> tuple[str, ...]:
+        if required in {"FAST_HORSE", "SHORT_HORSE"}:
+            return ("FAST_HORSE", "SHORT_HORSE")
+        return (required,)
 
     @staticmethod
     def _player_tie_key(player_id: Any) -> tuple[int, int | str]:

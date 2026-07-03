@@ -1420,6 +1420,52 @@ class DecisionTest(unittest.TestCase):
 
         self.assertEqual(engine.decide(context, snap), [{"action": "WINDOW_CARD", "contestId": "C1", "card": "ABSTAIN"}])
 
+    def test_high_id_keeps_xian_gong_for_critical_s05_process_corridor(self):
+        memory, context, engine, nodes = self.make_replay_split_engine()
+        nodes = [dict(node) for node in nodes]
+        for node in nodes:
+            if node["nodeId"] == "S09":
+                node["resourceStock"] = {"FAST_HORSE": 1}
+        contests = [
+            {
+                "contestId": "C1",
+                "contestType": "DOCK",
+                "redPlayerId": 1001,
+                "bluePlayerId": 1002,
+                "objectKey": "PROCESS:S05:WATER_TRANSFER",
+                "sourceActionTypes": {"1001": "PROCESS", "1002": "PROCESS"},
+                "cards": {"R1:RED": "XIAN_GONG"},
+            }
+        ]
+        tasks = [
+            {
+                "taskId": "T06_006",
+                "taskTemplateId": "T06",
+                "nodeId": "S09",
+                "score": 30,
+                "processRound": 3,
+                "active": True,
+                "requiredResourceTypes": ["FAST_HORSE"],
+            },
+            {"taskId": "T11_011", "nodeId": "S10", "score": 30, "processRound": 4, "active": True},
+        ]
+
+        snap = snapshot(
+            memory,
+            round_no=151,
+            playerId=1002,
+            teamId="BLUE",
+            state="CONTESTING",
+            currentNodeId="S05",
+            taskScore=30,
+            nodes=nodes,
+            tasks=tasks,
+            contests=contests,
+            opponent_overrides={"playerId": 1001, "teamId": "RED", "currentNodeId": "S05"},
+        )
+
+        self.assertEqual(engine.decide(context, snap), [{"action": "WINDOW_CARD", "contestId": "C1", "card": "XIAN_GONG"}])
+
     def test_late_fixed_process_window_still_abstains_after_xian_gong(self):
         memory, context, engine, nodes = self.make_replay_split_engine()
         contests = [
@@ -1446,6 +1492,51 @@ class DecisionTest(unittest.TestCase):
             tasks=tasks,
             contests=contests,
             opponent_overrides={"playerId": 1001, "teamId": "RED", "currentNodeId": "S02"},
+        )
+
+        self.assertEqual(engine.decide(context, snap), [{"action": "WINDOW_CARD", "contestId": "C1", "card": "ABSTAIN"}])
+
+    def test_late_critical_process_corridor_still_abstains_after_xian_gong(self):
+        memory, context, engine, nodes = self.make_replay_split_engine()
+        nodes = [dict(node) for node in nodes]
+        for node in nodes:
+            if node["nodeId"] == "S09":
+                node["resourceStock"] = {"FAST_HORSE": 1}
+        contests = [
+            {
+                "contestId": "C1",
+                "contestType": "DOCK",
+                "redPlayerId": 1001,
+                "bluePlayerId": 1002,
+                "objectKey": "PROCESS:S05:WATER_TRANSFER",
+                "sourceActionTypes": {"1001": "PROCESS", "1002": "PROCESS"},
+                "cards": {"R1:RED": "XIAN_GONG"},
+            }
+        ]
+        tasks = [
+            {
+                "taskId": "T06_006",
+                "taskTemplateId": "T06",
+                "nodeId": "S09",
+                "score": 30,
+                "processRound": 3,
+                "active": True,
+                "requiredResourceTypes": ["FAST_HORSE"],
+            }
+        ]
+
+        snap = snapshot(
+            memory,
+            round_no=260,
+            playerId=1002,
+            teamId="BLUE",
+            state="CONTESTING",
+            currentNodeId="S05",
+            taskScore=30,
+            nodes=nodes,
+            tasks=tasks,
+            contests=contests,
+            opponent_overrides={"playerId": 1001, "teamId": "RED", "currentNodeId": "S05"},
         )
 
         self.assertEqual(engine.decide(context, snap), [{"action": "WINDOW_CARD", "contestId": "C1", "card": "ABSTAIN"}])
