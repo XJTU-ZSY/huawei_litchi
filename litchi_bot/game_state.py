@@ -52,6 +52,7 @@ class GameMemory:
     active_task_contests: dict[str, str] = field(default_factory=dict)
     skipped_resource_claims: set[str] = field(default_factory=set)
     skipped_task_claims: set[str] = field(default_factory=set)
+    drawn_task_retry_counts: dict[str, int] = field(default_factory=dict)
     drawn_process_yield_counts: dict[str, int] = field(default_factory=dict)
     drawn_process_retry_counts: dict[str, int] = field(default_factory=dict)
     process_idle_yield_counts: dict[str, int] = field(default_factory=dict)
@@ -135,6 +136,7 @@ class GameMemory:
                 if task_id:
                     self.completed_tasks.add(str(task_id))
                     self.skipped_task_claims.discard(str(task_id))
+                    self.drawn_task_retry_counts.pop(str(task_id), None)
             elif event_type in {"ACTION_REJECTED", "INVALID_ACTION"}:
                 self.rejected_actions.append(event)
                 self._recover_from_rejection(payload, current_node_id)

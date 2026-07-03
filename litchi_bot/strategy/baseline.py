@@ -29,6 +29,7 @@ FIXED_PROCESS_BUSY_STATES = {"PROCESSING", "VERIFYING", "RESTING", "CONTESTING"}
 IDLE_PROCESS_YIELD_LIMIT = 1
 DRAWN_PROCESS_PRESSURE_RETRY_LIMIT = 1
 DRAWN_PROCESS_YIELD_LIMIT = 2
+DRAWN_TASK_RETRY_LIMIT = 1
 EARLY_PROCESS_RACE_TASK_SCORE = 90
 DOWNSTREAM_RACE_MIN_TASK_SCORE = 30
 DOWNSTREAM_RACE_MAX_TRAVEL_ROUNDS = 80
@@ -279,7 +280,7 @@ class BaselineStrategy:
                 continue
             if not self._task_available_for_self(context, task):
                 continue
-            if self._task_claim_skipped(snapshot, task):
+            if self._task_claim_skipped(context, snapshot, task):
                 continue
             if self._missing_task_resources(context, snapshot, task):
                 continue
@@ -839,12 +840,12 @@ class BaselineStrategy:
                 continue
             if not self._task_available_for_self(context, task):
                 continue
-            if self._task_claim_skipped(snapshot, task):
+            if self._task_claim_skipped(context, snapshot, task):
                 continue
             tasks.append(task)
         return tasks
 
-    def _task_claim_skipped(self, snapshot: GameSnapshot, task: dict[str, Any]) -> bool:
+    def _task_claim_skipped(self, context: GameContext, snapshot: GameSnapshot, task: dict[str, Any]) -> bool:
         task_id = str(task.get("taskId") or "")
         if not task_id or task_id not in self.memory.skipped_task_claims:
             return False
@@ -859,10 +860,62 @@ class BaselineStrategy:
             and opponent_state not in {"DELIVERED", "RETIRED", "MOVING"}
         )
         if opponent_still_competing:
+            if self._should_retry_drawn_high_value_task(context, snapshot, task):
+                self.memory.drawn_task_retry_counts[task_id] = self.memory.drawn_task_retry_counts.get(task_id, 0) + 1
+                self.memory.skipped_task_claims.discard(task_id)
+                self.last_reason = f"retry drawn high-value task {task_id}"
+                return False
             self.last_reason = f"skip drawn task {task_id} while opponent remains at {current}"
             return True
 
         self.memory.skipped_task_claims.discard(task_id)
+        self.memory.drawn_task_retry_counts.pop(task_id, None)
+        return False
+
+    def _should_retry_drawn_high_value_task(
+        self,
+        context: GameContext,
+        snapshot: GameSnapshot,
+        task: dict[str, Any],
+    ) -> bool:
+        task_id = str(task.get("taskId") or "")
+        if not task_id:
+            return False
+        if self.memory.drawn_task_retry_counts.get(task_id, 0) >= DRAWN_TASK_RETRY_LIMIT:
+            return False
+
+        opponent = snapshot.opponent_player or {}
+        if str(opponent.get("state") or "IDLE") != "IDLE":
+            return False
+        if self._ordinary_task_base_score(context, snapshot) < BASE_TASK_RESOURCE_SCORE:
+            return False
+        if self._opponent_ordinary_task_base_score(context, snapshot) >= BASE_TASK_RESOURCE_SCORE:
+            return False
+        if int(task.get("score") or 0) < DOWNSTREAM_RACE_MIN_TASK_SCORE:
+            return False
+        if self._missing_task_resources(context, snapshot, task):
+            return False
+        if not self._can_finish_after_current_task(context, snapshot, task):
+            return False
+
+        current = str(snapshot.self_player.get("currentNodeId") or "")
+        task_score = int(task.get("score") or 0)
+        for alternate in snapshot.tasks:
+            alternate_id = str(alternate.get("taskId") or "")
+            if not alternate_id or alternate_id == task_id:
+                continue
+            if alternate_id in self.memory.skipped_task_claims:
+                continue
+            if str(alternate.get("nodeId") or "") != current:
+                continue
+            if not self._task_available_for_self(context, alternate):
+                continue
+            alternate_score = int(alternate.get("score") or 0)
+            if alternate_score <= 0 or alternate_score > LOW_VALUE_ROUTE_TASK_SCORE or alternate_score >= task_score:
+                continue
+            if self._missing_task_resources(context, snapshot, alternate):
+                continue
+            return True
         return False
 
     def _can_finish_after_current_task(
@@ -1160,7 +1213,7 @@ class BaselineStrategy:
         for task in sorted(snapshot.tasks, key=self._task_sort_key):
             if not self._task_available_for_self(context, task):
                 continue
-            if self._task_claim_skipped(snapshot, task):
+            if self._task_claim_skipped(context, snapshot, task):
                 continue
             if not self._task_route_viable(context, snapshot, task):
                 continue
@@ -1272,7 +1325,7 @@ class BaselineStrategy:
         for task in sorted(snapshot.tasks, key=self._task_sort_key):
             if not self._task_available_for_self(context, task):
                 continue
-            if self._task_claim_skipped(snapshot, task):
+            if self._task_claim_skipped(context, snapshot, task):
                 continue
             if not self._task_route_viable(context, snapshot, task):
                 continue

@@ -1348,6 +1348,56 @@ class DecisionTest(unittest.TestCase):
         self.assertEqual(engine.decide(context, snap), [{"action": "CLAIM_TASK", "taskId": "T11_011"}])
         self.assertNotEqual(engine.last_reason, "claim current task T02_003")
 
+    def test_drawn_high_value_task_retries_once_when_low_value_fallback_concedes_opponent_base(self):
+        memory, context, engine = self.make_engine()
+        tasks = [
+            {"taskId": "DONE_SELF_1", "nodeId": "S04", "score": 30, "completed": True, "ownerPlayerId": 1001},
+            {"taskId": "DONE_SELF_2", "nodeId": "S05", "score": 30, "completed": True, "ownerPlayerId": 1001},
+            {"taskId": "DONE_SELF_3", "nodeId": "S09", "score": 30, "completed": True, "ownerPlayerId": 1001},
+            {"taskId": "DONE_OPP_1", "nodeId": "S04", "score": 30, "completed": True, "ownerPlayerId": 2002},
+            {"taskId": "DONE_OPP_2", "nodeId": "S10", "score": 30, "completed": True, "ownerPlayerId": 2002},
+            {"taskId": "T11_011", "nodeId": "S02", "score": 30, "processRound": 4, "active": True},
+            {"taskId": "T14_014", "nodeId": "S02", "score": 15, "processRound": 5, "active": True},
+        ]
+        memory.skipped_task_claims.add("T11_011")
+
+        snap = snapshot(
+            memory,
+            currentNodeId="S02",
+            tasks=tasks,
+            opponent_overrides={"currentNodeId": "S02", "state": "IDLE", "taskScore": 60},
+            round_no=284,
+        )
+
+        self.assertEqual(engine.decide(context, snap), [{"action": "CLAIM_TASK", "taskId": "T11_011"}])
+        self.assertEqual(memory.drawn_task_retry_counts["T11_011"], 1)
+        self.assertNotIn("T11_011", memory.skipped_task_claims)
+
+    def test_drawn_high_value_task_retry_limit_falls_back_to_low_value_task(self):
+        memory, context, engine = self.make_engine()
+        tasks = [
+            {"taskId": "DONE_SELF_1", "nodeId": "S04", "score": 30, "completed": True, "ownerPlayerId": 1001},
+            {"taskId": "DONE_SELF_2", "nodeId": "S05", "score": 30, "completed": True, "ownerPlayerId": 1001},
+            {"taskId": "DONE_SELF_3", "nodeId": "S09", "score": 30, "completed": True, "ownerPlayerId": 1001},
+            {"taskId": "DONE_OPP_1", "nodeId": "S04", "score": 30, "completed": True, "ownerPlayerId": 2002},
+            {"taskId": "DONE_OPP_2", "nodeId": "S10", "score": 30, "completed": True, "ownerPlayerId": 2002},
+            {"taskId": "T11_011", "nodeId": "S02", "score": 30, "processRound": 4, "active": True},
+            {"taskId": "T14_014", "nodeId": "S02", "score": 15, "processRound": 5, "active": True},
+        ]
+        memory.skipped_task_claims.add("T11_011")
+        memory.drawn_task_retry_counts["T11_011"] = 1
+
+        snap = snapshot(
+            memory,
+            currentNodeId="S02",
+            tasks=tasks,
+            opponent_overrides={"currentNodeId": "S02", "state": "IDLE", "taskScore": 60},
+            round_no=284,
+        )
+
+        self.assertEqual(engine.decide(context, snap), [{"action": "CLAIM_TASK", "taskId": "T14_014"}])
+        self.assertIn("T11_011", memory.skipped_task_claims)
+
     def test_drawn_task_contest_moves_on_when_no_alternate_current_task(self):
         memory, context, engine = self.make_engine()
         tasks = [{"taskId": "T02_003", "nodeId": "S02", "score": 30, "active": True}]
