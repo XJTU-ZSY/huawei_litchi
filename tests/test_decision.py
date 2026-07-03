@@ -1449,6 +1449,53 @@ class DecisionTest(unittest.TestCase):
         self.assertNotEqual(action, [{"action": "MOVE", "targetNodeId": "S07"}])
         self.assertIn("toward S09", engine.last_reason)
 
+    def test_prefers_direct_corridor_task_before_branch_bonus_below_target(self):
+        memory, context, engine, nodes = self.make_replay_split_engine()
+        memory.completed_process_nodes.add("S04")
+        nodes = [dict(node) for node in nodes]
+        for node in nodes:
+            if node["nodeId"] == "S04":
+                node["resourceStock"] = {}
+            elif node["nodeId"] == "S09":
+                node["resourceStock"] = {"FAST_HORSE": 1}
+        tasks = [
+            {"taskId": "T02_002", "nodeId": "S07", "score": 30, "processRound": 4, "active": True},
+            {"taskId": "T02_003", "nodeId": "S10", "score": 30, "processRound": 4, "active": True},
+            {
+                "taskId": "T06_006",
+                "taskTemplateId": "T06",
+                "nodeId": "S09",
+                "score": 30,
+                "processRound": 3,
+                "active": True,
+            },
+            {"taskId": "T08_009", "nodeId": "S05", "score": 30, "processRound": 4, "active": True},
+            {"taskId": "T11_011", "nodeId": "S10", "score": 30, "processRound": 4, "active": True},
+        ]
+
+        snap = snapshot(
+            memory,
+            round_no=94,
+            playerId=1002,
+            teamId="BLUE",
+            currentNodeId="S04",
+            taskScore=60,
+            nodes=nodes,
+            tasks=tasks,
+            opponent_overrides={
+                "playerId": 1001,
+                "teamId": "RED",
+                "state": "MOVING",
+                "currentNodeId": "S04",
+                "nextNodeId": "S05",
+                "edgeProgressMs": 15000,
+                "edgeTotalMs": 60720,
+            },
+        )
+
+        self.assertEqual(engine.decide(context, snap), [{"action": "MOVE", "targetNodeId": "S05"}])
+        self.assertIn("direct corridor task node S05", engine.last_reason)
+
     def test_routes_to_bonus_task_after_task_score_target_when_slack_allows(self):
         memory, context, engine, nodes = self.make_delivery_map_engine()
         memory.completed_process_nodes.add("S05")

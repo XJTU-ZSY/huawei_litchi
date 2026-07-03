@@ -1115,7 +1115,10 @@ class BaselineStrategy:
         if target:
             waypoint = self._bonus_task_waypoint_before_destination(context, snapshot, target)
             if waypoint:
-                self.last_reason = f"detour to bonus task node {waypoint} before {target}"
+                if self._waypoint_is_on_unblocked_path(context, snapshot, waypoint, target):
+                    self.last_reason = f"follow direct corridor task node {waypoint} before {target}"
+                else:
+                    self.last_reason = f"detour to bonus task node {waypoint} before {target}"
                 return waypoint
             if task_score < TASK_SCORE_TARGET:
                 self.last_reason = f"go to task node {target}"
@@ -1141,6 +1144,10 @@ class BaselineStrategy:
         direct_rounds = self._path_rounds(context, snapshot, direct_path, self.memory.completed_process_nodes)
         if direct_rounds is None:
             return None
+
+        corridor_waypoint = self._direct_corridor_task_waypoint_before_destination(context, snapshot, destination)
+        if corridor_waypoint is not None:
+            return corridor_waypoint
 
         best_node: str | None = None
         best_key: tuple[int, int, int] | None = None
@@ -1176,6 +1183,40 @@ class BaselineStrategy:
                 best_key = key
                 best_node = node_id
         return best_node
+
+    def _direct_corridor_task_waypoint_before_destination(
+        self, context: GameContext, snapshot: GameSnapshot, destination: str
+    ) -> str | None:
+        if int(snapshot.self_player.get("taskScore") or 0) >= TASK_SCORE_TARGET:
+            return None
+        current = str(snapshot.self_player.get("currentNodeId") or "")
+        if not current or current == destination:
+            return None
+        direct_path = context.graph.shortest_path(current, destination)
+        if len(direct_path) < 3:
+            return None
+
+        for node_id in direct_path[1:-1]:
+            for task in sorted(snapshot.tasks, key=self._task_sort_key):
+                if str(task.get("nodeId") or "") != node_id:
+                    continue
+                if int(task.get("score") or 0) < BONUS_TASK_MIN_SCORE:
+                    continue
+                if not self._task_routeable_for_self(context, snapshot, task):
+                    continue
+                if not self._has_endgame_slack_for_task(context, snapshot, task):
+                    continue
+                return node_id
+        return None
+
+    def _waypoint_is_on_unblocked_path(
+        self, context: GameContext, snapshot: GameSnapshot, waypoint: str, destination: str
+    ) -> bool:
+        current = str(snapshot.self_player.get("currentNodeId") or "")
+        if not current:
+            return False
+        direct_path = context.graph.shortest_path(current, destination)
+        return waypoint in direct_path[1:-1]
 
     def _nearest_task_node(self, context: GameContext, snapshot: GameSnapshot) -> str | None:
         current = str(snapshot.self_player.get("currentNodeId") or "")
@@ -1370,7 +1411,9 @@ class BaselineStrategy:
             return None
         next_node = path[1]
         movement_reason = f"move from {current} to {next_node} toward {target}"
-        if self.last_reason.startswith(("detour to bonus task node", "go to bonus task node", "go to task node")):
+        if self.last_reason.startswith(
+            ("detour to bonus task node", "follow direct corridor task node", "go to bonus task node", "go to task node")
+        ):
             self.last_reason = f"{self.last_reason}; {movement_reason}"
         else:
             self.last_reason = movement_reason
