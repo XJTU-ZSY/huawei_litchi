@@ -72,6 +72,12 @@ class WindowCardSelector:
         counter = self._safe_counter_card(context, snapshot, contest, tied_card)
         if counter is not None:
             return counter
+        if (
+            self._is_fixed_process_contest(contest)
+            and base_card == tied_card
+            and self._can_pay_card(context, snapshot, contest, base_card)
+        ):
+            return base_card
         if self._card_beats(base_card, tied_card):
             return base_card
         return "ABSTAIN"

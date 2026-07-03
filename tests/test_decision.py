@@ -2051,7 +2051,7 @@ class DecisionTest(unittest.TestCase):
 
         self.assertEqual(engine.decide(context, snap), [{"action": "WINDOW_CARD", "contestId": "C1", "card": "ABSTAIN"}])
 
-    def test_fixed_process_window_abstains_after_same_bing_zheng_tie_without_counter(self):
+    def test_fixed_process_window_repeats_same_bing_zheng_tie_without_counter(self):
         memory, context, engine = self.make_engine()
         contests = [
             {
@@ -2076,7 +2076,34 @@ class DecisionTest(unittest.TestCase):
             contests=contests,
         )
 
-        self.assertEqual(engine.decide(context, snap), [{"action": "WINDOW_CARD", "contestId": "C1", "card": "ABSTAIN"}])
+        self.assertEqual(engine.decide(context, snap), [{"action": "WINDOW_CARD", "contestId": "C1", "card": "BING_ZHENG"}])
+
+    def test_fixed_process_window_repeats_same_xian_gong_tie_without_counter(self):
+        memory, context, engine = self.make_engine()
+        contests = [
+            {
+                "contestId": "C1",
+                "contestType": "DOCK",
+                "targetNodeId": "S02",
+                "redPlayerId": 1001,
+                "bluePlayerId": 2002,
+                "objectKey": "PROCESS:S02:TRANSFER",
+                "sourceActionTypes": {"1001": "PROCESS", "2002": "PROCESS"},
+                "roundIndex": 2,
+                "cards": {"R1:RED": "XIAN_GONG", "R1:BLUE": "XIAN_GONG"},
+            }
+        ]
+        snap = snapshot(
+            memory,
+            state="CONTESTING",
+            currentNodeId="S02",
+            freshness=97,
+            goodFruit=99,
+            guardActionPoint=4,
+            contests=contests,
+        )
+
+        self.assertEqual(engine.decide(context, snap), [{"action": "WINDOW_CARD", "contestId": "C1", "card": "XIAN_GONG"}])
 
     def test_fixed_process_window_counters_same_bing_zheng_tie_with_xian_gong(self):
         memory, context, engine = self.make_engine()
