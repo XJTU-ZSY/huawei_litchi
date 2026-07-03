@@ -9,6 +9,13 @@ HORSE_RESOURCE_TYPES = {"FAST_HORSE", "SHORT_HORSE"}
 HORSE_TRANSFER_TEMPLATE_IDS = {"T06"}
 HORSE_TRANSFER_PROCESS_TYPES = {"HORSE_TRANSFER"}
 HORSE_SPEED_BUFF_TYPES = {"FAST_HORSE", "SHORT_HORSE", "RUSH_SPEED"}
+DOCUMENT_RESOURCE_TYPES = {"PASS_TOKEN", "OFFICIAL_PERMIT"}
+WINNING_COUNTERS = {
+    "YAN_DIE": ("BING_ZHENG", "XIAN_GONG"),
+    "QIANG_XING": ("BING_ZHENG", "YAN_DIE"),
+    "XIAN_GONG": ("QIANG_XING",),
+    "BING_ZHENG": ("XIAN_GONG",),
+}
 
 
 class WindowCardSelector:
@@ -32,6 +39,10 @@ class WindowCardSelector:
         return None
 
     def _choose_card(self, context: GameContext, snapshot: GameSnapshot, contest: dict[str, Any]) -> str:
+        base_card = self._choose_base_card(context, snapshot, contest)
+        return self._adapt_same_card_tie(context, snapshot, contest, base_card)
+
+    def _choose_base_card(self, context: GameContext, snapshot: GameSnapshot, contest: dict[str, Any]) -> str:
         player = snapshot.self_player
         resources = player.get("resources") or {}
         contest_type = contest.get("contestType")
@@ -47,6 +58,82 @@ class WindowCardSelector:
                 return self._fallback_non_horse_card(player, allow_bing_zheng=self._is_fixed_process_contest(contest))
             return "QIANG_XING"
         return self._fallback_non_horse_card(player, allow_bing_zheng=self._is_fixed_process_contest(contest))
+
+    def _adapt_same_card_tie(
+        self,
+        context: GameContext,
+        snapshot: GameSnapshot,
+        contest: dict[str, Any],
+        base_card: str,
+    ) -> str:
+        tied_card = self._previous_same_card(contest)
+        if tied_card is None or tied_card == "ABSTAIN":
+            return base_card
+        counter = self._safe_counter_card(context, snapshot, contest, tied_card)
+        if counter is not None:
+            return counter
+        if self._card_beats(base_card, tied_card):
+            return base_card
+        return "ABSTAIN"
+
+    @staticmethod
+    def _previous_same_card(contest: dict[str, Any]) -> str | None:
+        try:
+            previous_round = int(contest.get("roundIndex") or 0) - 1
+        except (TypeError, ValueError):
+            return None
+        if previous_round <= 0:
+            return None
+        cards = contest.get("cards") or {}
+        red_card = cards.get(f"R{previous_round}:RED")
+        blue_card = cards.get(f"R{previous_round}:BLUE")
+        if not red_card or not blue_card:
+            return None
+        red_card_text = str(red_card)
+        if red_card_text != str(blue_card):
+            return None
+        return red_card_text
+
+    def _safe_counter_card(
+        self,
+        context: GameContext,
+        snapshot: GameSnapshot,
+        contest: dict[str, Any],
+        opponent_card: str,
+    ) -> str | None:
+        for card in WINNING_COUNTERS.get(opponent_card, ()):
+            if self._can_pay_card(context, snapshot, contest, card):
+                return card
+        return None
+
+    def _can_pay_card(
+        self,
+        context: GameContext,
+        snapshot: GameSnapshot,
+        contest: dict[str, Any],
+        card: str,
+    ) -> bool:
+        player = snapshot.self_player
+        resources = player.get("resources") or {}
+        if card == "XIAN_GONG":
+            return self._can_pay_xian_gong(player)
+        if card == "BING_ZHENG":
+            return self._can_pay_bing_zheng(player)
+        if card == "YAN_DIE":
+            return any(int(resources.get(resource_type) or 0) > 0 for resource_type in DOCUMENT_RESOURCE_TYPES)
+        if card == "QIANG_XING":
+            if self._has_horse_speed_buff(player):
+                return True
+            return self._horse_resource_count(resources) > 0 and not self._should_preserve_horse_for_task(
+                context,
+                snapshot,
+                contest,
+            )
+        return card == "ABSTAIN"
+
+    @staticmethod
+    def _card_beats(card: str, opponent_card: str) -> bool:
+        return card in WINNING_COUNTERS.get(opponent_card, ())
 
     def _choose_task_contest_card(
         self,

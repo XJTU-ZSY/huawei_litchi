@@ -1650,6 +1650,60 @@ class DecisionTest(unittest.TestCase):
 
         self.assertEqual(engine.decide(context, snap), [{"action": "WINDOW_CARD", "contestId": "C1", "card": "ABSTAIN"}])
 
+    def test_fixed_process_window_abstains_after_same_bing_zheng_tie_without_counter(self):
+        memory, context, engine = self.make_engine()
+        contests = [
+            {
+                "contestId": "C1",
+                "contestType": "DOCK",
+                "targetNodeId": "S13",
+                "redPlayerId": 1001,
+                "bluePlayerId": 2002,
+                "objectKey": "PROCESS:S13:PALACE_TRANSFER",
+                "sourceActionTypes": {"1001": "PROCESS", "2002": "PROCESS"},
+                "roundIndex": 2,
+                "cards": {"R1:RED": "BING_ZHENG", "R1:BLUE": "BING_ZHENG"},
+            }
+        ]
+        snap = snapshot(
+            memory,
+            state="CONTESTING",
+            currentNodeId="S13",
+            freshness=77,
+            goodFruit=95,
+            guardActionPoint=3,
+            contests=contests,
+        )
+
+        self.assertEqual(engine.decide(context, snap), [{"action": "WINDOW_CARD", "contestId": "C1", "card": "ABSTAIN"}])
+
+    def test_fixed_process_window_counters_same_bing_zheng_tie_with_xian_gong(self):
+        memory, context, engine = self.make_engine()
+        contests = [
+            {
+                "contestId": "C1",
+                "contestType": "DOCK",
+                "targetNodeId": "S13",
+                "redPlayerId": 1001,
+                "bluePlayerId": 2002,
+                "objectKey": "PROCESS:S13:PALACE_TRANSFER",
+                "sourceActionTypes": {"1001": "PROCESS", "2002": "PROCESS"},
+                "roundIndex": 2,
+                "cards": {"R1:RED": "BING_ZHENG", "R1:BLUE": "BING_ZHENG"},
+            }
+        ]
+        snap = snapshot(
+            memory,
+            state="CONTESTING",
+            currentNodeId="S13",
+            freshness=85,
+            goodFruit=95,
+            guardActionPoint=3,
+            contests=contests,
+        )
+
+        self.assertEqual(engine.decide(context, snap), [{"action": "WINDOW_CARD", "contestId": "C1", "card": "XIAN_GONG"}])
+
     def test_task_window_preserves_only_horse_resource_for_t06(self):
         memory, context, engine = self.make_engine()
         contests = [
@@ -1683,6 +1737,77 @@ class DecisionTest(unittest.TestCase):
         )
 
         self.assertEqual(engine.decide(context, snap), [{"action": "WINDOW_CARD", "contestId": "C1", "card": "XIAN_GONG"}])
+
+    def test_task_window_same_xian_gong_tie_preserves_only_horse_resource_for_t06(self):
+        memory, context, engine = self.make_engine()
+        contests = [
+            {
+                "contestId": "C1",
+                "contestType": "TASK",
+                "taskId": "T06_006",
+                "redPlayerId": 1001,
+                "bluePlayerId": 2002,
+                "roundIndex": 2,
+                "cards": {"R1:RED": "XIAN_GONG", "R1:BLUE": "XIAN_GONG"},
+            }
+        ]
+        tasks = [
+            {
+                "taskId": "T06_006",
+                "taskTemplateId": "T06",
+                "nodeId": "S09",
+                "processType": "HORSE_TRANSFER",
+                "score": 30,
+                "active": True,
+            }
+        ]
+        snap = snapshot(
+            memory,
+            state="CONTESTING",
+            currentNodeId="S09",
+            guardActionPoint=4,
+            resources={"FAST_HORSE": 1},
+            tasks=tasks,
+            contests=contests,
+        )
+
+        self.assertEqual(engine.decide(context, snap), [{"action": "WINDOW_CARD", "contestId": "C1", "card": "ABSTAIN"}])
+
+    def test_task_window_same_xian_gong_tie_uses_free_qiang_xing_with_horse_buff(self):
+        memory, context, engine = self.make_engine()
+        contests = [
+            {
+                "contestId": "C1",
+                "contestType": "TASK",
+                "taskId": "T06_006",
+                "redPlayerId": 1001,
+                "bluePlayerId": 2002,
+                "roundIndex": 2,
+                "cards": {"R1:RED": "XIAN_GONG", "R1:BLUE": "XIAN_GONG"},
+            }
+        ]
+        tasks = [
+            {
+                "taskId": "T06_006",
+                "taskTemplateId": "T06",
+                "nodeId": "S09",
+                "processType": "HORSE_TRANSFER",
+                "score": 30,
+                "active": True,
+            }
+        ]
+        snap = snapshot(
+            memory,
+            state="CONTESTING",
+            currentNodeId="S09",
+            guardActionPoint=4,
+            resources={"FAST_HORSE": 1},
+            buffs=[{"type": "FAST_HORSE"}],
+            tasks=tasks,
+            contests=contests,
+        )
+
+        self.assertEqual(engine.decide(context, snap), [{"action": "WINDOW_CARD", "contestId": "C1", "card": "QIANG_XING"}])
 
     def test_task_window_abstains_before_spending_only_horse_when_no_safe_card_exists(self):
         memory, context, engine = self.make_engine()
