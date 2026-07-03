@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from ..game_state import GameContext, GameMemory, GameSnapshot
+from ..game_state import GameContext, GameMemory, GameSnapshot, same_player_id
 from .contest import WindowCardSelector
 
 
@@ -18,6 +18,7 @@ RESOURCE_PRIORITY = [
 
 HORSE_RESOURCE_PRIORITY = ["FAST_HORSE", "SHORT_HORSE"]
 HORSE_RESOURCE_TYPES = set(HORSE_RESOURCE_PRIORITY)
+HORSE_SPEED_BUFF_TYPES = {"FAST_HORSE", "SHORT_HORSE", "RUSH_SPEED"}
 HORSE_TRANSFER_TEMPLATE_IDS = {"T06"}
 HORSE_TRANSFER_PROCESS_TYPES = {"HORSE_TRANSFER"}
 LOW_VALUE_CONTEST_RESOURCES = {"OFFICIAL_PERMIT", "BOAT_RIGHT"}
@@ -34,6 +35,8 @@ TASK_GATED_PROCESS_TARGET_SCORE = 105
 ENDGAME_TASK_SAFETY_BUFFER_ROUNDS = 10
 DELIVERY_SUBMIT_BUFFER_ROUNDS = 2
 BREAK_ORDER_BAD_FRUIT_COST = 2
+XIAN_GONG_MIN_FRESHNESS = 80
+XIAN_GONG_MIN_GOOD_FRUIT = 30
 
 
 class BaselineStrategy:
@@ -505,7 +508,8 @@ class BaselineStrategy:
         current = snapshot.self_player.get("currentNodeId")
         if not current:
             return None
-        for task in self._current_available_tasks(context, snapshot):
+        tasks = self._current_available_tasks(context, snapshot)
+        for task in tasks:
             missing_resources = self._missing_task_resources(context, snapshot, task)
             if missing_resources:
                 if allow_required_resource:
@@ -522,9 +526,112 @@ class BaselineStrategy:
                     f"skip task {task.get('taskId')} missing required resource " + ",".join(missing_resources)
                 )
                 continue
+            if self._should_defer_unfavorable_current_task_contest(context, snapshot, task, tasks):
+                self.last_reason = f"defer contested task {task.get('taskId')} for safer current-node alternate"
+                continue
             self.last_reason = f"claim current task {task.get('taskId')}"
             return {"action": "CLAIM_TASK", "taskId": task["taskId"]}
         return None
+
+    def _should_defer_unfavorable_current_task_contest(
+        self,
+        context: GameContext,
+        snapshot: GameSnapshot,
+        task: dict[str, Any],
+        current_tasks: list[dict[str, Any]],
+    ) -> bool:
+        if not self._has_direct_current_task_alternative(context, snapshot, task, current_tasks):
+            return False
+        if not self._opponent_idle_at_self_node(snapshot):
+            return False
+        if not self._task_contestable_by_opponent(context, snapshot, task):
+            return False
+        if not self._opponent_can_pay_xian_gong(snapshot):
+            return False
+        return not self._has_task_safe_qiang_xing_counter(context, snapshot, task)
+
+    def _has_direct_current_task_alternative(
+        self,
+        context: GameContext,
+        snapshot: GameSnapshot,
+        task: dict[str, Any],
+        current_tasks: list[dict[str, Any]],
+    ) -> bool:
+        base_score = self._ordinary_task_base_score(context, snapshot)
+        task_score = int(task.get("score") or 0)
+        for alternate in current_tasks:
+            if alternate is task or alternate.get("taskId") == task.get("taskId"):
+                continue
+            alternate_score = int(alternate.get("score") or 0)
+            if alternate_score <= 0 or alternate_score >= task_score:
+                continue
+            if base_score < BASE_TASK_RESOURCE_SCORE and base_score + alternate_score < BASE_TASK_RESOURCE_SCORE:
+                continue
+            if self._missing_task_resources(context, snapshot, alternate):
+                continue
+            return True
+        return False
+
+    def _opponent_idle_at_self_node(self, snapshot: GameSnapshot) -> bool:
+        current = str(snapshot.self_player.get("currentNodeId") or "")
+        opponent = snapshot.opponent_player or {}
+        if not current or str(opponent.get("currentNodeId") or "") != current:
+            return False
+        if opponent.get("delivered"):
+            return False
+        return str(opponent.get("state") or "IDLE") == "IDLE"
+
+    @staticmethod
+    def _task_contestable_by_opponent(
+        context: GameContext,
+        snapshot: GameSnapshot,
+        task: dict[str, Any],
+    ) -> bool:
+        opponent = snapshot.opponent_player or {}
+        opponent_id = opponent.get("playerId")
+        if opponent_id is None:
+            opponent_id = context.opponent_player_id
+        if opponent_id is None:
+            return False
+        owner = task.get("ownerPlayerId")
+        if owner not in (None, 0, "0") and not same_player_id(owner, opponent_id):
+            return False
+        protection = task.get("protectionPlayerId")
+        if protection not in (None, 0, "0") and not same_player_id(protection, opponent_id):
+            return False
+        return True
+
+    @staticmethod
+    def _opponent_can_pay_xian_gong(snapshot: GameSnapshot) -> bool:
+        opponent = snapshot.opponent_player or {}
+        return (
+            float(opponent.get("freshness") or 0) >= XIAN_GONG_MIN_FRESHNESS
+            and int(opponent.get("goodFruit") or 0) > XIAN_GONG_MIN_GOOD_FRUIT
+        )
+
+    def _has_task_safe_qiang_xing_counter(
+        self,
+        context: GameContext,
+        snapshot: GameSnapshot,
+        task: dict[str, Any],
+    ) -> bool:
+        player = snapshot.self_player
+        if self._has_horse_speed_buff(player):
+            return True
+        horse_count = self._horse_resource_count(player.get("resources") or {})
+        if horse_count <= 0:
+            return False
+        if horse_count == 1 and self._task_accepts_horse_resource(context, task):
+            return False
+        return True
+
+    @staticmethod
+    def _has_horse_speed_buff(player: dict[str, Any]) -> bool:
+        return any((buff.get("type") in HORSE_SPEED_BUFF_TYPES) for buff in player.get("buffs") or [])
+
+    @staticmethod
+    def _horse_resource_count(resources: dict[str, Any]) -> int:
+        return sum(int(resources.get(resource_type) or 0) for resource_type in HORSE_RESOURCE_TYPES)
 
     def _claim_safe_current_task_before_endgame(
         self,

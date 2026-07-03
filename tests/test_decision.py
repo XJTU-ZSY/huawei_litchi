@@ -149,6 +149,55 @@ class DecisionTest(unittest.TestCase):
         snap = snapshot(memory, currentNodeId="S02", tasks=[{"taskId": "T01_1", "nodeId": "S02", "score": 30, "active": True}])
         self.assertEqual(engine.decide(context, snap), [{"action": "CLAIM_TASK", "taskId": "T01_1"}])
 
+    def test_avoids_same_node_task_contest_without_qiang_xing_counter(self):
+        memory, context, engine = self.make_engine()
+        tasks = [
+            {"taskId": "T11_011", "nodeId": "S02", "score": 30, "active": True},
+            {"taskId": "T14_014", "nodeId": "S02", "score": 15, "active": True},
+        ]
+
+        snap = snapshot(
+            memory,
+            currentNodeId="S02",
+            taskScore=80,
+            tasks=tasks,
+            opponent_overrides={"currentNodeId": "S02", "state": "IDLE", "freshness": 84, "goodFruit": 94},
+        )
+
+        self.assertEqual(engine.decide(context, snap), [{"action": "CLAIM_TASK", "taskId": "T14_014"}])
+
+    def test_same_node_task_contest_allowed_without_alternate_task(self):
+        memory, context, engine = self.make_engine()
+        tasks = [{"taskId": "T11_011", "nodeId": "S02", "score": 30, "active": True}]
+
+        snap = snapshot(
+            memory,
+            currentNodeId="S02",
+            taskScore=80,
+            tasks=tasks,
+            opponent_overrides={"currentNodeId": "S02", "state": "IDLE", "freshness": 84, "goodFruit": 94},
+        )
+
+        self.assertEqual(engine.decide(context, snap), [{"action": "CLAIM_TASK", "taskId": "T11_011"}])
+
+    def test_same_node_task_contest_allowed_with_qiang_xing_counter(self):
+        memory, context, engine = self.make_engine()
+        tasks = [
+            {"taskId": "T11_011", "nodeId": "S02", "score": 30, "active": True},
+            {"taskId": "T14_014", "nodeId": "S02", "score": 15, "active": True},
+        ]
+
+        snap = snapshot(
+            memory,
+            currentNodeId="S02",
+            taskScore=80,
+            resources={"FAST_HORSE": 1},
+            tasks=tasks,
+            opponent_overrides={"currentNodeId": "S02", "state": "IDLE", "freshness": 84, "goodFruit": 94},
+        )
+
+        self.assertEqual(engine.decide(context, snap), [{"action": "CLAIM_TASK", "taskId": "T11_011"}])
+
     def test_claims_required_resource_before_current_task(self):
         memory, context, engine = self.make_engine()
         nodes = [
