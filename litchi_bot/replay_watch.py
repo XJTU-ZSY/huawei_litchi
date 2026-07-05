@@ -224,6 +224,10 @@ def write_report(report_dir: Path, replay_path: Path, report: str) -> Path:
     return output
 
 
+def analysis_doc_path_for(analysis_doc_dir: Path, replay_path: Path) -> Path:
+    return analysis_doc_dir / f"{_safe_name(replay_path.stem)}.analysis.md"
+
+
 def build_skill_handoff_prompt(
     replay_path: Path,
     machine_report_path: Path,
@@ -231,7 +235,10 @@ def build_skill_handoff_prompt(
     player_id: int | str | None = None,
     append_backlog: bool = False,
     auto_implement: bool = False,
+    analysis_doc_path: Path | None = None,
 ) -> str:
+    if analysis_doc_path is None:
+        analysis_doc_path = analysis_doc_path_for(Path(".replay_watch/analysis_docs"), replay_path)
     player_line = f"我方 playerId 是 `{player_id}`。" if player_id is not None else "请先从回放中识别我方 playerId；如果无法识别，明确说明。"
     backlog_instruction = (
         "请把最终需求卡追加到 `docs/backlog.md`。"
@@ -260,21 +267,25 @@ def build_skill_handoff_prompt(
             f"- 原始回放：`{replay_path}`",
             f"- 机器预分析报告：`{machine_report_path}`",
             f"- 本轮流程日志：`{process_log_path}`",
+            f"- AI 复盘文档：`{analysis_doc_path}`",
             f"- {player_line}",
             "",
             "请按以下顺序执行：",
             "1. 先使用 `$litchi-replay-analyst`，读取原始回放和机器预分析报告。",
             "2. 不要只复述机器报告；需要用 AI 判断补充：卡住原因、策略失误、对手优秀策略、窗口/路线/任务模式。",
-            "3. 再交给 `$litchi-coach`，按 P0/P1/P2 排优先级。",
-            "4. 生成 1-3 张可执行需求卡，每张卡必须包含 Evidence、Expected behavior、Forbidden behavior、Implementation owner、Validation。",
-            "5. P0 问题优先于胜率优化；没有 P0 问题时，再选择最高预期收益的 P1/P2 卡。",
-            "6. 把 replay analyst 分析过程、coach 排序理由、需求卡内容追加到本轮流程日志。",
-            f"7. {backlog_instruction}",
-            f"8. {implementation_instruction}",
+            "3. 将完整 AI 复盘结论写入 `AI 复盘文档`，每轮回放一个独立 Markdown 文件，方便用户直接查看。",
+            "4. 如发现 `msg_name:error`、`ACTION_REJECTED`、`INVALID_ACTION` 或 `actionResults.accepted=false`，必须逐条写明触发帧、动作、错误码、根因、需要改进的算法/代码位置和回归验证，目标是避免同类错误重犯。",
+            "5. 再交给 `$litchi-coach`，按 P0/P1/P2 排优先级。",
+            "6. 生成 1-3 张可执行需求卡，每张卡必须包含 Evidence、Expected behavior、Forbidden behavior、Implementation owner、Validation。",
+            "7. P0 问题优先于胜率优化；没有 P0 问题时，再选择最高预期收益的 P1/P2 卡。",
+            "8. 把 replay analyst 分析过程、coach 排序理由、需求卡内容、AI 复盘文档路径追加到本轮流程日志。",
+            f"9. {backlog_instruction}",
+            f"10. {implementation_instruction}",
             "",
             "输出格式：",
             "```text",
             "Replay:",
+            "Saved analysis document:",
             "Outcome:",
             "Hard bugs:",
             "Strategy losses:",
@@ -371,11 +382,18 @@ def create_done_files_from_latest_manifest(replay_out_dir: Path, client: str | N
     return created
 
 
-def run_ai_command(command_template: str, task_path: Path, replay_path: Path, report_path: Path) -> subprocess.CompletedProcess[str]:
+def run_ai_command(
+    command_template: str,
+    task_path: Path,
+    replay_path: Path,
+    report_path: Path,
+    analysis_doc_path: Path | None = None,
+) -> subprocess.CompletedProcess[str]:
     command = command_template.format(
         task=str(task_path),
         replay=str(replay_path),
         report=str(report_path),
+        analysis_doc=str(analysis_doc_path or ""),
     )
     return subprocess.run(command, shell=True, text=True, capture_output=True)
 

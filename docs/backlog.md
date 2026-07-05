@@ -73,6 +73,54 @@ Validation:
 
 Status: done
 
+### 000D. 服务端错误根因与防重犯闭环
+
+Priority: P0
+
+Evidence: 用户要求“收到服务器返回的错误后，要重点审视原因，改进算法和代码，尽可能不重犯”。
+
+Expected behavior:
+- `$litchi-coach` 和 `$litchi-replay-analyst` 将 `msg_name:error`、`ACTION_REJECTED`、`INVALID_ACTION`、`actionResults.accepted=false` 视为 P0 证据，优先于得分优化。
+- 每个服务端错误都要在复盘中写明触发帧、动作、错误码、根因、需要改进的算法/代码位置和回归验证。
+- 需求卡完成前，必须能用单测、mock 状态或同一回放回归解释为什么同类错误不会重复。
+
+Forbidden behavior:
+- 只统计错误数量，不追溯原因。
+- 为了推进 P1/P2 得分优化而跳过未解释的服务端错误。
+- 将服务端错误当成一次性偶发问题，而没有代码、策略、测试或明确拒绝理由。
+
+Implementation owner: `$litchi-replay-analyst -> $litchi-coach -> $litchi-protocol-expert -> $litchi-architect -> $litchi-implementer -> $litchi-tester`
+
+Validation:
+- `python -B -m unittest tests.test_replay_watch`
+- `python -B tools/quality_gate.py`
+
+Status: done
+
+### 000E. 单轮 AI 复盘文档
+
+Priority: P0
+
+Evidence: 用户要求“要将每轮比赛的回放分析结果单独保存为文档，我要看”。
+
+Expected behavior:
+- watcher 为每轮回放生成固定 AI 复盘文档路径：`.replay_watch/analysis_docs/<replay-name>.analysis.md`。
+- handoff prompt 明确要求 AI 将最终复盘结论写入该 Markdown 文档，并把路径追加到 process log。
+- 机器预分析报告、聊天输出和 process log 不能替代用户可读的单轮 AI 复盘文档。
+
+Forbidden behavior:
+- 只把复盘结论发在聊天里。
+- 多轮回放共用一个分析文档。
+- 只保存机器预分析报告，不保存 AI 补充判断后的最终复盘。
+
+Implementation owner: `$litchi-replay-analyst -> $litchi-coach -> $litchi-tester`
+
+Validation:
+- `python -B -m unittest tests.test_replay_watch`
+- `python -B tools/quality_gate.py`
+
+Status: done
+
 ### 001. 最小可运行 Python 客户端
 
 Priority: P0

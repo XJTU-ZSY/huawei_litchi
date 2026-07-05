@@ -7,6 +7,7 @@ from unittest.mock import patch
 
 from litchi_bot.replay_watch import (
     ReplayCandidate,
+    analysis_doc_path_for,
     build_replay_report,
     build_requirement_cards,
     build_skill_handoff_prompt,
@@ -188,10 +189,12 @@ class ReplayWatchTest(unittest.TestCase):
         self.assertEqual(touch.call_count, 2)
 
     def test_skill_handoff_prompt_targets_replay_analyst_and_coach(self):
+        analysis_doc_path = Path(".replay_watch/analysis_docs/match_001.analysis.md")
         prompt = build_skill_handoff_prompt(
             replay_path=Path("replays/match_001.json"),
             machine_report_path=Path(".replay_watch/reports/match_001.md"),
             process_log_path=Path(".replay_watch/process_logs/match_001.process.md"),
+            analysis_doc_path=analysis_doc_path,
             player_id=1001,
         )
 
@@ -200,9 +203,17 @@ class ReplayWatchTest(unittest.TestCase):
         self.assertIn("replays\\match_001.json", prompt.replace("/", "\\"))
         self.assertIn(".replay_watch\\reports\\match_001.md", prompt.replace("/", "\\"))
         self.assertIn(".replay_watch\\process_logs\\match_001.process.md", prompt.replace("/", "\\"))
+        self.assertIn(".replay_watch\\analysis_docs\\match_001.analysis.md", prompt.replace("/", "\\"))
+        self.assertIn("每轮回放一个独立 Markdown 文件", prompt)
+        self.assertIn("触发帧、动作、错误码、根因", prompt)
         self.assertIn("quality gate", prompt)
         self.assertIn("git commit", prompt)
         self.assertIn("不直接改代码", prompt)
+
+    def test_analysis_doc_path_uses_replay_stem(self):
+        path = analysis_doc_path_for(Path(".replay_watch/analysis_docs"), Path("replays/match 001.jsonl"))
+
+        self.assertEqual(path, Path(".replay_watch/analysis_docs/match_001.analysis.md"))
 
 
     def test_skill_handoff_prompt_can_request_implementation(self):
@@ -243,6 +254,7 @@ class ReplayWatchTest(unittest.TestCase):
 
         self.assertEqual(completed.returncode, 0, completed.stderr)
         self.assertIn("--process-log-dir", completed.stdout)
+        self.assertIn("--analysis-doc-dir", completed.stdout)
         self.assertIn("--auto-implement", completed.stdout)
         self.assertIn("--done-client", completed.stdout)
         self.assertIn("--skip-done-file", completed.stdout)

@@ -12,6 +12,7 @@ if str(ROOT) not in sys.path:
 from litchi_bot.protocol import parse_player_id
 from litchi_bot.replay_watch import (
     analyze_replay_file,
+    analysis_doc_path_for,
     append_cards_to_backlog,
     build_skill_handoff_prompt,
     create_done_files_from_latest_manifest,
@@ -46,12 +47,13 @@ def main() -> int:
     parser.add_argument("--stable-seconds", type=float, default=3.0, help="Wait until file has not changed for this long")
     parser.add_argument("--state", default=".replay_watch/state.json", help="Processed-file state path")
     parser.add_argument("--report-dir", default=".replay_watch/reports", help="Generated report output directory")
+    parser.add_argument("--analysis-doc-dir", default=".replay_watch/analysis_docs", help="AI-authored per-replay analysis document directory")
     parser.add_argument("--ai-task-dir", default=".replay_watch/ai_tasks", help="Generated skill handoff prompt directory")
     parser.add_argument("--process-log-dir", default=".replay_watch/process_logs", help="Per-replay process log directory")
     parser.add_argument("--no-ai-task", action="store_true", help="Do not generate skill handoff prompts")
     parser.add_argument(
         "--ai-command-template",
-        help="Optional command to run for each generated prompt. Placeholders: {task}, {replay}, {report}",
+        help="Optional command to run for each generated prompt. Placeholders: {task}, {replay}, {report}, {analysis_doc}",
     )
     parser.add_argument("--append-backlog", action="store_true", help="Append generated requirement cards to docs/backlog.md")
     parser.add_argument("--backlog", default="docs/backlog.md", help="Backlog path used with --append-backlog")
@@ -65,6 +67,7 @@ def main() -> int:
     folder = Path(args.folder)
     state_path = ROOT / args.state
     report_dir = ROOT / args.report_dir
+    analysis_doc_dir = ROOT / args.analysis_doc_dir
     ai_task_dir = ROOT / args.ai_task_dir
     process_log_dir = ROOT / args.process_log_dir
     backlog_path = ROOT / args.backlog
@@ -99,21 +102,32 @@ def main() -> int:
             print_stage("process-log", str(process_log_path))
             report_path = write_report(report_dir, candidate.path, report)
             print_stage("report-written", str(report_path))
+            analysis_doc_path = analysis_doc_path_for(analysis_doc_dir, candidate.path)
+            analysis_doc_path.parent.mkdir(parents=True, exist_ok=True)
+            print_stage("analysis-doc", str(analysis_doc_path))
             append_process_event(
                 process_log_path,
                 "Machine replay analysis",
-                f"Generated machine report `{report_path}`.\n\nSummary: messages={summary['messageCount']}, rejected={summary['rejectedCount']}, invalid={summary['invalidCount']}.",
+                f"Generated machine report `{report_path}`.\n\nAI replay analysis document must be saved to `{analysis_doc_path}`.\n\nSummary: messages={summary['messageCount']}, rejected={summary['rejectedCount']}, invalid={summary['invalidCount']}.",
             )
             task_path = None
             if not args.no_ai_task:
                 print_stage("ai-handoff-build", str(candidate.path))
-                prompt = build_skill_handoff_prompt(candidate.path, report_path, process_log_path, player_id, args.append_backlog, args.auto_implement)
+                prompt = build_skill_handoff_prompt(
+                    candidate.path,
+                    report_path,
+                    process_log_path,
+                    player_id,
+                    args.append_backlog,
+                    args.auto_implement,
+                    analysis_doc_path=analysis_doc_path,
+                )
                 task_path = write_ai_task(ai_task_dir, candidate.path, prompt)
                 print_stage("ai-task-written", str(task_path))
                 append_process_event(process_log_path, "AI handoff prompt", f"Generated skill handoff prompt `{task_path}`.")
             if args.ai_command_template and task_path is not None:
                 print_stage("ai-command-start", str(task_path))
-                completed = run_ai_command(args.ai_command_template, task_path, candidate.path, report_path)
+                completed = run_ai_command(args.ai_command_template, task_path, candidate.path, report_path, analysis_doc_path)
                 if completed.stdout.strip():
                     print(completed.stdout.strip())
                 if completed.stderr.strip():

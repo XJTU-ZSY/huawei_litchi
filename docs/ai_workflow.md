@@ -13,7 +13,7 @@
 | `$litchi-architect` | 模块边界、状态设计、接口变更 | 架构方案和影响范围 |
 | `$litchi-implementer` | 按需求卡写代码 | 小范围代码变更 |
 | `$litchi-tester` | 单测、mock、回放回归、打包检查 | 测试报告 |
-| `$litchi-replay-analyst` | 比赛回放分析、学习对手策略 | 复盘报告和新需求卡 |
+| `$litchi-replay-analyst` | 比赛回放分析、学习对手策略 | 单轮 AI 复盘文档和新需求卡 |
 
 ## 迭代流程
 
@@ -85,8 +85,8 @@ python -B tools/watch_replays.py replays --player-id 1001
 1. watcher 轮询目录中的 `.json/.jsonl/.log/.txt/.replay` 文件。
 2. 等文件稳定后生成机器预分析报告。
 3. 同时生成 `.replay_watch/ai_tasks/*.prompt.md`，该 prompt 明确要求使用 `$litchi-replay-analyst` 和 `$litchi-coach`。
-4. 将 prompt 交给 opencode/Codex 后，由 AI 读取原始回放和机器报告，补充策略判断并生成需求卡。
-5. 默认报告写入 `.replay_watch/reports/`，AI handoff prompt 写入 `.replay_watch/ai_tasks/`，流程日志写入 `.replay_watch/process_logs/`，处理状态写入 `.replay_watch/state.json`。
+4. 将 prompt 交给 opencode/Codex 后，由 AI 读取原始回放和机器报告，补充策略判断，将最终复盘结论写入单独 AI 复盘文档并生成需求卡。
+5. 默认机器报告写入 `.replay_watch/reports/`，AI 复盘文档写入 `.replay_watch/analysis_docs/`，AI handoff prompt 写入 `.replay_watch/ai_tasks/`，流程日志写入 `.replay_watch/process_logs/`，处理状态写入 `.replay_watch/state.json`。
 6. 加 `--append-backlog` 时，脚本会将机器生成的初步需求卡追加到 `docs/backlog.md`；更推荐先让 AI 审核 prompt 后再写入 backlog。
 
 测试或手动批处理时只扫描一次：
@@ -101,7 +101,11 @@ python -B tools/watch_replays.py replays --player-id 1001 --once
 python -B tools/watch_replays.py replays --player-id 1001 --ai-command-template "python -B tools/run_ai_task.py --prompt-file {task}" --auto-implement
 ```
 
-`--ai-command-template` 支持 `{task}`、`{replay}`、`{report}` 占位符。推荐使用 `tools/run_ai_task.py`，它会优先调用 opencode，找不到时自动使用 Codex CLI。不加 `--auto-implement` 时，AI 只做回放分析、教练排序和需求卡，不会改代码。
+`--ai-command-template` 支持 `{task}`、`{replay}`、`{report}`、`{analysis_doc}` 占位符。推荐使用 `tools/run_ai_task.py`，它会优先调用 opencode，找不到时自动使用 Codex CLI。不加 `--auto-implement` 时，AI 只做回放分析、教练排序和需求卡，不会改代码。
+
+## 服务端错误复盘
+
+收到服务端 `msg_name:error`、`ACTION_REJECTED`、`INVALID_ACTION` 或 `actionResults.accepted=false` 后，不允许只把它记成一次失败。复盘必须写明触发帧、动作、错误码、根因、要改的算法或代码位置，以及防止重犯的回归验证。教练优先把这类问题转成 P0 需求卡；只有确认没有 P0 风险后，才继续做 P1/P2 得分优化。
 
 AI 命令成功返回后，watcher 会扫描回放输出目录里的最新 `*.manifest.json`，不是按 `<replay-stem>.replay.manifest.json` 字面量推导。manifest 的文件名应跟 replay 文件同名，只是把 `.jsonl` 换成 `.manifest.json`。watcher 会读取其中的 `clientA.doneFile` 和 `clientB.doneFile`，在回放目录创建对应 doneFile 标记；如果只需要单侧，使用：
 
@@ -120,6 +124,14 @@ python -B tools/mark_replay_done.py replays --client clientA
 ## 过程记录
 
 每一轮回放分析、需求卡、实现、测试、提交都必须记录到同一个 process log 文件。
+
+每一轮 AI 复盘结论必须另存为单独 Markdown 文档，默认路径：
+
+```text
+.replay_watch/analysis_docs/<replay-name>.analysis.md
+```
+
+这个文档用于人工查看最终复盘结论；process log 用于追踪过程和后续实现记录。
 
 watcher 会自动创建：
 
