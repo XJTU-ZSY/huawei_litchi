@@ -241,6 +241,35 @@ Validation:
 
 Status: done
 
+### 002D. 设卡与反制策略场景完备性验证
+
+Priority: P0/P1
+
+Evidence: 用户担心“设卡和对应策略没有效果”，需要用确定性用例验证设卡收益、反制行为、改道和提前规避是否符合预期。
+
+Expected behavior:
+- 己方只在 NORMAL 阶段、可设卡节点、资源留存安全、未超己方有效设卡上限且节点无有效设卡时提交 `SET_GUARD`。
+- 主车队移动中或主动等待在路线边上时，若当前目标节点存在敌方有效设卡或道路障碍，只能提交合法改道 `MOVE` 或 `WAIT`，不得提交站点动作。
+- 主车队已经停靠在节点且下一跳被敌方设卡或障碍阻挡时，才可优先提交合法 `BREAK_GUARD`、`FORCED_PASS` 或 `CLEAR`，并可配合一条合法小分队动作处理阻挡。
+- 路线规划应把对手可提前完成设卡的中间节点视为风险，存在可行替代路径时避开风险节点；无替代路径时仍可走原路线。
+- 每帧动作仍满足最多 1 个主车队动作、1 个小分队动作、1 个窗口动作，且不单独发送 `BREAK_ORDER`。
+
+Forbidden behavior:
+- 对安全区、已有有效设卡节点、资源不足或已达己方设卡上限时仍提交 `SET_GUARD`。
+- 移动中目标已被敌方设卡/障碍阻挡时继续提交 `MOVE` 到该目标。
+- `MOVING`/`WAITING` 路线边状态下提交 `BREAK_GUARD`、`FORCED_PASS` 或 `CLEAR`。
+- 边上改道选择敌方设卡、道路障碍、不可达节点或本段被阻挡目标。
+- 为了验证策略效果而允许非法动作字段、重复主动作或独立 `BREAK_ORDER`。
+
+Implementation owner: `$litchi-protocol-expert -> $litchi-architect -> $litchi-implementer -> $litchi-tester`
+
+Validation:
+- `python -B -m unittest tests.test_strategy_baseline`
+- `python -B -m unittest`
+- `python -B tools/quality_gate.py`
+
+Status: done
+
 ## P1 待办
 
 ### 101. 任务收益模型

@@ -2072,6 +2072,8 @@ class BaselineStrategy:
         origin_key = str(origin or "")
         if self._special_terminal_return(context, origin_key, target):
             return None
+        if str(target) in self.memory.blocked_move_targets:
+            return "recent blocked target"
         node = snapshot.nodes_by_id.get(str(target), {})
         if self._enemy_guard_active(context, node):
             return "enemy guard"
