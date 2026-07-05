@@ -695,6 +695,9 @@ class BaselineStrategy:
             and not opponent.get("delivered")
             and self._loses_process_tie(context.player_id, opponent.get("playerId"))
         ):
+            if self._should_force_terminal_corridor_process(context, snapshot, current_key):
+                self._clear_drawn_process(current_key)
+                return False
             if self._should_retry_drawn_process_before_yield(context, snapshot, current_key):
                 retries = self.memory.drawn_process_retry_counts.get(current_key, 0)
                 self.memory.drawn_process_retry_counts[current_key] = retries + 1

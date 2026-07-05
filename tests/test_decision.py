@@ -1648,7 +1648,7 @@ class DecisionTest(unittest.TestCase):
         self.assertEqual(engine.decide(context, snap), [])
         self.assertIn("yield drawn process node S02", engine.last_reason)
 
-    def test_drawn_terminal_corridor_process_yields_two_frames_before_retry(self):
+    def test_drawn_terminal_corridor_process_retries_immediately(self):
         start = {
             "matchId": "m1",
             "round": 1,
@@ -1686,7 +1686,7 @@ class DecisionTest(unittest.TestCase):
             {"taskId": "DONE_4", "nodeId": "S10", "score": 30, "completed": True, "ownerPlayerId": 1001},
         ]
 
-        first_yield = snapshot(
+        retry = snapshot(
             memory,
             currentNodeId="S13",
             nodes=start["nodes"],
@@ -1694,29 +1694,9 @@ class DecisionTest(unittest.TestCase):
             opponent_overrides={"playerId": 2002, "currentNodeId": "S13", "state": "IDLE"},
             round_no=414,
         )
-        self.assertEqual(engine.decide(context, first_yield), [])
-        self.assertEqual(memory.drawn_process_yield_counts["S13"], 1)
-
-        second_yield = snapshot(
-            memory,
-            currentNodeId="S13",
-            nodes=start["nodes"],
-            tasks=tasks,
-            opponent_overrides={"playerId": 2002, "currentNodeId": "S13", "state": "IDLE"},
-            round_no=415,
-        )
-        self.assertEqual(engine.decide(context, second_yield), [])
-        self.assertEqual(memory.drawn_process_yield_counts["S13"], 2)
-
-        retry = snapshot(
-            memory,
-            currentNodeId="S13",
-            nodes=start["nodes"],
-            tasks=tasks,
-            opponent_overrides={"playerId": 2002, "currentNodeId": "S13", "state": "IDLE"},
-            round_no=416,
-        )
         self.assertEqual(engine.decide(context, retry), [{"action": "PROCESS", "targetNodeId": "S13"}])
+        self.assertNotIn("S13", memory.skipped_process_nodes)
+        self.assertNotIn("S13", memory.drawn_process_yield_counts)
 
     def test_process_completion_marks_fixed_node_done(self):
         memory, context, engine = self.make_engine()
