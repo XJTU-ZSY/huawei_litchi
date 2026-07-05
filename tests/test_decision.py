@@ -546,6 +546,66 @@ class DecisionTest(unittest.TestCase):
         self.assertEqual(engine.decide(context, snap), [])
         self.assertIn("wait after process contest", engine.last_reason)
 
+    def test_high_id_waits_when_lower_id_occupies_same_fixed_process(self):
+        memory, context, engine, nodes = self.make_replay_split_engine()
+        snap = snapshot(
+            memory,
+            round_no=161,
+            playerId=1002,
+            teamId="BLUE",
+            currentNodeId="S05",
+            taskScore=30,
+            nodes=nodes,
+            opponent_overrides={
+                "playerId": 1001,
+                "teamId": "RED",
+                "currentNodeId": "S05",
+                "state": "PROCESSING",
+                "currentProcess": {
+                    "action": "PROCESS",
+                    "objectKey": "PROCESS:S05:WATER_TRANSFER",
+                    "targetNodeId": "S05",
+                    "remainRound": 2,
+                },
+            },
+        )
+
+        self.assertEqual(engine.decide(context, snap), [])
+        self.assertIn("occupying process node S05", engine.last_reason)
+
+    def test_high_id_can_process_while_opponent_claims_task_at_process_node(self):
+        memory, context, engine, nodes = self.make_replay_split_engine()
+        nodes = [dict(node) for node in nodes]
+        for node in nodes:
+            if node["nodeId"] == "S11":
+                node["processType"] = "PASS_TRANSFER"
+                node["processRound"] = 5
+
+        snap = snapshot(
+            memory,
+            round_no=344,
+            playerId=1002,
+            teamId="BLUE",
+            currentNodeId="S11",
+            taskScore=60,
+            nodes=nodes,
+            opponent_overrides={
+                "playerId": 1001,
+                "teamId": "RED",
+                "currentNodeId": "S11",
+                "state": "PROCESSING",
+                "currentProcess": {
+                    "action": "CLAIM_TASK",
+                    "objectKey": "TASK:T12_012",
+                    "targetNodeId": "S11",
+                    "taskId": "T12_012",
+                    "remainRound": 4,
+                },
+            },
+        )
+
+        self.assertEqual(engine.decide(context, snap), [{"action": "PROCESS", "targetNodeId": "S11"}])
+
     def test_process_contest_backoff_is_bounded_when_opponent_stays_idle(self):
         memory = GameMemory(2002)
         context = memory.apply_start(START)

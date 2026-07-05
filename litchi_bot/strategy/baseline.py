@@ -858,6 +858,10 @@ class BaselineStrategy:
             self._clear_process_yield(str(current))
             return False
         current_key = str(current)
+        if self._opponent_occupies_fixed_process(snapshot, current_key):
+            self.last_reason = f"wait for opponent {opponent.get('playerId')} occupying process node {current}"
+            return True
+
         loses_tie = self._loses_process_tie(context.player_id, opponent.get("playerId"))
         contested_count = self.memory.process_contest_counts.get(current_key, 0)
         should_yield = (not loses_tie) if contested_count > 0 else loses_tie
@@ -890,6 +894,18 @@ class BaselineStrategy:
 
         self._clear_process_yield(current_key)
         return False
+
+    def _opponent_occupies_fixed_process(self, snapshot: GameSnapshot, current_id: str) -> bool:
+        opponent = snapshot.opponent_player or {}
+        if str(opponent.get("currentNodeId") or "") != current_id:
+            return False
+        if str(opponent.get("state") or "").upper() not in FIXED_PROCESS_BUSY_STATES:
+            return False
+        process = opponent.get("currentProcess") or {}
+        if str(process.get("action") or "").upper() != "PROCESS":
+            return False
+        target_node = process.get("targetNodeId") or self._process_node_from_object_key(process.get("objectKey"))
+        return target_node is not None and str(target_node) == current_id
 
     def _clear_process_yield(self, node_id: str) -> None:
         if node_id:
@@ -1144,6 +1160,13 @@ class BaselineStrategy:
         parts = str(object_key or "").split(":")
         if len(parts) >= 3 and parts[0] == "RESOURCE":
             return parts[2]
+        return None
+
+    @staticmethod
+    def _process_node_from_object_key(object_key: Any) -> str | None:
+        parts = str(object_key or "").split(":")
+        if len(parts) >= 2 and parts[0] == "PROCESS":
+            return parts[1]
         return None
 
     def _choose_destination(self, context: GameContext, snapshot: GameSnapshot) -> str | None:
