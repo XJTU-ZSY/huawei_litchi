@@ -776,6 +776,9 @@ class BaselineStrategy:
             return False
 
         if opponent_state in FIXED_PROCESS_BUSY_STATES:
+            if self._should_force_terminal_corridor_process(context, snapshot, current_key):
+                self._clear_process_yield(current_key)
+                return False
             if early_desync:
                 self._clear_process_yield(current_key)
                 return False
