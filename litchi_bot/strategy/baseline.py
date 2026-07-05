@@ -77,7 +77,7 @@ class BaselineStrategy:
         state = str(player.get("state") or "IDLE")
         current = player.get("currentNodeId")
 
-        if player.get("delivered") or state in {"DELIVERED", "RETIRED"}:
+        if self._effective_delivered(player) or state in {"DELIVERED", "RETIRED"}:
             self.last_reason = "already delivered or retired"
             return None
 
@@ -89,13 +89,16 @@ class BaselineStrategy:
             return self._moving_or_waiting_action(context, snapshot)
 
         if current == context.terminal_node_id:
-            if player.get("verified"):
+            if self._effective_verified(player):
+                if not self._can_deliver(player):
+                    self.last_reason = "terminal but delivery requirements not met"
+                    return None
                 self.last_reason = "verified at terminal, deliver"
                 return {"action": "DELIVER"}
             self.last_reason = "terminal without verification, return to gate"
             return self._move_toward(context, snapshot, context.gate_node_id)
 
-        if current == context.gate_node_id and snapshot.phase == "RUSH" and not player.get("verified"):
+        if current == context.gate_node_id and snapshot.phase == "RUSH" and not self._effective_verified(player):
             return self._gate_verify_action(context, snapshot)
 
         pre_process_task_action = self._claim_resource_free_current_task_before_process(context, snapshot)
@@ -125,7 +128,7 @@ class BaselineStrategy:
             return endgame_resource_action
 
         if self._should_go_endgame(context, snapshot):
-            target = context.terminal_node_id if player.get("verified") else context.gate_node_id
+            target = context.terminal_node_id if self._effective_verified(player) else context.gate_node_id
             self.last_reason = f"prioritize endgame target {target}"
             return self._move_toward(context, snapshot, target)
 
@@ -150,6 +153,16 @@ class BaselineStrategy:
             return self._move_toward(context, snapshot, target)
         self.last_reason = "no safe target"
         return None
+
+    def _effective_verified(self, player: dict[str, Any]) -> bool:
+        return bool(player.get("verified") or self.memory.gate_verified) and not self.memory.delivery_requires_verification
+
+    def _effective_delivered(self, player: dict[str, Any]) -> bool:
+        return bool(player.get("delivered") or self.memory.delivered)
+
+    @staticmethod
+    def _can_deliver(player: dict[str, Any]) -> bool:
+        return int(player.get("goodFruit") or 0) > 0 and float(player.get("freshness") or 0) > 0
 
     def _moving_or_waiting_action(self, context: GameContext, snapshot: GameSnapshot) -> dict[str, Any] | None:
         player = snapshot.self_player
@@ -277,7 +290,7 @@ class BaselineStrategy:
                     node_id = str(task.get("nodeId") or "")
                     if node_id:
                         targets.append(node_id)
-        targets.append(context.terminal_node_id if player.get("verified") else context.gate_node_id)
+        targets.append(context.terminal_node_id if self._effective_verified(player) else context.gate_node_id)
         for target in targets:
             path = context.graph.shortest_path(current, target)
             for node_id in path[1:]:
@@ -335,13 +348,13 @@ class BaselineStrategy:
         excluded = excluded or set()
         player = snapshot.self_player
         if self._should_go_endgame(context, snapshot):
-            target = context.terminal_node_id if player.get("verified") else context.gate_node_id
+            target = context.terminal_node_id if self._effective_verified(player) else context.gate_node_id
             return None if target in excluded else target
         if int(player.get("taskScore") or 0) < BASE_TASK_RESOURCE_SCORE:
             target = self._nearest_task_node_excluding(context, snapshot, excluded)
             if target:
                 return target
-        target = context.terminal_node_id if player.get("verified") else context.gate_node_id
+        target = context.terminal_node_id if self._effective_verified(player) else context.gate_node_id
         return None if target in excluded else target
 
     def _nearest_task_node_excluding(
@@ -604,7 +617,7 @@ class BaselineStrategy:
         current = str(snapshot.self_player.get("currentNodeId") or "")
         if not current:
             return None
-        target = context.terminal_node_id if snapshot.self_player.get("verified") else context.gate_node_id
+        target = context.terminal_node_id if self._effective_verified(snapshot.self_player) else context.gate_node_id
         blocked = self._blocked_nodes(context, snapshot)
         path = context.graph.shortest_path(current, target, blocked=blocked)
         if not path or len(path) < 2:
@@ -657,7 +670,9 @@ class BaselineStrategy:
         player = snapshot.self_player
         if int(player.get("rushTacticUsedCount") or 0) > 0:
             return False
-        return int(player.get("badFruit") or 0) >= BREAK_ORDER_BAD_FRUIT_COST
+        if int(player.get("badFruit") or 0) >= BREAK_ORDER_BAD_FRUIT_COST:
+            return True
+        return int(player.get("goodFruit") or 0) > 1
 
     def _should_yield_drawn_process(self, context: GameContext, snapshot: GameSnapshot) -> bool:
         current = snapshot.self_player.get("currentNodeId")
@@ -804,7 +819,7 @@ class BaselineStrategy:
         if current_node_id not in rush_excluded:
             return False
 
-        target = context.terminal_node_id if snapshot.self_player.get("verified") else context.gate_node_id
+        target = context.terminal_node_id if self._effective_verified(snapshot.self_player) else context.gate_node_id
         blocked = self._blocked_nodes(context, snapshot)
         path = context.graph.shortest_path(current_node_id, target, blocked=blocked)
         if not path:
@@ -1212,7 +1227,7 @@ class BaselineStrategy:
         current = str(snapshot.self_player.get("currentNodeId") or "")
         if not current:
             return None
-        target = context.terminal_node_id if snapshot.self_player.get("verified") else context.gate_node_id
+        target = context.terminal_node_id if self._effective_verified(snapshot.self_player) else context.gate_node_id
         blocked = self._blocked_nodes(context, snapshot)
         path = context.graph.shortest_path(current, target, blocked=blocked)
         if not path:
@@ -1389,7 +1404,7 @@ class BaselineStrategy:
         travel_rounds = self._endgame_travel_rounds(context, snapshot, current)
         if travel_rounds is None:
             return False
-        verify_rounds = 0 if snapshot.self_player.get("verified") else self._gate_verify_rounds(context, snapshot)
+        verify_rounds = 0 if self._effective_verified(snapshot.self_player) else self._gate_verify_rounds(context, snapshot)
         required_rounds = (
             task_rounds
             + travel_rounds
@@ -1417,7 +1432,7 @@ class BaselineStrategy:
         travel_rounds = self._endgame_travel_rounds(context, snapshot, current)
         if travel_rounds is None:
             return False
-        verify_rounds = 0 if snapshot.self_player.get("verified") else self._gate_verify_rounds(context, snapshot)
+        verify_rounds = 0 if self._effective_verified(snapshot.self_player) else self._gate_verify_rounds(context, snapshot)
         required_rounds = (
             task_rounds
             + max(0, process_rounds)
@@ -1444,7 +1459,7 @@ class BaselineStrategy:
         endgame_travel_rounds = self._endgame_travel_rounds(context, snapshot, task_node_id)
         if endgame_travel_rounds is None:
             return False
-        verify_rounds = 0 if snapshot.self_player.get("verified") else self._gate_verify_rounds(context, snapshot)
+        verify_rounds = 0 if self._effective_verified(snapshot.self_player) else self._gate_verify_rounds(context, snapshot)
         required_rounds = (
             travel_to_task_rounds
             + self._remote_task_resource_rounds(context, snapshot, task, task_node_id)
@@ -1479,7 +1494,7 @@ class BaselineStrategy:
 
     def _endgame_travel_rounds(self, context: GameContext, snapshot: GameSnapshot, current: str) -> int | None:
         blocked = self._blocked_nodes(context, snapshot)
-        if snapshot.self_player.get("verified"):
+        if self._effective_verified(snapshot.self_player):
             return self._shortest_rounds(context, current, context.terminal_node_id, blocked)
 
         to_gate = self._shortest_rounds(context, current, context.gate_node_id, blocked)
@@ -1777,13 +1792,13 @@ class BaselineStrategy:
         player = snapshot.self_player
         task_score = int(player.get("taskScore") or 0)
         if self._should_go_endgame(context, snapshot):
-            return context.terminal_node_id if player.get("verified") else context.gate_node_id
+            return context.terminal_node_id if self._effective_verified(player) else context.gate_node_id
         if task_score < 90:
             target = self._nearest_task_node(context, snapshot)
             if target:
                 self.last_reason = f"go to task node {target}"
                 return target
-        target = context.terminal_node_id if player.get("verified") else context.gate_node_id
+        target = context.terminal_node_id if self._effective_verified(player) else context.gate_node_id
         self.last_reason = f"default endgame target {target}"
         return target
 

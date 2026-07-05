@@ -65,6 +65,8 @@ class GameMemory:
     blocked_move_targets: set[str] = field(default_factory=set)
     forced_pass_blocked_nodes: set[str] = field(default_factory=set)
     delivery_requires_verification: bool = False
+    gate_verified: bool = False
+    delivered: bool = False
 
     def apply_start(self, data: dict[str, Any]) -> GameContext:
         players = data.get("players", [])
@@ -98,6 +100,11 @@ class GameMemory:
             raise ValueError("cannot apply inquire before start")
         players = data.get("players") or []
         self_player = next((p for p in players if same_player_id(p.get("playerId"), self.player_id)), {})
+        if self_player.get("verified"):
+            self.gate_verified = True
+            self.delivery_requires_verification = False
+        if self_player.get("delivered"):
+            self.delivered = True
         self._record_events(data.get("events") or [], current_node_id=self_player.get("currentNodeId"))
         self._record_action_results(data.get("actionResults") or [], current_node_id=self_player.get("currentNodeId"))
         opponent = next((p for p in players if not same_player_id(p.get("playerId"), self.player_id)), None)
@@ -135,6 +142,11 @@ class GameMemory:
                 node_id = payload.get("targetNodeId") or payload.get("nodeId")
                 if node_id:
                     self.blocked_move_targets.discard(str(node_id))
+            elif event_type in {"VERIFY_GATE_COMPLETE", "VERIFY_GATE_ALREADY_DONE"}:
+                self.gate_verified = True
+                self.delivery_requires_verification = False
+            elif event_type == "DELIVER_SUCCESS":
+                self.delivered = True
             elif event_type == "PROCESS_COMPLETE":
                 node_id = payload.get("targetNodeId") or payload.get("nodeId")
                 if node_id and self._is_fixed_node_process_complete(payload):
@@ -256,7 +268,10 @@ class GameMemory:
         if error_code in {"VERIFY_REQUIRED", "DELIVER_NOT_VERIFIED"}:
             self.delivery_requires_verification = True
         elif error_code == "ALREADY_VERIFIED":
+            self.gate_verified = True
             self.delivery_requires_verification = False
+        elif error_code == "ALREADY_DELIVERED":
+            self.delivered = True
 
         if error_code in {"TASK_NOT_FOUND", "TASK_PROTECTED", "TASK_REQUIREMENT_NOT_MET", "TASK_EXPIRED"}:
             task_id = self.task_id_from_object(object_key, payload.get("taskId"))

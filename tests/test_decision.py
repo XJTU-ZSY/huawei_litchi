@@ -320,7 +320,10 @@ class DecisionTest(unittest.TestCase):
     def test_gate_verification_in_rush(self):
         memory, context, engine = self.make_engine()
         snap = snapshot(memory, phase="RUSH", currentNodeId="S14")
-        self.assertEqual(engine.decide(context, snap), [{"action": "VERIFY_GATE"}])
+        self.assertEqual(
+            engine.decide(context, snap),
+            [{"action": "VERIFY_GATE", "targetNodeId": "S14", "rushTactic": "BREAK_ORDER"}],
+        )
 
     def test_gate_verification_binds_break_order_when_bad_fruit_can_pay(self):
         memory, context, engine = self.make_engine()
@@ -333,8 +336,16 @@ class DecisionTest(unittest.TestCase):
 
     def test_gate_verification_does_not_bind_break_order_without_bad_fruit(self):
         memory, context, engine = self.make_engine()
-        snap = snapshot(memory, phase="RUSH", currentNodeId="S14", badFruit=1, rushTacticUsedCount=0)
+        snap = snapshot(memory, phase="RUSH", currentNodeId="S14", badFruit=1, goodFruit=1, rushTacticUsedCount=0)
         self.assertEqual(engine.decide(context, snap), [{"action": "VERIFY_GATE"}])
+
+    def test_gate_verification_binds_break_order_when_good_fruit_can_pay_and_still_deliver(self):
+        memory, context, engine = self.make_engine()
+        snap = snapshot(memory, phase="RUSH", currentNodeId="S14", badFruit=0, goodFruit=2, rushTacticUsedCount=0)
+        self.assertEqual(
+            engine.decide(context, snap),
+            [{"action": "VERIFY_GATE", "targetNodeId": "S14", "rushTactic": "BREAK_ORDER"}],
+        )
 
     def test_gate_verification_does_not_bind_break_order_after_rush_tactic_used(self):
         memory, context, engine = self.make_engine()
@@ -345,6 +356,36 @@ class DecisionTest(unittest.TestCase):
         memory, context, engine = self.make_engine()
         snap = snapshot(memory, currentNodeId="S15", verified=True)
         self.assertEqual(engine.decide(context, snap), [{"action": "DELIVER"}])
+
+    def test_terminal_does_not_deliver_without_good_fruit(self):
+        memory, context, engine = self.make_engine()
+        snap = snapshot(memory, currentNodeId="S15", verified=True, goodFruit=0)
+        self.assertEqual(engine.decide(context, snap), [])
+        self.assertIn("delivery requirements", engine.last_reason)
+
+    def test_terminal_does_not_deliver_without_freshness(self):
+        memory, context, engine = self.make_engine()
+        snap = snapshot(memory, currentNodeId="S15", verified=True, freshness=0)
+        self.assertEqual(engine.decide(context, snap), [])
+        self.assertIn("delivery requirements", engine.last_reason)
+
+    def test_verify_gate_complete_event_prevents_repeated_gate_verification(self):
+        memory, context, engine = self.make_engine()
+        event = {"type": "VERIFY_GATE_COMPLETE", "payload": {"playerId": 1001, "targetNodeId": "S14"}}
+        snap = snapshot(memory, phase="RUSH", currentNodeId="S14", verified=False, events=[event])
+        self.assertEqual(engine.decide(context, snap), [{"action": "MOVE", "targetNodeId": "S15"}])
+
+    def test_already_verified_result_prevents_repeated_gate_verification(self):
+        memory, context, engine = self.make_engine()
+        result = {"playerId": 1001, "action": "VERIFY_GATE", "accepted": False, "errorCode": "ALREADY_VERIFIED"}
+        snap = snapshot(memory, phase="RUSH", currentNodeId="S14", verified=False, action_results=[result])
+        self.assertEqual(engine.decide(context, snap), [{"action": "MOVE", "targetNodeId": "S15"}])
+
+    def test_deliver_success_event_prevents_repeated_delivery(self):
+        memory, context, engine = self.make_engine()
+        event = {"type": "DELIVER_SUCCESS", "payload": {"playerId": 1001, "targetNodeId": "S15"}}
+        snap = snapshot(memory, currentNodeId="S15", verified=True, delivered=False, events=[event])
+        self.assertEqual(engine.decide(context, snap), [])
 
     def test_terminal_without_verification_returns_to_gate(self):
         memory, context, engine = self.make_engine()

@@ -166,6 +166,33 @@ Validation:
 
 Status: done
 
+### 002C. 宫门验核与交付协议细节复核
+
+Priority: P0
+
+Evidence: 任务书 4.5、6.5、7.1；通信协议 `VERIFY_GATE`、`DELIVER`、`VERIFY_GATE_COMPLETE`、`DELIVER_SUCCESS`、`ALREADY_VERIFIED`、`DELIVER_NOT_VERIFIED`。
+
+Expected behavior:
+- 只在 `phase=RUSH`、位于 S14、未验核且非忙状态时提交 `VERIFY_GATE`。
+- `VERIFY_GATE_COMPLETE`、`VERIFY_GATE_ALREADY_DONE`、`ALREADY_VERIFIED` 应更新本地验核记忆，避免状态字段滞后一帧时重复验核。
+- 位于 S15 时，只有已验核、未交付、好果大于 0、鲜度大于 0 时提交 `DELIVER`。
+- `DELIVER_SUCCESS`、`ALREADY_DELIVERED` 应更新本地交付记忆，避免交付后主动动作。
+- `BREAK_ORDER` 绑定宫门验核时遵守成本规则：坏果足够时可用坏果，否则必须至少留出交付所需好果。
+
+Forbidden behavior:
+- 鲜度或好果为 0 时仍提交 `DELIVER`。
+- 已收到验核完成/已验核反馈后继续重复 `VERIFY_GATE`。
+- 已收到交付成功/已交付反馈后继续提交主动动作。
+- 单独发送 `BREAK_ORDER`。
+
+Implementation owner: `$litchi-protocol-expert -> $litchi-architect -> $litchi-implementer -> $litchi-tester`
+
+Validation:
+- `python -B -m unittest`
+- `python -B tools/quality_gate.py`
+
+Status: done
+
 ## P1 待办
 
 ### 101. 任务收益模型
