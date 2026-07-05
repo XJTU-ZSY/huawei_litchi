@@ -1229,7 +1229,7 @@ class DecisionTest(unittest.TestCase):
         self.assertEqual(engine.decide(context, snap), [{"action": "PROCESS", "targetNodeId": "S13"}])
         self.assertNotIn("yield process node", engine.last_reason)
 
-    def test_terminal_corridor_process_does_not_wait_for_busy_opponent_after_draw(self):
+    def test_terminal_corridor_process_waits_for_busy_opponent_after_draw(self):
         start = {
             "matchId": "m1",
             "round": 1,
@@ -1285,8 +1285,8 @@ class DecisionTest(unittest.TestCase):
             },
         )
 
-        self.assertEqual(engine.decide(context, snap), [{"action": "PROCESS", "targetNodeId": "S13"}])
-        self.assertNotIn("wait for opponent", engine.last_reason)
+        self.assertEqual(engine.decide(context, snap), [])
+        self.assertIn("wait for opponent 2002", engine.last_reason)
         self.assertNotIn("S13", memory.skipped_process_nodes)
 
     def test_terminal_corridor_process_can_yield_before_base_tasks(self):
