@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from .graph import RouteGraph
+from .protocol import error_recovery_policy, normalize_error_code
 
 
 def same_player_id(left: Any, right: Any) -> bool:
@@ -58,6 +59,12 @@ class GameMemory:
     process_idle_yield_counts: dict[str, int] = field(default_factory=dict)
     completed_tasks: set[str] = field(default_factory=set)
     rejected_actions: list[dict[str, Any]] = field(default_factory=list)
+    error_counts: dict[str, int] = field(default_factory=dict)
+    last_error_code: str | None = None
+    last_error_policy: str | None = None
+    blocked_move_targets: set[str] = field(default_factory=set)
+    forced_pass_blocked_nodes: set[str] = field(default_factory=set)
+    delivery_requires_verification: bool = False
 
     def apply_start(self, data: dict[str, Any]) -> GameContext:
         players = data.get("players", [])
@@ -124,6 +131,10 @@ class GameMemory:
                 self._record_window_contest_result(event_type, payload)
             elif event_type == "NODE_ENTER":
                 self._record_node_enter(payload)
+            elif event_type in {"GUARD_BREAK", "OBSTACLE_CLEAR", "FORCED_PASS_END"}:
+                node_id = payload.get("targetNodeId") or payload.get("nodeId")
+                if node_id:
+                    self.blocked_move_targets.discard(str(node_id))
             elif event_type == "PROCESS_COMPLETE":
                 node_id = payload.get("targetNodeId") or payload.get("nodeId")
                 if node_id and self._is_fixed_node_process_complete(payload):
@@ -146,7 +157,8 @@ class GameMemory:
             payload = result.get("payload") or result
             if payload.get("playerId") is not None and not same_player_id(payload.get("playerId"), self.player_id):
                 continue
-            self._recover_from_rejection(payload, current_node_id)
+            if payload.get("accepted") is False or payload.get("errorCode"):
+                self._recover_from_rejection(payload, current_node_id)
 
     def _record_node_enter(self, payload: dict[str, Any]) -> None:
         node_id = payload.get("nodeId") or payload.get("targetNodeId")
@@ -158,6 +170,7 @@ class GameMemory:
         self.drawn_process_yield_counts.pop(node_key, None)
         self.drawn_process_retry_counts.pop(node_key, None)
         self.process_idle_yield_counts.pop(node_key, None)
+        self.blocked_move_targets.discard(node_key)
 
     @staticmethod
     def _is_fixed_node_process_complete(payload: dict[str, Any]) -> bool:
@@ -211,14 +224,76 @@ class GameMemory:
         return None
 
     def _recover_from_rejection(self, payload: dict[str, Any], current_node_id: Any = None) -> None:
-        if str(payload.get("errorCode") or "").upper() != "PROCESS_REQUIRED":
+        error_code = normalize_error_code(payload.get("errorCode"))
+        if not error_code:
             return
+        self.last_error_code = error_code
+        self.last_error_policy = error_recovery_policy(error_code)
+        self.error_counts[error_code] = self.error_counts.get(error_code, 0) + 1
         node_id = payload.get("targetNodeId") or payload.get("currentNodeId") or payload.get("nodeId") or current_node_id
-        if node_id:
-            self.completed_process_nodes.discard(str(node_id))
-            self.skipped_process_nodes.discard(str(node_id))
-            self.drawn_process_yield_counts.pop(str(node_id), None)
-            self.drawn_process_retry_counts.pop(str(node_id), None)
+        node_key = str(node_id) if node_id else ""
+        action_name = str(payload.get("action") or "").upper()
+        object_key = str(payload.get("objectKey") or "")
+
+        if error_code == "PROCESS_REQUIRED":
+            if node_key:
+                self.completed_process_nodes.discard(node_key)
+                self.skipped_process_nodes.discard(node_key)
+                self.drawn_process_yield_counts.pop(node_key, None)
+                self.drawn_process_retry_counts.pop(node_key, None)
+            return
+
+        if error_code in {"PROCESS_NOT_AVAILABLE", "NOT_AT_TARGET_NODE"} and node_key:
+            self.completed_process_nodes.discard(node_key)
+            self.skipped_process_nodes.add(node_key)
+
+        if error_code in {"MOVE_BLOCKED_BY_GUARD", "MOVE_EDGE_NOT_FOUND", "TARGET_NOT_REACHABLE"} and node_key:
+            self.blocked_move_targets.add(node_key)
+
+        if error_code == "FORCED_PASS_REPEAT" and node_key:
+            self.forced_pass_blocked_nodes.add(node_key)
+
+        if error_code in {"VERIFY_REQUIRED", "DELIVER_NOT_VERIFIED"}:
+            self.delivery_requires_verification = True
+        elif error_code == "ALREADY_VERIFIED":
+            self.delivery_requires_verification = False
+
+        if error_code in {"TASK_NOT_FOUND", "TASK_PROTECTED", "TASK_REQUIREMENT_NOT_MET", "TASK_EXPIRED"}:
+            task_id = self.task_id_from_object(object_key, payload.get("taskId"))
+            if task_id:
+                self.skipped_task_claims.add(task_id)
+
+        if error_code in {"OBJECT_BUSY", "WINDOW_DRAW_RETRY_LIMIT"}:
+            self._skip_object_from_rejection(payload)
+
+        if error_code in {"RESOURCE_NOT_ENOUGH", "RESOURCE_NOT_USABLE"}:
+            resource_key = self.resource_claim_key_from_object(
+                object_key,
+                node_key,
+                payload.get("resourceType"),
+            )
+            if action_name == "CLAIM_RESOURCE" and resource_key:
+                self.skipped_resource_claims.add(resource_key)
+            if action_name == "USE_RESOURCE" and payload.get("resourceType"):
+                self.skipped_resource_claims.add(f"USE_RESOURCE:{payload.get('resourceType')}")
+
+        if error_code == "OBSTACLE_NOT_FOUND" and node_key:
+            self.blocked_move_targets.discard(node_key)
+
+    def _skip_object_from_rejection(self, payload: dict[str, Any]) -> None:
+        object_key = str(payload.get("objectKey") or "")
+        node_id = payload.get("targetNodeId") or payload.get("nodeId")
+        task_id = self.task_id_from_object(object_key, payload.get("taskId"))
+        if task_id:
+            self.skipped_task_claims.add(task_id)
+            return
+        resource_key = self.resource_claim_key_from_object(object_key, node_id, payload.get("resourceType"))
+        if resource_key:
+            self.skipped_resource_claims.add(resource_key)
+            return
+        node_key = self._process_node_from_object_key(object_key, node_id)
+        if node_key:
+            self.skipped_process_nodes.add(node_key)
 
     @classmethod
     def resource_claim_key_from_object(

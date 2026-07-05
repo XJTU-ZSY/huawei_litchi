@@ -9,7 +9,7 @@ from typing import Any
 from .decision import DecisionEngine
 from .framing import FrameDecoder, ProtocolError, encode_frame
 from .game_state import GameMemory
-from .protocol import action, ready, registration
+from .protocol import action, error_recovery_policy, ready, registration
 
 
 class GameClient:
@@ -61,7 +61,15 @@ class GameClient:
             )
             self._send(sock, payload)
         elif name == "error":
-            self._log({"kind": "server_error", "data": data})
+            error_code = data.get("errorCode")
+            self._log(
+                {
+                    "kind": "server_error",
+                    "errorCode": error_code,
+                    "policy": error_recovery_policy(error_code),
+                    "data": data,
+                }
+            )
         elif name == "over":
             self._log({"kind": "over", "data": data})
             return True

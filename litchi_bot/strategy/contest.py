@@ -28,15 +28,37 @@ class WindowCardSelector:
 
     def _active_contest_for_self(self, context: GameContext, snapshot: GameSnapshot) -> dict[str, Any] | None:
         for contest in snapshot.contests:
-            if contest.get("status") == "SUPPRESSED" or contest.get("resolved") is True:
+            if str(contest.get("status") or "").upper() == "SUPPRESSED" or contest.get("resolved") is True:
                 continue
             if not contest.get("contestId"):
                 continue
-            if same_player_id(contest.get("redPlayerId"), context.player_id) or same_player_id(
-                contest.get("bluePlayerId"), context.player_id
-            ):
+            if self._contest_involves_self(context, contest):
                 return contest
         return None
+
+    @staticmethod
+    def _contest_involves_self(context: GameContext, contest: dict[str, Any]) -> bool:
+        player_id = context.player_id
+        direct_fields = (
+            "redPlayerId",
+            "bluePlayerId",
+            "initiatorPlayerId",
+            "attackerPlayerId",
+            "defenderPlayerId",
+        )
+        if any(same_player_id(contest.get(field), player_id) for field in direct_fields):
+            return True
+        for field in ("sourceActionTypes", "sourceTaskIds", "breakOrderCostTypes"):
+            values = contest.get(field) or {}
+            if any(same_player_id(key, player_id) for key in values):
+                return True
+        for field in ("playerIds", "participants", "participantPlayerIds"):
+            values = contest.get(field) or []
+            if isinstance(values, dict):
+                values = values.values()
+            if any(same_player_id(value, player_id) for value in values):
+                return True
+        return False
 
     def _choose_card(self, context: GameContext, snapshot: GameSnapshot, contest: dict[str, Any]) -> str:
         base_card = self._choose_base_card(context, snapshot, contest)
@@ -91,8 +113,11 @@ class WindowCardSelector:
         if previous_round <= 0:
             return None
         cards = contest.get("cards") or {}
-        red_card = cards.get(f"R{previous_round}:RED")
-        blue_card = cards.get(f"R{previous_round}:BLUE")
+        red_card = cards.get(f"R{previous_round}:RED") or cards.get(f"RED:R{previous_round}")
+        blue_card = cards.get(f"R{previous_round}:BLUE") or cards.get(f"BLUE:R{previous_round}")
+        if red_card is None and blue_card is None and previous_round == 1:
+            red_card = cards.get("RED")
+            blue_card = cards.get("BLUE")
         if not red_card or not blue_card:
             return None
         red_card_text = str(red_card)

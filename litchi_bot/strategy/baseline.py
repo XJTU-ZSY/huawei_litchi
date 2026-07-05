@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from math import ceil
 from typing import Any
 
 from ..game_state import GameContext, GameMemory, GameSnapshot, same_player_id
@@ -40,6 +41,16 @@ BREAK_ORDER_BAD_FRUIT_COST = 2
 XIAN_GONG_MIN_FRESHNESS = 80
 XIAN_GONG_MIN_GOOD_FRUIT = 30
 ENDGAME_ICE_BOX_FRESHNESS_CAP = 90.0
+SQUAD_ACTION_COSTS = {
+    "SQUAD_SCOUT": 1,
+    "SQUAD_CLEAR": 2,
+    "SQUAD_REINFORCE": 2,
+    "SQUAD_WEAKEN": 2,
+}
+GUARD_ROUTE_NODE_TYPES = {"KEY_PASS", "GATE", "PASS", "MOUNTAIN_PASS", "STRATEGIC_PASS"}
+MIN_GOOD_FRUIT_AFTER_GUARD = 20
+MIN_GOOD_FRUIT_AFTER_BREAK = 8
+GUARD_ACTIVE_AFTER_START_ROUNDS = 5
 
 
 class BaselineStrategy:
@@ -53,6 +64,9 @@ class BaselineStrategy:
         main_action = self._main_action(context, snapshot)
         if main_action is not None:
             actions.append(main_action)
+        squad_action = self._squad_action(context, snapshot, main_action)
+        if squad_action is not None:
+            actions.append(squad_action)
         window_action = self.window_selector.choose(context, snapshot)
         if window_action is not None:
             actions.append(window_action)
@@ -72,12 +86,7 @@ class BaselineStrategy:
             return None
 
         if state in {"MOVING", "WAITING"}:
-            next_node = player.get("nextNodeId")
-            if next_node:
-                self.last_reason = f"continue moving to {next_node}"
-                return {"action": "MOVE", "targetNodeId": next_node}
-            self.last_reason = "moving without nextNodeId"
-            return None
+            return self._moving_or_waiting_action(context, snapshot)
 
         if current == context.terminal_node_id:
             if player.get("verified"):
@@ -132,11 +141,296 @@ class BaselineStrategy:
         if resource_action is not None:
             return resource_action
 
+        guard_action = self._set_guard_action(context, snapshot)
+        if guard_action is not None:
+            return guard_action
+
         target = self._choose_destination(context, snapshot)
         if target:
             return self._move_toward(context, snapshot, target)
         self.last_reason = "no safe target"
         return None
+
+    def _moving_or_waiting_action(self, context: GameContext, snapshot: GameSnapshot) -> dict[str, Any] | None:
+        player = snapshot.self_player
+        next_node = player.get("nextNodeId")
+        if not next_node:
+            self.last_reason = "moving without nextNodeId"
+            return None
+        blocker = self._entry_blocker(context, snapshot, str(next_node), origin=player.get("currentNodeId"))
+        if blocker:
+            reroute = self._reroute_from_edge_origin(context, snapshot, str(next_node))
+            if reroute is not None:
+                self.last_reason = f"reroute from edge origin away from blocked {next_node} via {reroute}"
+                return {"action": "MOVE", "targetNodeId": reroute}
+            self.last_reason = f"pause on edge to {next_node}: {blocker}"
+            return {"action": "WAIT"}
+        self.last_reason = f"continue moving to {next_node}"
+        return {"action": "MOVE", "targetNodeId": str(next_node)}
+
+    def _reroute_from_edge_origin(
+        self,
+        context: GameContext,
+        snapshot: GameSnapshot,
+        blocked_target: str,
+    ) -> str | None:
+        origin = str(snapshot.self_player.get("currentNodeId") or "")
+        if not origin:
+            return None
+        objective = self._route_objective(context, snapshot, excluded={blocked_target})
+        if objective is None:
+            return None
+
+        hard_blocked = self._hard_blocked_nodes(context, snapshot)
+        hard_blocked.add(blocked_target)
+        preferred_blocked = set(hard_blocked)
+        preferred_blocked.update(self._guard_threat_nodes(context, snapshot))
+
+        best: tuple[int, int, str] | None = None
+        for neighbor in context.graph.neighbors(origin):
+            candidate = str(neighbor)
+            if candidate == blocked_target:
+                continue
+            if self._entry_blocker(context, snapshot, candidate, origin=origin):
+                continue
+            if candidate in hard_blocked:
+                continue
+
+            path = context.graph.shortest_path(candidate, objective, blocked=preferred_blocked)
+            risk_penalty = 0
+            if not path:
+                path = context.graph.shortest_path(candidate, objective, blocked=hard_blocked)
+                risk_penalty = 1
+            if not path:
+                continue
+            rounds = context.graph.path_movement_rounds([origin] + path)
+            if rounds is None:
+                continue
+            key = (risk_penalty, rounds, candidate)
+            if best is None or key < best:
+                best = key
+        return None if best is None else best[2]
+
+    def _squad_action(
+        self,
+        context: GameContext,
+        snapshot: GameSnapshot,
+        main_action: dict[str, Any] | None,
+    ) -> dict[str, Any] | None:
+        player = snapshot.self_player
+        state = str(player.get("state") or "IDLE")
+        if snapshot.phase == "RUSH" or player.get("delivered") or state in {"DELIVERED", "RETIRED"}:
+            return None
+        available = int(player.get("squadAvailable") or 0)
+        if available <= 0:
+            return None
+
+        avoided_target = str((main_action or {}).get("targetNodeId") or "")
+        moving_target = str(player.get("nextNodeId") or "")
+        if moving_target:
+            node = snapshot.nodes_by_id.get(moving_target, {})
+            if self._enemy_guard_active(context, node) and self._can_spend_squad(available, "SQUAD_WEAKEN"):
+                if avoided_target != moving_target or (main_action or {}).get("action") not in {"BREAK_GUARD", "FORCED_PASS"}:
+                    return self._squad("SQUAD_WEAKEN", moving_target, main_action)
+            if node.get("hasObstacle") and self._can_spend_squad(available, "SQUAD_CLEAR"):
+                if avoided_target != moving_target or (main_action or {}).get("action") not in {"CLEAR", "FORCED_PASS"}:
+                    return self._squad("SQUAD_CLEAR", moving_target, main_action)
+
+        route_blocker = self._first_route_blocker(context, snapshot)
+        if route_blocker:
+            node_id, blocker_type = route_blocker
+            if blocker_type == "guard" and self._can_spend_squad(available, "SQUAD_WEAKEN"):
+                if avoided_target != node_id or (main_action or {}).get("action") not in {"BREAK_GUARD", "FORCED_PASS"}:
+                    return self._squad("SQUAD_WEAKEN", node_id, main_action)
+            if blocker_type == "obstacle" and self._can_spend_squad(available, "SQUAD_CLEAR"):
+                if avoided_target != node_id or (main_action or {}).get("action") not in {"CLEAR", "FORCED_PASS"}:
+                    return self._squad("SQUAD_CLEAR", node_id, main_action)
+
+        reinforce_target = self._reinforce_guard_target(context, snapshot)
+        if reinforce_target and self._can_spend_squad(available, "SQUAD_REINFORCE"):
+            return self._squad("SQUAD_REINFORCE", reinforce_target, main_action)
+
+        scout_target = self._scout_target(context, snapshot)
+        if scout_target and self._can_spend_squad(available, "SQUAD_SCOUT"):
+            return self._squad("SQUAD_SCOUT", scout_target, main_action)
+
+        return None
+
+    def _squad(self, action: str, target_node_id: str, main_action: dict[str, Any] | None) -> dict[str, Any]:
+        if main_action is None:
+            self.last_reason = f"{action} target {target_node_id}"
+        return {"action": action, "targetNodeId": target_node_id}
+
+    @staticmethod
+    def _can_spend_squad(available: int, action: str) -> bool:
+        return available >= SQUAD_ACTION_COSTS[action]
+
+    def _first_route_blocker(self, context: GameContext, snapshot: GameSnapshot) -> tuple[str, str] | None:
+        player = snapshot.self_player
+        current = str(player.get("currentNodeId") or "")
+        if not current:
+            return None
+        targets: list[str] = []
+        if int(player.get("taskScore") or 0) < BASE_TASK_RESOURCE_SCORE and snapshot.phase != "RUSH":
+            for task in sorted(snapshot.tasks, key=self._task_sort_key):
+                if self._task_available_for_self(context, task) and not self._task_claim_skipped(context, snapshot, task):
+                    node_id = str(task.get("nodeId") or "")
+                    if node_id:
+                        targets.append(node_id)
+        targets.append(context.terminal_node_id if player.get("verified") else context.gate_node_id)
+        for target in targets:
+            path = context.graph.shortest_path(current, target)
+            for node_id in path[1:]:
+                node = snapshot.nodes_by_id.get(str(node_id), {})
+                if self._enemy_guard_active(context, node):
+                    return str(node_id), "guard"
+                if node.get("hasObstacle"):
+                    return str(node_id), "obstacle"
+        return None
+
+    def _reinforce_guard_target(self, context: GameContext, snapshot: GameSnapshot) -> str | None:
+        if int(snapshot.self_player.get("taskScore") or 0) < BASE_TASK_RESOURCE_SCORE:
+            return None
+        best: tuple[int, str] | None = None
+        for node_id, node in snapshot.nodes_by_id.items():
+            guard = node.get("guard") or {}
+            if not guard.get("active") or guard.get("ownerTeamId") != context.team_id:
+                continue
+            defense = int(guard.get("defense") or 0)
+            max_defense = int(guard.get("maxDefense") or defense)
+            if defense <= 0 or defense >= max_defense:
+                continue
+            if not self._opponent_route_contains(context, snapshot, node_id):
+                continue
+            key = (defense, node_id)
+            if best is None or key < best:
+                best = key
+        return None if best is None else best[1]
+
+    def _scout_target(self, context: GameContext, snapshot: GameSnapshot) -> str | None:
+        if int(snapshot.self_player.get("taskScore") or 0) >= BASE_TASK_RESOURCE_SCORE:
+            return None
+        current = str(snapshot.self_player.get("currentNodeId") or "")
+        for task in sorted(snapshot.tasks, key=self._task_sort_key):
+            if not self._task_available_for_self(context, task):
+                continue
+            node_id = str(task.get("nodeId") or "")
+            if not node_id or node_id == current:
+                continue
+            node = snapshot.nodes_by_id.get(node_id, {})
+            if not node or self._has_own_scout(context, node):
+                continue
+            process_round = int(task.get("processRound") or node.get("processRound") or 0)
+            if int(task.get("score") or 0) >= DOWNSTREAM_RACE_MIN_TASK_SCORE or process_round >= 5:
+                return node_id
+        return None
+
+    def _route_objective(
+        self,
+        context: GameContext,
+        snapshot: GameSnapshot,
+        *,
+        excluded: set[str] | None = None,
+    ) -> str | None:
+        excluded = excluded or set()
+        player = snapshot.self_player
+        if self._should_go_endgame(context, snapshot):
+            target = context.terminal_node_id if player.get("verified") else context.gate_node_id
+            return None if target in excluded else target
+        if int(player.get("taskScore") or 0) < BASE_TASK_RESOURCE_SCORE:
+            target = self._nearest_task_node_excluding(context, snapshot, excluded)
+            if target:
+                return target
+        target = context.terminal_node_id if player.get("verified") else context.gate_node_id
+        return None if target in excluded else target
+
+    def _nearest_task_node_excluding(
+        self,
+        context: GameContext,
+        snapshot: GameSnapshot,
+        excluded: set[str],
+    ) -> str | None:
+        current = snapshot.self_player.get("currentNodeId")
+        blocked = self._blocked_nodes(context, snapshot)
+        blocked.update(excluded)
+        best_node_id: str | None = None
+        best_rounds: int | None = None
+        for task in sorted(snapshot.tasks, key=self._task_sort_key):
+            if not self._task_available_for_self(context, task):
+                continue
+            if self._task_claim_skipped(context, snapshot, task):
+                continue
+            if not self._task_route_viable(context, snapshot, task):
+                continue
+            node_id = str(task.get("nodeId") or "")
+            if not node_id or node_id in blocked:
+                continue
+            rounds = self._shortest_rounds(context, str(current or ""), node_id, blocked)
+            if rounds is None:
+                continue
+            if not self._can_finish_after_remote_task(context, snapshot, task, node_id, rounds):
+                continue
+            if best_rounds is None or rounds < best_rounds:
+                best_node_id = node_id
+                best_rounds = rounds
+        return best_node_id
+
+    def _set_guard_action(self, context: GameContext, snapshot: GameSnapshot) -> dict[str, Any] | None:
+        player = snapshot.self_player
+        if snapshot.phase == "RUSH" or int(player.get("taskScore") or 0) < BASE_TASK_RESOURCE_SCORE:
+            return None
+        current = str(player.get("currentNodeId") or "")
+        if not current or current in {context.start_node_id, context.terminal_node_id}:
+            return None
+        node = snapshot.nodes_by_id.get(current, {})
+        guard = node.get("guard") or {}
+        if guard.get("active") or node.get("safeZone") is True:
+            return None
+        if self._own_active_guard_count(context, snapshot) >= 2:
+            return None
+        if not self._guard_worth_node(node):
+            return None
+        if not self._opponent_route_contains(context, snapshot, current):
+            return None
+        if int(player.get("goodFruit") or 0) <= MIN_GOOD_FRUIT_AFTER_GUARD:
+            return None
+        action: dict[str, Any] = {"action": "SET_GUARD", "targetNodeId": current}
+        if int(player.get("goodFruit") or 0) >= 60:
+            action["extraGoodFruit"] = 1
+        self.last_reason = f"set guard at route choke {current}"
+        return action
+
+    @staticmethod
+    def _guard_worth_node(node: dict[str, Any]) -> bool:
+        node_type = str(node.get("nodeType") or "").upper()
+        return node_type in GUARD_ROUTE_NODE_TYPES or node.get("guardCandidate") is True
+
+    @staticmethod
+    def _own_active_guard_count(context: GameContext, snapshot: GameSnapshot) -> int:
+        total = 0
+        for node in snapshot.nodes_by_id.values():
+            guard = node.get("guard") or {}
+            if guard.get("active") and guard.get("ownerTeamId") == context.team_id:
+                total += 1
+        return total
+
+    def _opponent_route_contains(self, context: GameContext, snapshot: GameSnapshot, node_id: str) -> bool:
+        opponent = snapshot.opponent_player or {}
+        if opponent.get("delivered") or str(opponent.get("state") or "") in {"DELIVERED", "RETIRED"}:
+            return False
+        start = str(opponent.get("currentNodeId") or "")
+        if not start or start == node_id:
+            return False
+        goal = context.terminal_node_id if opponent.get("verified") else context.gate_node_id
+        path = context.graph.shortest_path(start, goal)
+        return node_id in path[1:]
+
+    @staticmethod
+    def _has_own_scout(context: GameContext, node: dict[str, Any]) -> bool:
+        for marker in node.get("scouted") or []:
+            if marker.get("teamId") == context.team_id and int(marker.get("remainingTriggers") or 0) > 0:
+                return True
+        return False
 
     def _process_current_node(self, context: GameContext, snapshot: GameSnapshot) -> dict[str, Any] | None:
         current = snapshot.self_player.get("currentNodeId")
@@ -1562,10 +1856,23 @@ class BaselineStrategy:
             self.last_reason = f"no path from {current} to {target}"
             return None
         next_node = path[1]
+        blocker_action = self._blocked_adjacent_action(context, snapshot, str(current), next_node)
+        if blocker_action is not None:
+            return blocker_action
+        blocker = self._entry_blocker(context, snapshot, next_node, origin=current)
+        if blocker:
+            self.last_reason = f"blocked from {current} to {next_node}: {blocker}"
+            return None
         self.last_reason = f"move from {current} to {next_node} toward {target}"
         return {"action": "MOVE", "targetNodeId": next_node}
 
     def _blocked_nodes(self, context: GameContext, snapshot: GameSnapshot) -> set[str]:
+        blocked = self._hard_blocked_nodes(context, snapshot)
+        blocked.update(self._guard_threat_nodes(context, snapshot))
+        blocked.discard(context.terminal_node_id)
+        return blocked
+
+    def _hard_blocked_nodes(self, context: GameContext, snapshot: GameSnapshot) -> set[str]:
         blocked: set[str] = set()
         for node_id, node in snapshot.nodes_by_id.items():
             if node.get("hasObstacle"):
@@ -1574,9 +1881,197 @@ class BaselineStrategy:
             guard = node.get("guard") or {}
             if guard.get("active") and guard.get("ownerTeamId") != context.team_id:
                 blocked.add(node_id)
-        blocked.discard(context.gate_node_id)
+        blocked.update(self.memory.blocked_move_targets)
         blocked.discard(context.terminal_node_id)
         return blocked
+
+    def _guard_threat_nodes(self, context: GameContext, snapshot: GameSnapshot) -> set[str]:
+        player = snapshot.self_player
+        current = str(player.get("currentNodeId") or "")
+        opponent = snapshot.opponent_player or {}
+        if not current or opponent.get("delivered") or str(opponent.get("state") or "") in {"DELIVERED", "RETIRED"}:
+            return set()
+        hard_blocked = self._hard_blocked_nodes(context, snapshot)
+        threats: set[str] = set()
+        for node_id, node in snapshot.nodes_by_id.items():
+            node_key = str(node_id)
+            if node_key in hard_blocked:
+                continue
+            if not self._guardable_node(context, node_key, node):
+                continue
+            ready_rounds = self._opponent_guard_ready_rounds(opponent, node_key)
+            if ready_rounds is None:
+                continue
+            arrival_rounds = context.graph.shortest_path_movement_rounds(current, node_key, blocked=hard_blocked)
+            if arrival_rounds is None:
+                continue
+            if ready_rounds <= arrival_rounds:
+                threats.add(node_key)
+        return threats
+
+    @staticmethod
+    def _guardable_node(context: GameContext, node_id: str, node: dict[str, Any]) -> bool:
+        if node_id == context.terminal_node_id or node.get("terminal") is True or node.get("safeZone") is True:
+            return False
+        guard = node.get("guard") or {}
+        return not bool(guard.get("active") and int(guard.get("defense") or 0) > 0)
+
+    def _opponent_guard_ready_rounds(self, opponent: dict[str, Any], node_id: str) -> int | None:
+        process = opponent.get("currentProcess") or {}
+        process_action = str(process.get("action") or process.get("type") or "").upper()
+        process_target = str(process.get("targetNodeId") or opponent.get("currentNodeId") or "")
+        if process_action == "SET_GUARD" and process_target == node_id:
+            return max(1, self._remaining_process_rounds(process) + 1)
+
+        state = str(opponent.get("state") or "IDLE")
+        current = str(opponent.get("currentNodeId") or "")
+        next_node = str(opponent.get("nextNodeId") or "")
+        if current == node_id and state in {"IDLE", "WAITING"} and not next_node:
+            return GUARD_ACTIVE_AFTER_START_ROUNDS
+        if next_node == node_id and state in {"MOVING", "WAITING"}:
+            return self._remaining_move_rounds(opponent) + GUARD_ACTIVE_AFTER_START_ROUNDS
+        return None
+
+    @staticmethod
+    def _remaining_process_rounds(process: dict[str, Any]) -> int:
+        for key in ("remainRound", "remainingRound"):
+            try:
+                return max(0, int(process.get(key) or 0))
+            except (TypeError, ValueError):
+                continue
+        return 0
+
+    @staticmethod
+    def _remaining_move_rounds(player: dict[str, Any]) -> int:
+        try:
+            total = int(player.get("edgeTotalMs") or 0)
+            progress = int(player.get("edgeProgressMs") or 0)
+        except (TypeError, ValueError):
+            total = 0
+            progress = 0
+        if total > 0:
+            return max(1, ceil(max(0, total - progress) / 1000))
+        for key in ("moveRemainRound", "remainingRound", "remainRound"):
+            try:
+                value = int(player.get(key) or 0)
+            except (TypeError, ValueError):
+                continue
+            if value > 0:
+                return value
+        return 1
+
+    def _blocked_adjacent_action(
+        self,
+        context: GameContext,
+        snapshot: GameSnapshot,
+        current: str,
+        target: str,
+    ) -> dict[str, Any] | None:
+        if self._special_terminal_return(context, current, target):
+            return None
+        node = snapshot.nodes_by_id.get(str(target), {})
+        if self._enemy_guard_active(context, node):
+            action = self._break_guard_action(context, snapshot, target, node.get("guard") or {})
+            if action is not None:
+                return action
+            if target not in self.memory.forced_pass_blocked_nodes:
+                self.last_reason = f"force pass enemy guard at {target}"
+                return {"action": "FORCED_PASS", "targetNodeId": target}
+            self.last_reason = f"avoid repeated forced pass at {target}"
+            return None
+        if node.get("hasObstacle"):
+            if self._should_force_pass_obstacle(context, snapshot, target):
+                self.last_reason = f"force pass obstacle at {target}"
+                return {"action": "FORCED_PASS", "targetNodeId": target}
+            if int(snapshot.self_player.get("goodFruit") or 0) > MIN_GOOD_FRUIT_AFTER_BREAK:
+                self.last_reason = f"clear obstacle at {target}"
+                return {"action": "CLEAR", "targetNodeId": target}
+            if target not in self.memory.forced_pass_blocked_nodes:
+                self.last_reason = f"force pass low-resource obstacle at {target}"
+                return {"action": "FORCED_PASS", "targetNodeId": target}
+        return None
+
+    def _break_guard_action(
+        self,
+        context: GameContext,
+        snapshot: GameSnapshot,
+        target: str,
+        guard: dict[str, Any],
+    ) -> dict[str, Any] | None:
+        defense = int(guard.get("defense") or 0)
+        if defense <= 0:
+            return None
+        player = snapshot.self_player
+        max_bad = min(2, int(player.get("badFruit") or 0))
+        max_good = min(2, max(0, int(player.get("goodFruit") or 0) - MIN_GOOD_FRUIT_AFTER_BREAK))
+        can_bind_break_order = self._can_bind_break_order_to_break_guard(snapshot)
+        best: tuple[int, int, int] | None = None
+        for use_break_order in (False, True):
+            if use_break_order and not can_bind_break_order:
+                continue
+            rush_bonus = 3 if use_break_order else 0
+            for bad in range(max_bad + 1):
+                for good in range(max_good + 1):
+                    attack = bad * 3 + good * 2 + rush_bonus
+                    if attack <= 0 or attack < defense:
+                        continue
+                    candidate = (1 if use_break_order else 0, good, bad)
+                    if best is None or candidate < best:
+                        best = candidate
+        if best is None:
+            return None
+        _, good, bad = best
+        use_break_order = bool(best[0])
+        action: dict[str, Any] = {"action": "BREAK_GUARD", "targetNodeId": target}
+        if good:
+            action["goodFruit"] = good
+        if bad:
+            action["badFruit"] = bad
+        if use_break_order:
+            action["rushTactic"] = "BREAK_ORDER"
+        self.last_reason = f"break enemy guard at {target}"
+        return action
+
+    @staticmethod
+    def _can_bind_break_order_to_break_guard(snapshot: GameSnapshot) -> bool:
+        player = snapshot.self_player
+        if snapshot.phase != "RUSH" or int(player.get("rushTacticUsedCount") or 0) > 0:
+            return False
+        return int(player.get("badFruit") or 0) >= 2 or int(player.get("goodFruit") or 0) > MIN_GOOD_FRUIT_AFTER_BREAK
+
+    def _should_force_pass_obstacle(self, context: GameContext, snapshot: GameSnapshot, target: str) -> bool:
+        if target == context.gate_node_id and snapshot.phase == "RUSH":
+            return True
+        if self._should_go_endgame(context, snapshot):
+            return True
+        return int(snapshot.self_player.get("goodFruit") or 0) <= MIN_GOOD_FRUIT_AFTER_BREAK
+
+    def _entry_blocker(
+        self,
+        context: GameContext,
+        snapshot: GameSnapshot,
+        target: str,
+        *,
+        origin: Any = None,
+    ) -> str | None:
+        origin_key = str(origin or "")
+        if self._special_terminal_return(context, origin_key, target):
+            return None
+        node = snapshot.nodes_by_id.get(str(target), {})
+        if self._enemy_guard_active(context, node):
+            return "enemy guard"
+        if node.get("hasObstacle"):
+            return "obstacle"
+        return None
+
+    @staticmethod
+    def _enemy_guard_active(context: GameContext, node: dict[str, Any]) -> bool:
+        guard = node.get("guard") or {}
+        return bool(guard.get("active") and guard.get("ownerTeamId") != context.team_id and int(guard.get("defense") or 0) > 0)
+
+    @staticmethod
+    def _special_terminal_return(context: GameContext, origin: str, target: str) -> bool:
+        return str(origin) == context.terminal_node_id and str(target) == context.gate_node_id
 
     def _should_go_endgame(self, context: GameContext, snapshot: GameSnapshot) -> bool:
         player = snapshot.self_player

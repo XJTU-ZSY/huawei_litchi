@@ -105,10 +105,217 @@ class DecisionTest(unittest.TestCase):
         snap = snapshot(memory, state="MOVING", currentNodeId="S01", nextNodeId="S02")
         self.assertEqual(engine.decide(context, snap), [{"action": "MOVE", "targetNodeId": "S02"}])
 
+    def test_moving_waits_when_next_node_gets_enemy_guard(self):
+        memory, context, engine = self.make_engine()
+        nodes = [
+            {"nodeId": "S01", "start": True},
+            {"nodeId": "S02", "guard": {"ownerTeamId": "BLUE", "defense": 4, "active": True}},
+            {"nodeId": "S14"},
+            {"nodeId": "S15", "terminal": True},
+        ]
+        snap = snapshot(memory, state="MOVING", currentNodeId="S01", nextNodeId="S02", nodes=nodes)
+        self.assertEqual(engine.decide(context, snap), [{"action": "WAIT"}])
+
+    def test_moving_reroutes_from_edge_origin_when_alternate_neighbor_is_available(self):
+        start = {
+            "matchId": "m1",
+            "round": 1,
+            "durationRound": 600,
+            "players": [{"playerId": 1001, "teamId": "RED"}, {"playerId": 2002, "teamId": "BLUE"}],
+            "map": {"gameplay": {"roles": {"startNodeId": "S01", "gateNodeId": "S14", "terminalNodeIds": ["S15"]}}},
+            "nodes": [
+                {"nodeId": "S01", "start": True},
+                {"nodeId": "S02", "guard": {"ownerTeamId": "BLUE", "defense": 4, "active": True}},
+                {"nodeId": "S03"},
+                {"nodeId": "S14"},
+                {"nodeId": "S15", "terminal": True},
+            ],
+            "edges": [
+                {"edgeId": "E1", "fromNodeId": "S01", "toNodeId": "S02", "routeType": "ROAD", "distance": 1},
+                {"edgeId": "E2", "fromNodeId": "S02", "toNodeId": "S14", "routeType": "ROAD", "distance": 1},
+                {"edgeId": "E3", "fromNodeId": "S01", "toNodeId": "S03", "routeType": "ROAD", "distance": 1},
+                {"edgeId": "E4", "fromNodeId": "S03", "toNodeId": "S14", "routeType": "ROAD", "distance": 1},
+                {"edgeId": "E5", "fromNodeId": "S14", "toNodeId": "S15", "routeType": "ROAD", "distance": 1},
+            ],
+        }
+        memory = GameMemory(1001)
+        context = memory.apply_start(start)
+        engine = DecisionEngine(memory)
+
+        snap = snapshot(
+            memory,
+            state="MOVING",
+            currentNodeId="S01",
+            nextNodeId="S02",
+            taskScore=90,
+            nodes=start["nodes"],
+        )
+
+        self.assertEqual(engine.decide(context, snap), [{"action": "MOVE", "targetNodeId": "S03"}])
+        self.assertIn("reroute", engine.last_reason)
+
+    def test_moving_uses_squad_weaken_when_next_node_gets_enemy_guard(self):
+        memory, context, engine = self.make_engine()
+        nodes = [
+            {"nodeId": "S01", "start": True},
+            {"nodeId": "S02", "guard": {"ownerTeamId": "BLUE", "defense": 4, "active": True}},
+            {"nodeId": "S14"},
+            {"nodeId": "S15", "terminal": True},
+        ]
+        snap = snapshot(
+            memory,
+            state="MOVING",
+            currentNodeId="S01",
+            nextNodeId="S02",
+            squadAvailable=2,
+            nodes=nodes,
+        )
+        self.assertEqual(
+            engine.decide(context, snap),
+            [{"action": "WAIT"}, {"action": "SQUAD_WEAKEN", "targetNodeId": "S02"}],
+        )
+
+    def test_moving_waits_and_squad_clears_when_next_node_gets_obstacle(self):
+        memory, context, engine = self.make_engine()
+        nodes = [
+            {"nodeId": "S01", "start": True},
+            {"nodeId": "S02", "hasObstacle": True},
+            {"nodeId": "S14"},
+            {"nodeId": "S15", "terminal": True},
+        ]
+        snap = snapshot(
+            memory,
+            state="MOVING",
+            currentNodeId="S01",
+            nextNodeId="S02",
+            squadAvailable=2,
+            nodes=nodes,
+        )
+        self.assertEqual(
+            engine.decide(context, snap),
+            [{"action": "WAIT"}, {"action": "SQUAD_CLEAR", "targetNodeId": "S02"}],
+        )
+
     def test_waiting_without_next_node_returns_no_action(self):
         memory, context, engine = self.make_engine()
         snap = snapshot(memory, state="WAITING", currentNodeId="S01", nextNodeId=None)
         self.assertEqual(engine.decide(context, snap), [])
+
+    def test_idle_breaks_adjacent_enemy_guard_instead_of_moving_into_it(self):
+        memory, context, engine = self.make_engine()
+        nodes = [
+            {"nodeId": "S01", "start": True},
+            {"nodeId": "S02", "guard": {"ownerTeamId": "BLUE", "defense": 3, "active": True}},
+            {"nodeId": "S14"},
+            {"nodeId": "S15", "terminal": True},
+        ]
+        snap = snapshot(memory, currentNodeId="S01", taskScore=90, badFruit=1, nodes=nodes)
+        self.assertEqual(
+            engine.decide(context, snap),
+            [{"action": "BREAK_GUARD", "targetNodeId": "S02", "badFruit": 1}],
+        )
+
+    def test_idle_force_passes_guard_when_break_guard_cannot_succeed(self):
+        memory, context, engine = self.make_engine()
+        nodes = [
+            {"nodeId": "S01", "start": True},
+            {"nodeId": "S02", "guard": {"ownerTeamId": "BLUE", "defense": 7, "active": True}},
+            {"nodeId": "S14"},
+            {"nodeId": "S15", "terminal": True},
+        ]
+        snap = snapshot(memory, currentNodeId="S01", taskScore=90, goodFruit=8, badFruit=0, nodes=nodes)
+        self.assertEqual(engine.decide(context, snap), [{"action": "FORCED_PASS", "targetNodeId": "S02"}])
+
+    def test_no_new_squad_action_in_rush(self):
+        memory, context, engine = self.make_engine()
+        nodes = [
+            {"nodeId": "S01", "start": True},
+            {"nodeId": "S02", "guard": {"ownerTeamId": "BLUE", "defense": 4, "active": True}},
+            {"nodeId": "S14"},
+            {"nodeId": "S15", "terminal": True},
+        ]
+        snap = snapshot(
+            memory,
+            phase="RUSH",
+            state="MOVING",
+            currentNodeId="S01",
+            nextNodeId="S02",
+            squadAvailable=8,
+            nodes=nodes,
+        )
+        self.assertEqual(engine.decide(context, snap), [{"action": "WAIT"}])
+
+    def test_idle_avoids_route_node_where_opponent_can_finish_guard_first(self):
+        start = {
+            "matchId": "m1",
+            "round": 1,
+            "durationRound": 600,
+            "players": [{"playerId": 1001, "teamId": "RED"}, {"playerId": 2002, "teamId": "BLUE"}],
+            "map": {"gameplay": {"roles": {"startNodeId": "S01", "gateNodeId": "S14", "terminalNodeIds": ["S15"]}}},
+            "nodes": [
+                {"nodeId": "S01", "start": True},
+                {"nodeId": "S02", "nodeType": "KEY_PASS"},
+                {"nodeId": "S03"},
+                {"nodeId": "S14"},
+                {"nodeId": "S15", "terminal": True},
+            ],
+            "edges": [
+                {"edgeId": "E1", "fromNodeId": "S01", "toNodeId": "S02", "routeType": "ROAD", "distance": 5},
+                {"edgeId": "E2", "fromNodeId": "S02", "toNodeId": "S14", "routeType": "ROAD", "distance": 1},
+                {"edgeId": "E3", "fromNodeId": "S01", "toNodeId": "S03", "routeType": "ROAD", "distance": 4},
+                {"edgeId": "E4", "fromNodeId": "S03", "toNodeId": "S14", "routeType": "ROAD", "distance": 4},
+                {"edgeId": "E5", "fromNodeId": "S14", "toNodeId": "S15", "routeType": "ROAD", "distance": 1},
+            ],
+        }
+        memory = GameMemory(1001)
+        context = memory.apply_start(start)
+        engine = DecisionEngine(memory)
+
+        snap = snapshot(
+            memory,
+            currentNodeId="S01",
+            taskScore=90,
+            nodes=start["nodes"],
+            opponent_overrides={"currentNodeId": "S02", "state": "IDLE"},
+        )
+
+        self.assertEqual(engine.decide(context, snap), [{"action": "MOVE", "targetNodeId": "S03"}])
+
+    def test_idle_takes_fast_route_when_opponent_cannot_guard_before_arrival(self):
+        start = {
+            "matchId": "m1",
+            "round": 1,
+            "durationRound": 600,
+            "players": [{"playerId": 1001, "teamId": "RED"}, {"playerId": 2002, "teamId": "BLUE"}],
+            "map": {"gameplay": {"roles": {"startNodeId": "S01", "gateNodeId": "S14", "terminalNodeIds": ["S15"]}}},
+            "nodes": [
+                {"nodeId": "S01", "start": True},
+                {"nodeId": "S02", "nodeType": "KEY_PASS"},
+                {"nodeId": "S03"},
+                {"nodeId": "S14"},
+                {"nodeId": "S15", "terminal": True},
+            ],
+            "edges": [
+                {"edgeId": "E1", "fromNodeId": "S01", "toNodeId": "S02", "routeType": "ROAD", "distance": 1},
+                {"edgeId": "E2", "fromNodeId": "S02", "toNodeId": "S14", "routeType": "ROAD", "distance": 1},
+                {"edgeId": "E3", "fromNodeId": "S01", "toNodeId": "S03", "routeType": "ROAD", "distance": 4},
+                {"edgeId": "E4", "fromNodeId": "S03", "toNodeId": "S14", "routeType": "ROAD", "distance": 4},
+                {"edgeId": "E5", "fromNodeId": "S14", "toNodeId": "S15", "routeType": "ROAD", "distance": 1},
+            ],
+        }
+        memory = GameMemory(1001)
+        context = memory.apply_start(start)
+        engine = DecisionEngine(memory)
+
+        snap = snapshot(
+            memory,
+            currentNodeId="S01",
+            taskScore=90,
+            nodes=start["nodes"],
+            opponent_overrides={"currentNodeId": "S02", "state": "IDLE"},
+        )
+
+        self.assertEqual(engine.decide(context, snap), [{"action": "MOVE", "targetNodeId": "S02"}])
 
     def test_gate_verification_in_rush(self):
         memory, context, engine = self.make_engine()
@@ -1981,9 +2188,87 @@ class DecisionTest(unittest.TestCase):
         )
         self.assertEqual(engine.decide(context, snap), [{"action": "MOVE", "targetNodeId": "S14"}])
 
+    def test_sets_guard_on_key_route_after_base_task_score(self):
+        memory, context, engine = self.make_engine()
+        nodes = [
+            {"nodeId": "S01", "start": True},
+            {"nodeId": "S02", "nodeType": "KEY_PASS"},
+            {"nodeId": "S14"},
+            {"nodeId": "S15", "terminal": True},
+        ]
+        snap = snapshot(
+            memory,
+            currentNodeId="S02",
+            taskScore=90,
+            goodFruit=80,
+            nodes=nodes,
+            opponent_overrides={"currentNodeId": "S01", "state": "IDLE"},
+        )
+        self.assertEqual(
+            engine.decide(context, snap),
+            [{"action": "SET_GUARD", "targetNodeId": "S02", "extraGoodFruit": 1}],
+        )
+
+    def test_does_not_set_third_active_guard(self):
+        memory, context, engine = self.make_engine()
+        nodes = [
+            {"nodeId": "S01", "start": True},
+            {"nodeId": "S02", "nodeType": "KEY_PASS"},
+            {"nodeId": "S07", "guard": {"ownerTeamId": "RED", "defense": 4, "active": True}},
+            {"nodeId": "S09", "guard": {"ownerTeamId": "RED", "defense": 4, "active": True}},
+            {"nodeId": "S14"},
+            {"nodeId": "S15", "terminal": True},
+        ]
+        snap = snapshot(
+            memory,
+            currentNodeId="S02",
+            taskScore=90,
+            goodFruit=80,
+            nodes=nodes,
+            opponent_overrides={"currentNodeId": "S01", "state": "IDLE"},
+        )
+        self.assertEqual(engine.decide(context, snap), [{"action": "MOVE", "targetNodeId": "S14"}])
+
+    def test_squad_scouts_high_value_remote_task(self):
+        memory, context, engine = self.make_engine()
+        tasks = [{"taskId": "T01_1", "nodeId": "S02", "score": 30, "processRound": 6, "active": True}]
+        snap = snapshot(memory, currentNodeId="S01", squadAvailable=1, tasks=tasks)
+        self.assertEqual(
+            engine.decide(context, snap),
+            [{"action": "MOVE", "targetNodeId": "S02"}, {"action": "SQUAD_SCOUT", "targetNodeId": "S02"}],
+        )
+
+    def test_action_result_error_updates_recovery_memory(self):
+        memory, context, engine = self.make_engine()
+        result = {
+            "playerId": 1001,
+            "action": "CLAIM_TASK",
+            "accepted": False,
+            "taskId": "T01_1",
+            "errorCode": "TASK_EXPIRED",
+        }
+        snap = snapshot(memory, action_results=[result])
+        self.assertEqual(memory.error_counts["TASK_EXPIRED"], 1)
+        self.assertEqual(memory.last_error_policy, "skip_task")
+        self.assertIn("T01_1", memory.skipped_task_claims)
+        self.assertEqual(engine.decide(context, snap), [{"action": "MOVE", "targetNodeId": "S02"}])
+
     def test_contesting_state_only_sends_task_window_card(self):
         memory, context, engine = self.make_engine()
         contests = [{"contestId": "C1", "contestType": "TASK", "redPlayerId": 1001, "bluePlayerId": 2002, "roundIndex": 1}]
+        snap = snapshot(memory, state="CONTESTING", currentNodeId="S02", contests=contests)
+        self.assertEqual(engine.decide(context, snap), [{"action": "WINDOW_CARD", "contestId": "C1", "card": "XIAN_GONG"}])
+
+    def test_window_participation_can_be_read_from_source_action_mapping(self):
+        memory, context, engine = self.make_engine()
+        contests = [
+            {
+                "contestId": "C1",
+                "contestType": "TASK",
+                "sourceActionTypes": {"1001": "CLAIM_TASK", "2002": "CLAIM_TASK"},
+                "roundIndex": 1,
+            }
+        ]
         snap = snapshot(memory, state="CONTESTING", currentNodeId="S02", contests=contests)
         self.assertEqual(engine.decide(context, snap), [{"action": "WINDOW_CARD", "contestId": "C1", "card": "XIAN_GONG"}])
 
