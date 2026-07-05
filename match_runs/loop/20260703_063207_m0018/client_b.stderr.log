@@ -1,0 +1,1562 @@
+{"kind":"send","msg_name":"registration","round":null}
+{"kind":"recv","msg_name":"start","round":1}
+{"kind":"send","msg_name":"ready","round":1}
+{"kind":"recv","msg_name":"inquire","round":1}
+{"kind":"decision","round":1,"actions":[{"action":"MOVE","targetNodeId":"S02"}],"reason":"go to task node S09; move from S01 to S02 toward S09"}
+{"kind":"send","msg_name":"action","round":1}
+{"kind":"recv","msg_name":"inquire","round":2}
+{"kind":"decision","round":2,"actions":[{"action":"MOVE","targetNodeId":"S02"}],"reason":"continue moving to S02"}
+{"kind":"send","msg_name":"action","round":2}
+{"kind":"recv","msg_name":"inquire","round":3}
+{"kind":"decision","round":3,"actions":[{"action":"MOVE","targetNodeId":"S02"}],"reason":"continue moving to S02"}
+{"kind":"send","msg_name":"action","round":3}
+{"kind":"recv","msg_name":"inquire","round":4}
+{"kind":"decision","round":4,"actions":[{"action":"MOVE","targetNodeId":"S02"}],"reason":"continue moving to S02"}
+{"kind":"send","msg_name":"action","round":4}
+{"kind":"recv","msg_name":"inquire","round":5}
+{"kind":"decision","round":5,"actions":[{"action":"MOVE","targetNodeId":"S02"}],"reason":"continue moving to S02"}
+{"kind":"send","msg_name":"action","round":5}
+{"kind":"recv","msg_name":"inquire","round":6}
+{"kind":"decision","round":6,"actions":[{"action":"MOVE","targetNodeId":"S02"}],"reason":"continue moving to S02"}
+{"kind":"send","msg_name":"action","round":6}
+{"kind":"recv","msg_name":"inquire","round":7}
+{"kind":"decision","round":7,"actions":[{"action":"MOVE","targetNodeId":"S02"}],"reason":"continue moving to S02"}
+{"kind":"send","msg_name":"action","round":7}
+{"kind":"recv","msg_name":"inquire","round":8}
+{"kind":"decision","round":8,"actions":[{"action":"MOVE","targetNodeId":"S02"}],"reason":"continue moving to S02"}
+{"kind":"send","msg_name":"action","round":8}
+{"kind":"recv","msg_name":"inquire","round":9}
+{"kind":"decision","round":9,"actions":[{"action":"MOVE","targetNodeId":"S02"}],"reason":"continue moving to S02"}
+{"kind":"send","msg_name":"action","round":9}
+{"kind":"recv","msg_name":"inquire","round":10}
+{"kind":"decision","round":10,"actions":[{"action":"MOVE","targetNodeId":"S02"}],"reason":"continue moving to S02"}
+{"kind":"send","msg_name":"action","round":10}
+{"kind":"recv","msg_name":"inquire","round":11}
+{"kind":"decision","round":11,"actions":[{"action":"MOVE","targetNodeId":"S02"}],"reason":"continue moving to S02"}
+{"kind":"send","msg_name":"action","round":11}
+{"kind":"recv","msg_name":"inquire","round":12}
+{"kind":"decision","round":12,"actions":[{"action":"MOVE","targetNodeId":"S02"}],"reason":"continue moving to S02"}
+{"kind":"send","msg_name":"action","round":12}
+{"kind":"recv","msg_name":"inquire","round":13}
+{"kind":"decision","round":13,"actions":[{"action":"MOVE","targetNodeId":"S02"}],"reason":"continue moving to S02"}
+{"kind":"send","msg_name":"action","round":13}
+{"kind":"recv","msg_name":"inquire","round":14}
+{"kind":"decision","round":14,"actions":[{"action":"MOVE","targetNodeId":"S02"}],"reason":"continue moving to S02"}
+{"kind":"send","msg_name":"action","round":14}
+{"kind":"recv","msg_name":"inquire","round":15}
+{"kind":"decision","round":15,"actions":[{"action":"MOVE","targetNodeId":"S02"}],"reason":"continue moving to S02"}
+{"kind":"send","msg_name":"action","round":15}
+{"kind":"recv","msg_name":"inquire","round":16}
+{"kind":"decision","round":16,"actions":[{"action":"MOVE","targetNodeId":"S02"}],"reason":"continue moving to S02"}
+{"kind":"send","msg_name":"action","round":16}
+{"kind":"recv","msg_name":"inquire","round":17}
+{"kind":"decision","round":17,"actions":[{"action":"MOVE","targetNodeId":"S02"}],"reason":"continue moving to S02"}
+{"kind":"send","msg_name":"action","round":17}
+{"kind":"recv","msg_name":"inquire","round":18}
+{"kind":"decision","round":18,"actions":[{"action":"MOVE","targetNodeId":"S02"}],"reason":"continue moving to S02"}
+{"kind":"send","msg_name":"action","round":18}
+{"kind":"recv","msg_name":"inquire","round":19}
+{"kind":"decision","round":19,"actions":[{"action":"MOVE","targetNodeId":"S02"}],"reason":"continue moving to S02"}
+{"kind":"send","msg_name":"action","round":19}
+{"kind":"recv","msg_name":"inquire","round":20}
+{"kind":"decision","round":20,"actions":[{"action":"MOVE","targetNodeId":"S02"}],"reason":"continue moving to S02"}
+{"kind":"send","msg_name":"action","round":20}
+{"kind":"recv","msg_name":"inquire","round":21}
+{"kind":"decision","round":21,"actions":[{"action":"MOVE","targetNodeId":"S02"}],"reason":"continue moving to S02"}
+{"kind":"send","msg_name":"action","round":21}
+{"kind":"recv","msg_name":"inquire","round":22}
+{"kind":"decision","round":22,"actions":[{"action":"MOVE","targetNodeId":"S02"}],"reason":"continue moving to S02"}
+{"kind":"send","msg_name":"action","round":22}
+{"kind":"recv","msg_name":"inquire","round":23}
+{"kind":"decision","round":23,"actions":[{"action":"MOVE","targetNodeId":"S02"}],"reason":"continue moving to S02"}
+{"kind":"send","msg_name":"action","round":23}
+{"kind":"recv","msg_name":"inquire","round":24}
+{"kind":"decision","round":24,"actions":[{"action":"MOVE","targetNodeId":"S02"}],"reason":"continue moving to S02"}
+{"kind":"send","msg_name":"action","round":24}
+{"kind":"recv","msg_name":"inquire","round":25}
+{"kind":"decision","round":25,"actions":[{"action":"MOVE","targetNodeId":"S02"}],"reason":"continue moving to S02"}
+{"kind":"send","msg_name":"action","round":25}
+{"kind":"recv","msg_name":"inquire","round":26}
+{"kind":"decision","round":26,"actions":[{"action":"MOVE","targetNodeId":"S02"}],"reason":"continue moving to S02"}
+{"kind":"send","msg_name":"action","round":26}
+{"kind":"recv","msg_name":"inquire","round":27}
+{"kind":"decision","round":27,"actions":[{"action":"MOVE","targetNodeId":"S02"}],"reason":"continue moving to S02"}
+{"kind":"send","msg_name":"action","round":27}
+{"kind":"recv","msg_name":"inquire","round":28}
+{"kind":"decision","round":28,"actions":[{"action":"MOVE","targetNodeId":"S02"}],"reason":"continue moving to S02"}
+{"kind":"send","msg_name":"action","round":28}
+{"kind":"recv","msg_name":"inquire","round":29}
+{"kind":"decision","round":29,"actions":[{"action":"MOVE","targetNodeId":"S02"}],"reason":"continue moving to S02"}
+{"kind":"send","msg_name":"action","round":29}
+{"kind":"recv","msg_name":"inquire","round":30}
+{"kind":"decision","round":30,"actions":[{"action":"MOVE","targetNodeId":"S02"}],"reason":"continue moving to S02"}
+{"kind":"send","msg_name":"action","round":30}
+{"kind":"recv","msg_name":"inquire","round":31}
+{"kind":"decision","round":31,"actions":[{"action":"MOVE","targetNodeId":"S02"}],"reason":"continue moving to S02"}
+{"kind":"send","msg_name":"action","round":31}
+{"kind":"recv","msg_name":"inquire","round":32}
+{"kind":"decision","round":32,"actions":[{"action":"MOVE","targetNodeId":"S02"}],"reason":"continue moving to S02"}
+{"kind":"send","msg_name":"action","round":32}
+{"kind":"recv","msg_name":"inquire","round":33}
+{"kind":"decision","round":33,"actions":[{"action":"MOVE","targetNodeId":"S02"}],"reason":"continue moving to S02"}
+{"kind":"send","msg_name":"action","round":33}
+{"kind":"recv","msg_name":"inquire","round":34}
+{"kind":"decision","round":34,"actions":[{"action":"MOVE","targetNodeId":"S02"}],"reason":"continue moving to S02"}
+{"kind":"send","msg_name":"action","round":34}
+{"kind":"recv","msg_name":"inquire","round":35}
+{"kind":"decision","round":35,"actions":[{"action":"MOVE","targetNodeId":"S02"}],"reason":"continue moving to S02"}
+{"kind":"send","msg_name":"action","round":35}
+{"kind":"recv","msg_name":"inquire","round":36}
+{"kind":"decision","round":36,"actions":[{"action":"MOVE","targetNodeId":"S02"}],"reason":"continue moving to S02"}
+{"kind":"send","msg_name":"action","round":36}
+{"kind":"recv","msg_name":"inquire","round":37}
+{"kind":"decision","round":37,"actions":[{"action":"MOVE","targetNodeId":"S02"}],"reason":"continue moving to S02"}
+{"kind":"send","msg_name":"action","round":37}
+{"kind":"recv","msg_name":"inquire","round":38}
+{"kind":"decision","round":38,"actions":[{"action":"MOVE","targetNodeId":"S02"}],"reason":"continue moving to S02"}
+{"kind":"send","msg_name":"action","round":38}
+{"kind":"recv","msg_name":"inquire","round":39}
+{"kind":"decision","round":39,"actions":[{"action":"MOVE","targetNodeId":"S02"}],"reason":"continue moving to S02"}
+{"kind":"send","msg_name":"action","round":39}
+{"kind":"recv","msg_name":"inquire","round":40}
+{"kind":"decision","round":40,"actions":[{"action":"MOVE","targetNodeId":"S02"}],"reason":"continue moving to S02"}
+{"kind":"send","msg_name":"action","round":40}
+{"kind":"recv","msg_name":"inquire","round":41}
+{"kind":"decision","round":41,"actions":[{"action":"MOVE","targetNodeId":"S02"}],"reason":"continue moving to S02"}
+{"kind":"send","msg_name":"action","round":41}
+{"kind":"recv","msg_name":"inquire","round":42}
+{"kind":"decision","round":42,"actions":[{"action":"MOVE","targetNodeId":"S02"}],"reason":"continue moving to S02"}
+{"kind":"send","msg_name":"action","round":42}
+{"kind":"recv","msg_name":"inquire","round":43}
+{"kind":"decision","round":43,"actions":[{"action":"PROCESS","targetNodeId":"S02"}],"reason":"process node S02"}
+{"kind":"send","msg_name":"action","round":43}
+{"kind":"recv","msg_name":"inquire","round":44}
+{"kind":"decision","round":44,"actions":[],"reason":"state PROCESSING should continue without main action"}
+{"kind":"send","msg_name":"action","round":44}
+{"kind":"recv","msg_name":"inquire","round":45}
+{"kind":"decision","round":45,"actions":[],"reason":"state PROCESSING should continue without main action"}
+{"kind":"send","msg_name":"action","round":45}
+{"kind":"recv","msg_name":"inquire","round":46}
+{"kind":"decision","round":46,"actions":[],"reason":"state PROCESSING should continue without main action"}
+{"kind":"send","msg_name":"action","round":46}
+{"kind":"recv","msg_name":"inquire","round":47}
+{"kind":"decision","round":47,"actions":[{"action":"MOVE","targetNodeId":"S04"}],"reason":"detour to bonus task node S04 before S09; move from S02 to S04 toward S04"}
+{"kind":"send","msg_name":"action","round":47}
+{"kind":"recv","msg_name":"inquire","round":48}
+{"kind":"decision","round":48,"actions":[{"action":"MOVE","targetNodeId":"S04"}],"reason":"continue moving to S04"}
+{"kind":"send","msg_name":"action","round":48}
+{"kind":"recv","msg_name":"inquire","round":49}
+{"kind":"decision","round":49,"actions":[{"action":"MOVE","targetNodeId":"S04"}],"reason":"continue moving to S04"}
+{"kind":"send","msg_name":"action","round":49}
+{"kind":"recv","msg_name":"inquire","round":50}
+{"kind":"decision","round":50,"actions":[{"action":"MOVE","targetNodeId":"S04"}],"reason":"continue moving to S04"}
+{"kind":"send","msg_name":"action","round":50}
+{"kind":"recv","msg_name":"inquire","round":51}
+{"kind":"decision","round":51,"actions":[{"action":"MOVE","targetNodeId":"S04"}],"reason":"continue moving to S04"}
+{"kind":"send","msg_name":"action","round":51}
+{"kind":"recv","msg_name":"inquire","round":52}
+{"kind":"decision","round":52,"actions":[{"action":"MOVE","targetNodeId":"S04"}],"reason":"continue moving to S04"}
+{"kind":"send","msg_name":"action","round":52}
+{"kind":"recv","msg_name":"inquire","round":53}
+{"kind":"decision","round":53,"actions":[{"action":"MOVE","targetNodeId":"S04"}],"reason":"continue moving to S04"}
+{"kind":"send","msg_name":"action","round":53}
+{"kind":"recv","msg_name":"inquire","round":54}
+{"kind":"decision","round":54,"actions":[{"action":"MOVE","targetNodeId":"S04"}],"reason":"continue moving to S04"}
+{"kind":"send","msg_name":"action","round":54}
+{"kind":"recv","msg_name":"inquire","round":55}
+{"kind":"decision","round":55,"actions":[{"action":"MOVE","targetNodeId":"S04"}],"reason":"continue moving to S04"}
+{"kind":"send","msg_name":"action","round":55}
+{"kind":"recv","msg_name":"inquire","round":56}
+{"kind":"decision","round":56,"actions":[{"action":"MOVE","targetNodeId":"S04"}],"reason":"continue moving to S04"}
+{"kind":"send","msg_name":"action","round":56}
+{"kind":"recv","msg_name":"inquire","round":57}
+{"kind":"decision","round":57,"actions":[{"action":"MOVE","targetNodeId":"S04"}],"reason":"continue moving to S04"}
+{"kind":"send","msg_name":"action","round":57}
+{"kind":"recv","msg_name":"inquire","round":58}
+{"kind":"decision","round":58,"actions":[{"action":"MOVE","targetNodeId":"S04"}],"reason":"continue moving to S04"}
+{"kind":"send","msg_name":"action","round":58}
+{"kind":"recv","msg_name":"inquire","round":59}
+{"kind":"decision","round":59,"actions":[{"action":"MOVE","targetNodeId":"S04"}],"reason":"continue moving to S04"}
+{"kind":"send","msg_name":"action","round":59}
+{"kind":"recv","msg_name":"inquire","round":60}
+{"kind":"decision","round":60,"actions":[{"action":"MOVE","targetNodeId":"S04"}],"reason":"continue moving to S04"}
+{"kind":"send","msg_name":"action","round":60}
+{"kind":"recv","msg_name":"inquire","round":61}
+{"kind":"decision","round":61,"actions":[{"action":"MOVE","targetNodeId":"S04"}],"reason":"continue moving to S04"}
+{"kind":"send","msg_name":"action","round":61}
+{"kind":"recv","msg_name":"inquire","round":62}
+{"kind":"decision","round":62,"actions":[{"action":"MOVE","targetNodeId":"S04"}],"reason":"continue moving to S04"}
+{"kind":"send","msg_name":"action","round":62}
+{"kind":"recv","msg_name":"inquire","round":63}
+{"kind":"decision","round":63,"actions":[{"action":"MOVE","targetNodeId":"S04"}],"reason":"continue moving to S04"}
+{"kind":"send","msg_name":"action","round":63}
+{"kind":"recv","msg_name":"inquire","round":64}
+{"kind":"decision","round":64,"actions":[{"action":"MOVE","targetNodeId":"S04"}],"reason":"continue moving to S04"}
+{"kind":"send","msg_name":"action","round":64}
+{"kind":"recv","msg_name":"inquire","round":65}
+{"kind":"decision","round":65,"actions":[{"action":"MOVE","targetNodeId":"S04"}],"reason":"continue moving to S04"}
+{"kind":"send","msg_name":"action","round":65}
+{"kind":"recv","msg_name":"inquire","round":66}
+{"kind":"decision","round":66,"actions":[{"action":"MOVE","targetNodeId":"S04"}],"reason":"continue moving to S04"}
+{"kind":"send","msg_name":"action","round":66}
+{"kind":"recv","msg_name":"inquire","round":67}
+{"kind":"decision","round":67,"actions":[{"action":"MOVE","targetNodeId":"S04"}],"reason":"continue moving to S04"}
+{"kind":"send","msg_name":"action","round":67}
+{"kind":"recv","msg_name":"inquire","round":68}
+{"kind":"decision","round":68,"actions":[{"action":"MOVE","targetNodeId":"S04"}],"reason":"continue moving to S04"}
+{"kind":"send","msg_name":"action","round":68}
+{"kind":"recv","msg_name":"inquire","round":69}
+{"kind":"decision","round":69,"actions":[{"action":"MOVE","targetNodeId":"S04"}],"reason":"continue moving to S04"}
+{"kind":"send","msg_name":"action","round":69}
+{"kind":"recv","msg_name":"inquire","round":70}
+{"kind":"decision","round":70,"actions":[{"action":"MOVE","targetNodeId":"S04"}],"reason":"continue moving to S04"}
+{"kind":"send","msg_name":"action","round":70}
+{"kind":"recv","msg_name":"inquire","round":71}
+{"kind":"decision","round":71,"actions":[{"action":"MOVE","targetNodeId":"S04"}],"reason":"continue moving to S04"}
+{"kind":"send","msg_name":"action","round":71}
+{"kind":"recv","msg_name":"inquire","round":72}
+{"kind":"decision","round":72,"actions":[{"action":"MOVE","targetNodeId":"S04"}],"reason":"continue moving to S04"}
+{"kind":"send","msg_name":"action","round":72}
+{"kind":"recv","msg_name":"inquire","round":73}
+{"kind":"decision","round":73,"actions":[{"action":"MOVE","targetNodeId":"S04"}],"reason":"continue moving to S04"}
+{"kind":"send","msg_name":"action","round":73}
+{"kind":"recv","msg_name":"inquire","round":74}
+{"kind":"decision","round":74,"actions":[{"action":"MOVE","targetNodeId":"S04"}],"reason":"continue moving to S04"}
+{"kind":"send","msg_name":"action","round":74}
+{"kind":"recv","msg_name":"inquire","round":75}
+{"kind":"decision","round":75,"actions":[{"action":"PROCESS","targetNodeId":"S04"}],"reason":"process node S04"}
+{"kind":"send","msg_name":"action","round":75}
+{"kind":"recv","msg_name":"inquire","round":76}
+{"kind":"decision","round":76,"actions":[],"reason":"state PROCESSING should continue without main action"}
+{"kind":"send","msg_name":"action","round":76}
+{"kind":"recv","msg_name":"inquire","round":77}
+{"kind":"decision","round":77,"actions":[],"reason":"state PROCESSING should continue without main action"}
+{"kind":"send","msg_name":"action","round":77}
+{"kind":"recv","msg_name":"inquire","round":78}
+{"kind":"decision","round":78,"actions":[],"reason":"state PROCESSING should continue without main action"}
+{"kind":"send","msg_name":"action","round":78}
+{"kind":"recv","msg_name":"inquire","round":79}
+{"kind":"decision","round":79,"actions":[],"reason":"state PROCESSING should continue without main action"}
+{"kind":"send","msg_name":"action","round":79}
+{"kind":"recv","msg_name":"inquire","round":80}
+{"kind":"decision","round":80,"actions":[],"reason":"state PROCESSING should continue without main action"}
+{"kind":"send","msg_name":"action","round":80}
+{"kind":"recv","msg_name":"inquire","round":81}
+{"kind":"decision","round":81,"actions":[],"reason":"state PROCESSING should continue without main action"}
+{"kind":"send","msg_name":"action","round":81}
+{"kind":"recv","msg_name":"inquire","round":82}
+{"kind":"decision","round":82,"actions":[{"action":"CLAIM_TASK","taskId":"T08_008"}],"reason":"claim current task T08_008"}
+{"kind":"send","msg_name":"action","round":82}
+{"kind":"recv","msg_name":"inquire","round":83}
+{"kind":"decision","round":83,"actions":[],"reason":"state PROCESSING should continue without main action"}
+{"kind":"send","msg_name":"action","round":83}
+{"kind":"recv","msg_name":"inquire","round":84}
+{"kind":"decision","round":84,"actions":[],"reason":"state PROCESSING should continue without main action"}
+{"kind":"send","msg_name":"action","round":84}
+{"kind":"recv","msg_name":"inquire","round":85}
+{"kind":"decision","round":85,"actions":[],"reason":"state PROCESSING should continue without main action"}
+{"kind":"send","msg_name":"action","round":85}
+{"kind":"recv","msg_name":"inquire","round":86}
+{"kind":"decision","round":86,"actions":[{"action":"MOVE","targetNodeId":"S05"}],"reason":"detour to bonus task node S05 before S09; move from S04 to S05 toward S05"}
+{"kind":"send","msg_name":"action","round":86}
+{"kind":"recv","msg_name":"inquire","round":87}
+{"kind":"decision","round":87,"actions":[{"action":"MOVE","targetNodeId":"S05"}],"reason":"continue moving to S05"}
+{"kind":"send","msg_name":"action","round":87}
+{"kind":"recv","msg_name":"inquire","round":88}
+{"kind":"decision","round":88,"actions":[{"action":"MOVE","targetNodeId":"S05"}],"reason":"continue moving to S05"}
+{"kind":"send","msg_name":"action","round":88}
+{"kind":"recv","msg_name":"inquire","round":89}
+{"kind":"decision","round":89,"actions":[{"action":"MOVE","targetNodeId":"S05"}],"reason":"continue moving to S05"}
+{"kind":"send","msg_name":"action","round":89}
+{"kind":"recv","msg_name":"inquire","round":90}
+{"kind":"decision","round":90,"actions":[{"action":"MOVE","targetNodeId":"S05"}],"reason":"continue moving to S05"}
+{"kind":"send","msg_name":"action","round":90}
+{"kind":"recv","msg_name":"inquire","round":91}
+{"kind":"decision","round":91,"actions":[{"action":"MOVE","targetNodeId":"S05"}],"reason":"continue moving to S05"}
+{"kind":"send","msg_name":"action","round":91}
+{"kind":"recv","msg_name":"inquire","round":92}
+{"kind":"decision","round":92,"actions":[{"action":"MOVE","targetNodeId":"S05"}],"reason":"continue moving to S05"}
+{"kind":"send","msg_name":"action","round":92}
+{"kind":"recv","msg_name":"inquire","round":93}
+{"kind":"decision","round":93,"actions":[{"action":"MOVE","targetNodeId":"S05"}],"reason":"continue moving to S05"}
+{"kind":"send","msg_name":"action","round":93}
+{"kind":"recv","msg_name":"inquire","round":94}
+{"kind":"decision","round":94,"actions":[{"action":"MOVE","targetNodeId":"S05"}],"reason":"continue moving to S05"}
+{"kind":"send","msg_name":"action","round":94}
+{"kind":"recv","msg_name":"inquire","round":95}
+{"kind":"decision","round":95,"actions":[{"action":"MOVE","targetNodeId":"S05"}],"reason":"continue moving to S05"}
+{"kind":"send","msg_name":"action","round":95}
+{"kind":"recv","msg_name":"inquire","round":96}
+{"kind":"decision","round":96,"actions":[{"action":"MOVE","targetNodeId":"S05"}],"reason":"continue moving to S05"}
+{"kind":"send","msg_name":"action","round":96}
+{"kind":"recv","msg_name":"inquire","round":97}
+{"kind":"decision","round":97,"actions":[{"action":"MOVE","targetNodeId":"S05"}],"reason":"continue moving to S05"}
+{"kind":"send","msg_name":"action","round":97}
+{"kind":"recv","msg_name":"inquire","round":98}
+{"kind":"decision","round":98,"actions":[{"action":"MOVE","targetNodeId":"S05"}],"reason":"continue moving to S05"}
+{"kind":"send","msg_name":"action","round":98}
+{"kind":"recv","msg_name":"inquire","round":99}
+{"kind":"decision","round":99,"actions":[{"action":"MOVE","targetNodeId":"S05"}],"reason":"continue moving to S05"}
+{"kind":"send","msg_name":"action","round":99}
+{"kind":"recv","msg_name":"inquire","round":100}
+{"kind":"decision","round":100,"actions":[{"action":"MOVE","targetNodeId":"S05"}],"reason":"continue moving to S05"}
+{"kind":"send","msg_name":"action","round":100}
+{"kind":"recv","msg_name":"inquire","round":101}
+{"kind":"decision","round":101,"actions":[{"action":"MOVE","targetNodeId":"S05"}],"reason":"continue moving to S05"}
+{"kind":"send","msg_name":"action","round":101}
+{"kind":"recv","msg_name":"inquire","round":102}
+{"kind":"decision","round":102,"actions":[{"action":"MOVE","targetNodeId":"S05"}],"reason":"continue moving to S05"}
+{"kind":"send","msg_name":"action","round":102}
+{"kind":"recv","msg_name":"inquire","round":103}
+{"kind":"decision","round":103,"actions":[{"action":"MOVE","targetNodeId":"S05"}],"reason":"continue moving to S05"}
+{"kind":"send","msg_name":"action","round":103}
+{"kind":"recv","msg_name":"inquire","round":104}
+{"kind":"decision","round":104,"actions":[{"action":"MOVE","targetNodeId":"S05"}],"reason":"continue moving to S05"}
+{"kind":"send","msg_name":"action","round":104}
+{"kind":"recv","msg_name":"inquire","round":105}
+{"kind":"decision","round":105,"actions":[{"action":"MOVE","targetNodeId":"S05"}],"reason":"continue moving to S05"}
+{"kind":"send","msg_name":"action","round":105}
+{"kind":"recv","msg_name":"inquire","round":106}
+{"kind":"decision","round":106,"actions":[{"action":"MOVE","targetNodeId":"S05"}],"reason":"continue moving to S05"}
+{"kind":"send","msg_name":"action","round":106}
+{"kind":"recv","msg_name":"inquire","round":107}
+{"kind":"decision","round":107,"actions":[{"action":"MOVE","targetNodeId":"S05"}],"reason":"continue moving to S05"}
+{"kind":"send","msg_name":"action","round":107}
+{"kind":"recv","msg_name":"inquire","round":108}
+{"kind":"decision","round":108,"actions":[{"action":"MOVE","targetNodeId":"S05"}],"reason":"continue moving to S05"}
+{"kind":"send","msg_name":"action","round":108}
+{"kind":"recv","msg_name":"inquire","round":109}
+{"kind":"decision","round":109,"actions":[{"action":"MOVE","targetNodeId":"S05"}],"reason":"continue moving to S05"}
+{"kind":"send","msg_name":"action","round":109}
+{"kind":"recv","msg_name":"inquire","round":110}
+{"kind":"decision","round":110,"actions":[{"action":"MOVE","targetNodeId":"S05"}],"reason":"continue moving to S05"}
+{"kind":"send","msg_name":"action","round":110}
+{"kind":"recv","msg_name":"inquire","round":111}
+{"kind":"decision","round":111,"actions":[{"action":"MOVE","targetNodeId":"S05"}],"reason":"continue moving to S05"}
+{"kind":"send","msg_name":"action","round":111}
+{"kind":"recv","msg_name":"inquire","round":112}
+{"kind":"decision","round":112,"actions":[{"action":"MOVE","targetNodeId":"S05"}],"reason":"continue moving to S05"}
+{"kind":"send","msg_name":"action","round":112}
+{"kind":"recv","msg_name":"inquire","round":113}
+{"kind":"decision","round":113,"actions":[{"action":"MOVE","targetNodeId":"S05"}],"reason":"continue moving to S05"}
+{"kind":"send","msg_name":"action","round":113}
+{"kind":"recv","msg_name":"inquire","round":114}
+{"kind":"decision","round":114,"actions":[{"action":"MOVE","targetNodeId":"S05"}],"reason":"continue moving to S05"}
+{"kind":"send","msg_name":"action","round":114}
+{"kind":"recv","msg_name":"inquire","round":115}
+{"kind":"decision","round":115,"actions":[{"action":"MOVE","targetNodeId":"S05"}],"reason":"continue moving to S05"}
+{"kind":"send","msg_name":"action","round":115}
+{"kind":"recv","msg_name":"inquire","round":116}
+{"kind":"decision","round":116,"actions":[{"action":"MOVE","targetNodeId":"S05"}],"reason":"continue moving to S05"}
+{"kind":"send","msg_name":"action","round":116}
+{"kind":"recv","msg_name":"inquire","round":117}
+{"kind":"decision","round":117,"actions":[{"action":"MOVE","targetNodeId":"S05"}],"reason":"continue moving to S05"}
+{"kind":"send","msg_name":"action","round":117}
+{"kind":"recv","msg_name":"inquire","round":118}
+{"kind":"decision","round":118,"actions":[{"action":"MOVE","targetNodeId":"S05"}],"reason":"continue moving to S05"}
+{"kind":"send","msg_name":"action","round":118}
+{"kind":"recv","msg_name":"inquire","round":119}
+{"kind":"decision","round":119,"actions":[{"action":"MOVE","targetNodeId":"S05"}],"reason":"continue moving to S05"}
+{"kind":"send","msg_name":"action","round":119}
+{"kind":"recv","msg_name":"inquire","round":120}
+{"kind":"decision","round":120,"actions":[{"action":"MOVE","targetNodeId":"S05"}],"reason":"continue moving to S05"}
+{"kind":"send","msg_name":"action","round":120}
+{"kind":"recv","msg_name":"inquire","round":121}
+{"kind":"decision","round":121,"actions":[{"action":"MOVE","targetNodeId":"S05"}],"reason":"continue moving to S05"}
+{"kind":"send","msg_name":"action","round":121}
+{"kind":"recv","msg_name":"inquire","round":122}
+{"kind":"decision","round":122,"actions":[{"action":"MOVE","targetNodeId":"S05"}],"reason":"continue moving to S05"}
+{"kind":"send","msg_name":"action","round":122}
+{"kind":"recv","msg_name":"inquire","round":123}
+{"kind":"decision","round":123,"actions":[{"action":"MOVE","targetNodeId":"S05"}],"reason":"continue moving to S05"}
+{"kind":"send","msg_name":"action","round":123}
+{"kind":"recv","msg_name":"inquire","round":124}
+{"kind":"decision","round":124,"actions":[{"action":"MOVE","targetNodeId":"S05"}],"reason":"continue moving to S05"}
+{"kind":"send","msg_name":"action","round":124}
+{"kind":"recv","msg_name":"inquire","round":125}
+{"kind":"decision","round":125,"actions":[{"action":"MOVE","targetNodeId":"S05"}],"reason":"continue moving to S05"}
+{"kind":"send","msg_name":"action","round":125}
+{"kind":"recv","msg_name":"inquire","round":126}
+{"kind":"decision","round":126,"actions":[{"action":"MOVE","targetNodeId":"S05"}],"reason":"continue moving to S05"}
+{"kind":"send","msg_name":"action","round":126}
+{"kind":"recv","msg_name":"inquire","round":127}
+{"kind":"decision","round":127,"actions":[{"action":"MOVE","targetNodeId":"S05"}],"reason":"continue moving to S05"}
+{"kind":"send","msg_name":"action","round":127}
+{"kind":"recv","msg_name":"inquire","round":128}
+{"kind":"decision","round":128,"actions":[{"action":"MOVE","targetNodeId":"S05"}],"reason":"continue moving to S05"}
+{"kind":"send","msg_name":"action","round":128}
+{"kind":"recv","msg_name":"inquire","round":129}
+{"kind":"decision","round":129,"actions":[{"action":"MOVE","targetNodeId":"S05"}],"reason":"continue moving to S05"}
+{"kind":"send","msg_name":"action","round":129}
+{"kind":"recv","msg_name":"inquire","round":130}
+{"kind":"decision","round":130,"actions":[{"action":"MOVE","targetNodeId":"S05"}],"reason":"continue moving to S05"}
+{"kind":"send","msg_name":"action","round":130}
+{"kind":"recv","msg_name":"inquire","round":131}
+{"kind":"decision","round":131,"actions":[{"action":"MOVE","targetNodeId":"S05"}],"reason":"continue moving to S05"}
+{"kind":"send","msg_name":"action","round":131}
+{"kind":"recv","msg_name":"inquire","round":132}
+{"kind":"decision","round":132,"actions":[{"action":"MOVE","targetNodeId":"S05"}],"reason":"continue moving to S05"}
+{"kind":"send","msg_name":"action","round":132}
+{"kind":"recv","msg_name":"inquire","round":133}
+{"kind":"decision","round":133,"actions":[{"action":"MOVE","targetNodeId":"S05"}],"reason":"continue moving to S05"}
+{"kind":"send","msg_name":"action","round":133}
+{"kind":"recv","msg_name":"inquire","round":134}
+{"kind":"decision","round":134,"actions":[{"action":"MOVE","targetNodeId":"S05"}],"reason":"continue moving to S05"}
+{"kind":"send","msg_name":"action","round":134}
+{"kind":"recv","msg_name":"inquire","round":135}
+{"kind":"decision","round":135,"actions":[{"action":"MOVE","targetNodeId":"S05"}],"reason":"continue moving to S05"}
+{"kind":"send","msg_name":"action","round":135}
+{"kind":"recv","msg_name":"inquire","round":136}
+{"kind":"decision","round":136,"actions":[{"action":"MOVE","targetNodeId":"S05"}],"reason":"continue moving to S05"}
+{"kind":"send","msg_name":"action","round":136}
+{"kind":"recv","msg_name":"inquire","round":137}
+{"kind":"decision","round":137,"actions":[{"action":"MOVE","targetNodeId":"S05"}],"reason":"continue moving to S05"}
+{"kind":"send","msg_name":"action","round":137}
+{"kind":"recv","msg_name":"inquire","round":138}
+{"kind":"decision","round":138,"actions":[{"action":"MOVE","targetNodeId":"S05"}],"reason":"continue moving to S05"}
+{"kind":"send","msg_name":"action","round":138}
+{"kind":"recv","msg_name":"inquire","round":139}
+{"kind":"decision","round":139,"actions":[{"action":"MOVE","targetNodeId":"S05"}],"reason":"continue moving to S05"}
+{"kind":"send","msg_name":"action","round":139}
+{"kind":"recv","msg_name":"inquire","round":140}
+{"kind":"decision","round":140,"actions":[{"action":"MOVE","targetNodeId":"S05"}],"reason":"continue moving to S05"}
+{"kind":"send","msg_name":"action","round":140}
+{"kind":"recv","msg_name":"inquire","round":141}
+{"kind":"decision","round":141,"actions":[{"action":"PROCESS","targetNodeId":"S05"}],"reason":"process node S05"}
+{"kind":"send","msg_name":"action","round":141}
+{"kind":"recv","msg_name":"inquire","round":142}
+{"kind":"decision","round":142,"actions":[],"reason":"state PROCESSING should continue without main action"}
+{"kind":"send","msg_name":"action","round":142}
+{"kind":"recv","msg_name":"inquire","round":143}
+{"kind":"decision","round":143,"actions":[],"reason":"state PROCESSING should continue without main action"}
+{"kind":"send","msg_name":"action","round":143}
+{"kind":"recv","msg_name":"inquire","round":144}
+{"kind":"decision","round":144,"actions":[],"reason":"state PROCESSING should continue without main action"}
+{"kind":"send","msg_name":"action","round":144}
+{"kind":"recv","msg_name":"inquire","round":145}
+{"kind":"decision","round":145,"actions":[],"reason":"state PROCESSING should continue without main action"}
+{"kind":"send","msg_name":"action","round":145}
+{"kind":"recv","msg_name":"inquire","round":146}
+{"kind":"decision","round":146,"actions":[],"reason":"state PROCESSING should continue without main action"}
+{"kind":"send","msg_name":"action","round":146}
+{"kind":"recv","msg_name":"inquire","round":147}
+{"kind":"decision","round":147,"actions":[{"action":"CLAIM_TASK","taskId":"T08_009"}],"reason":"claim current task T08_009"}
+{"kind":"send","msg_name":"action","round":147}
+{"kind":"recv","msg_name":"inquire","round":148}
+{"kind":"decision","round":148,"actions":[],"reason":"state PROCESSING should continue without main action"}
+{"kind":"send","msg_name":"action","round":148}
+{"kind":"recv","msg_name":"inquire","round":149}
+{"kind":"decision","round":149,"actions":[],"reason":"state PROCESSING should continue without main action"}
+{"kind":"send","msg_name":"action","round":149}
+{"kind":"recv","msg_name":"inquire","round":150}
+{"kind":"decision","round":150,"actions":[],"reason":"state PROCESSING should continue without main action"}
+{"kind":"send","msg_name":"action","round":150}
+{"kind":"recv","msg_name":"inquire","round":151}
+{"kind":"decision","round":151,"actions":[{"action":"MOVE","targetNodeId":"S07"}],"reason":"detour to bonus task node S07 before S09; move from S05 to S07 toward S07"}
+{"kind":"send","msg_name":"action","round":151}
+{"kind":"recv","msg_name":"inquire","round":152}
+{"kind":"decision","round":152,"actions":[{"action":"MOVE","targetNodeId":"S07"}],"reason":"continue moving to S07"}
+{"kind":"send","msg_name":"action","round":152}
+{"kind":"recv","msg_name":"inquire","round":153}
+{"kind":"decision","round":153,"actions":[{"action":"MOVE","targetNodeId":"S07"}],"reason":"continue moving to S07"}
+{"kind":"send","msg_name":"action","round":153}
+{"kind":"recv","msg_name":"inquire","round":154}
+{"kind":"decision","round":154,"actions":[{"action":"MOVE","targetNodeId":"S07"}],"reason":"continue moving to S07"}
+{"kind":"send","msg_name":"action","round":154}
+{"kind":"recv","msg_name":"inquire","round":155}
+{"kind":"decision","round":155,"actions":[{"action":"MOVE","targetNodeId":"S07"}],"reason":"continue moving to S07"}
+{"kind":"send","msg_name":"action","round":155}
+{"kind":"recv","msg_name":"inquire","round":156}
+{"kind":"decision","round":156,"actions":[{"action":"MOVE","targetNodeId":"S07"}],"reason":"continue moving to S07"}
+{"kind":"send","msg_name":"action","round":156}
+{"kind":"recv","msg_name":"inquire","round":157}
+{"kind":"decision","round":157,"actions":[{"action":"MOVE","targetNodeId":"S07"}],"reason":"continue moving to S07"}
+{"kind":"send","msg_name":"action","round":157}
+{"kind":"recv","msg_name":"inquire","round":158}
+{"kind":"decision","round":158,"actions":[{"action":"MOVE","targetNodeId":"S07"}],"reason":"continue moving to S07"}
+{"kind":"send","msg_name":"action","round":158}
+{"kind":"recv","msg_name":"inquire","round":159}
+{"kind":"decision","round":159,"actions":[{"action":"MOVE","targetNodeId":"S07"}],"reason":"continue moving to S07"}
+{"kind":"send","msg_name":"action","round":159}
+{"kind":"recv","msg_name":"inquire","round":160}
+{"kind":"decision","round":160,"actions":[{"action":"MOVE","targetNodeId":"S07"}],"reason":"continue moving to S07"}
+{"kind":"send","msg_name":"action","round":160}
+{"kind":"recv","msg_name":"inquire","round":161}
+{"kind":"decision","round":161,"actions":[{"action":"MOVE","targetNodeId":"S07"}],"reason":"continue moving to S07"}
+{"kind":"send","msg_name":"action","round":161}
+{"kind":"recv","msg_name":"inquire","round":162}
+{"kind":"decision","round":162,"actions":[{"action":"MOVE","targetNodeId":"S07"}],"reason":"continue moving to S07"}
+{"kind":"send","msg_name":"action","round":162}
+{"kind":"recv","msg_name":"inquire","round":163}
+{"kind":"decision","round":163,"actions":[{"action":"MOVE","targetNodeId":"S07"}],"reason":"continue moving to S07"}
+{"kind":"send","msg_name":"action","round":163}
+{"kind":"recv","msg_name":"inquire","round":164}
+{"kind":"decision","round":164,"actions":[{"action":"MOVE","targetNodeId":"S07"}],"reason":"continue moving to S07"}
+{"kind":"send","msg_name":"action","round":164}
+{"kind":"recv","msg_name":"inquire","round":165}
+{"kind":"decision","round":165,"actions":[{"action":"MOVE","targetNodeId":"S07"}],"reason":"continue moving to S07"}
+{"kind":"send","msg_name":"action","round":165}
+{"kind":"recv","msg_name":"inquire","round":166}
+{"kind":"decision","round":166,"actions":[{"action":"MOVE","targetNodeId":"S07"}],"reason":"continue moving to S07"}
+{"kind":"send","msg_name":"action","round":166}
+{"kind":"recv","msg_name":"inquire","round":167}
+{"kind":"decision","round":167,"actions":[{"action":"MOVE","targetNodeId":"S07"}],"reason":"continue moving to S07"}
+{"kind":"send","msg_name":"action","round":167}
+{"kind":"recv","msg_name":"inquire","round":168}
+{"kind":"decision","round":168,"actions":[{"action":"MOVE","targetNodeId":"S07"}],"reason":"continue moving to S07"}
+{"kind":"send","msg_name":"action","round":168}
+{"kind":"recv","msg_name":"inquire","round":169}
+{"kind":"decision","round":169,"actions":[{"action":"MOVE","targetNodeId":"S07"}],"reason":"continue moving to S07"}
+{"kind":"send","msg_name":"action","round":169}
+{"kind":"recv","msg_name":"inquire","round":170}
+{"kind":"decision","round":170,"actions":[{"action":"MOVE","targetNodeId":"S07"}],"reason":"continue moving to S07"}
+{"kind":"send","msg_name":"action","round":170}
+{"kind":"recv","msg_name":"inquire","round":171}
+{"kind":"decision","round":171,"actions":[{"action":"MOVE","targetNodeId":"S07"}],"reason":"continue moving to S07"}
+{"kind":"send","msg_name":"action","round":171}
+{"kind":"recv","msg_name":"inquire","round":172}
+{"kind":"decision","round":172,"actions":[{"action":"MOVE","targetNodeId":"S07"}],"reason":"continue moving to S07"}
+{"kind":"send","msg_name":"action","round":172}
+{"kind":"recv","msg_name":"inquire","round":173}
+{"kind":"decision","round":173,"actions":[{"action":"MOVE","targetNodeId":"S07"}],"reason":"continue moving to S07"}
+{"kind":"send","msg_name":"action","round":173}
+{"kind":"recv","msg_name":"inquire","round":174}
+{"kind":"decision","round":174,"actions":[{"action":"MOVE","targetNodeId":"S07"}],"reason":"continue moving to S07"}
+{"kind":"send","msg_name":"action","round":174}
+{"kind":"recv","msg_name":"inquire","round":175}
+{"kind":"decision","round":175,"actions":[{"action":"MOVE","targetNodeId":"S07"}],"reason":"continue moving to S07"}
+{"kind":"send","msg_name":"action","round":175}
+{"kind":"recv","msg_name":"inquire","round":176}
+{"kind":"decision","round":176,"actions":[{"action":"MOVE","targetNodeId":"S07"}],"reason":"continue moving to S07"}
+{"kind":"send","msg_name":"action","round":176}
+{"kind":"recv","msg_name":"inquire","round":177}
+{"kind":"decision","round":177,"actions":[{"action":"MOVE","targetNodeId":"S07"}],"reason":"continue moving to S07"}
+{"kind":"send","msg_name":"action","round":177}
+{"kind":"recv","msg_name":"inquire","round":178}
+{"kind":"decision","round":178,"actions":[{"action":"MOVE","targetNodeId":"S07"}],"reason":"continue moving to S07"}
+{"kind":"send","msg_name":"action","round":178}
+{"kind":"recv","msg_name":"inquire","round":179}
+{"kind":"decision","round":179,"actions":[{"action":"MOVE","targetNodeId":"S07"}],"reason":"continue moving to S07"}
+{"kind":"send","msg_name":"action","round":179}
+{"kind":"recv","msg_name":"inquire","round":180}
+{"kind":"decision","round":180,"actions":[{"action":"MOVE","targetNodeId":"S07"}],"reason":"continue moving to S07"}
+{"kind":"send","msg_name":"action","round":180}
+{"kind":"recv","msg_name":"inquire","round":181}
+{"kind":"decision","round":181,"actions":[{"action":"MOVE","targetNodeId":"S07"}],"reason":"continue moving to S07"}
+{"kind":"send","msg_name":"action","round":181}
+{"kind":"recv","msg_name":"inquire","round":182}
+{"kind":"decision","round":182,"actions":[{"action":"MOVE","targetNodeId":"S07"}],"reason":"continue moving to S07"}
+{"kind":"send","msg_name":"action","round":182}
+{"kind":"recv","msg_name":"inquire","round":183}
+{"kind":"decision","round":183,"actions":[{"action":"MOVE","targetNodeId":"S07"}],"reason":"continue moving to S07"}
+{"kind":"send","msg_name":"action","round":183}
+{"kind":"recv","msg_name":"inquire","round":184}
+{"kind":"decision","round":184,"actions":[{"action":"MOVE","targetNodeId":"S07"}],"reason":"continue moving to S07"}
+{"kind":"send","msg_name":"action","round":184}
+{"kind":"recv","msg_name":"inquire","round":185}
+{"kind":"decision","round":185,"actions":[{"action":"MOVE","targetNodeId":"S07"}],"reason":"continue moving to S07"}
+{"kind":"send","msg_name":"action","round":185}
+{"kind":"recv","msg_name":"inquire","round":186}
+{"kind":"decision","round":186,"actions":[{"action":"MOVE","targetNodeId":"S07"}],"reason":"continue moving to S07"}
+{"kind":"send","msg_name":"action","round":186}
+{"kind":"recv","msg_name":"inquire","round":187}
+{"kind":"decision","round":187,"actions":[{"action":"MOVE","targetNodeId":"S07"}],"reason":"continue moving to S07"}
+{"kind":"send","msg_name":"action","round":187}
+{"kind":"recv","msg_name":"inquire","round":188}
+{"kind":"decision","round":188,"actions":[{"action":"MOVE","targetNodeId":"S07"}],"reason":"continue moving to S07"}
+{"kind":"send","msg_name":"action","round":188}
+{"kind":"recv","msg_name":"inquire","round":189}
+{"kind":"decision","round":189,"actions":[{"action":"MOVE","targetNodeId":"S07"}],"reason":"continue moving to S07"}
+{"kind":"send","msg_name":"action","round":189}
+{"kind":"recv","msg_name":"inquire","round":190}
+{"kind":"decision","round":190,"actions":[{"action":"MOVE","targetNodeId":"S07"}],"reason":"continue moving to S07"}
+{"kind":"send","msg_name":"action","round":190}
+{"kind":"recv","msg_name":"inquire","round":191}
+{"kind":"decision","round":191,"actions":[{"action":"MOVE","targetNodeId":"S07"}],"reason":"continue moving to S07"}
+{"kind":"send","msg_name":"action","round":191}
+{"kind":"recv","msg_name":"inquire","round":192}
+{"kind":"decision","round":192,"actions":[{"action":"MOVE","targetNodeId":"S07"}],"reason":"continue moving to S07"}
+{"kind":"send","msg_name":"action","round":192}
+{"kind":"recv","msg_name":"inquire","round":193}
+{"kind":"decision","round":193,"actions":[{"action":"MOVE","targetNodeId":"S07"}],"reason":"continue moving to S07"}
+{"kind":"send","msg_name":"action","round":193}
+{"kind":"recv","msg_name":"inquire","round":194}
+{"kind":"decision","round":194,"actions":[{"action":"MOVE","targetNodeId":"S07"}],"reason":"continue moving to S07"}
+{"kind":"send","msg_name":"action","round":194}
+{"kind":"recv","msg_name":"inquire","round":195}
+{"kind":"decision","round":195,"actions":[{"action":"MOVE","targetNodeId":"S07"}],"reason":"continue moving to S07"}
+{"kind":"send","msg_name":"action","round":195}
+{"kind":"recv","msg_name":"inquire","round":196}
+{"kind":"decision","round":196,"actions":[{"action":"MOVE","targetNodeId":"S07"}],"reason":"continue moving to S07"}
+{"kind":"send","msg_name":"action","round":196}
+{"kind":"recv","msg_name":"inquire","round":197}
+{"kind":"decision","round":197,"actions":[{"action":"MOVE","targetNodeId":"S07"}],"reason":"continue moving to S07"}
+{"kind":"send","msg_name":"action","round":197}
+{"kind":"recv","msg_name":"inquire","round":198}
+{"kind":"decision","round":198,"actions":[{"action":"MOVE","targetNodeId":"S07"}],"reason":"continue moving to S07"}
+{"kind":"send","msg_name":"action","round":198}
+{"kind":"recv","msg_name":"inquire","round":199}
+{"kind":"decision","round":199,"actions":[{"action":"MOVE","targetNodeId":"S07"}],"reason":"continue moving to S07"}
+{"kind":"send","msg_name":"action","round":199}
+{"kind":"recv","msg_name":"inquire","round":200}
+{"kind":"decision","round":200,"actions":[{"action":"MOVE","targetNodeId":"S07"}],"reason":"continue moving to S07"}
+{"kind":"send","msg_name":"action","round":200}
+{"kind":"recv","msg_name":"inquire","round":201}
+{"kind":"decision","round":201,"actions":[{"action":"MOVE","targetNodeId":"S07"}],"reason":"continue moving to S07"}
+{"kind":"send","msg_name":"action","round":201}
+{"kind":"recv","msg_name":"inquire","round":202}
+{"kind":"decision","round":202,"actions":[{"action":"MOVE","targetNodeId":"S07"}],"reason":"continue moving to S07"}
+{"kind":"send","msg_name":"action","round":202}
+{"kind":"recv","msg_name":"inquire","round":203}
+{"kind":"decision","round":203,"actions":[{"action":"MOVE","targetNodeId":"S07"}],"reason":"continue moving to S07"}
+{"kind":"send","msg_name":"action","round":203}
+{"kind":"recv","msg_name":"inquire","round":204}
+{"kind":"decision","round":204,"actions":[{"action":"MOVE","targetNodeId":"S07"}],"reason":"continue moving to S07"}
+{"kind":"send","msg_name":"action","round":204}
+{"kind":"recv","msg_name":"inquire","round":205}
+{"kind":"decision","round":205,"actions":[{"action":"MOVE","targetNodeId":"S07"}],"reason":"continue moving to S07"}
+{"kind":"send","msg_name":"action","round":205}
+{"kind":"recv","msg_name":"inquire","round":206}
+{"kind":"decision","round":206,"actions":[{"action":"MOVE","targetNodeId":"S07"}],"reason":"continue moving to S07"}
+{"kind":"send","msg_name":"action","round":206}
+{"kind":"recv","msg_name":"inquire","round":207}
+{"kind":"decision","round":207,"actions":[{"action":"MOVE","targetNodeId":"S07"}],"reason":"continue moving to S07"}
+{"kind":"send","msg_name":"action","round":207}
+{"kind":"recv","msg_name":"inquire","round":208}
+{"kind":"decision","round":208,"actions":[{"action":"MOVE","targetNodeId":"S07"}],"reason":"continue moving to S07"}
+{"kind":"send","msg_name":"action","round":208}
+{"kind":"recv","msg_name":"inquire","round":209}
+{"kind":"decision","round":209,"actions":[{"action":"MOVE","targetNodeId":"S07"}],"reason":"continue moving to S07"}
+{"kind":"send","msg_name":"action","round":209}
+{"kind":"recv","msg_name":"inquire","round":210}
+{"kind":"decision","round":210,"actions":[{"action":"MOVE","targetNodeId":"S07"}],"reason":"continue moving to S07"}
+{"kind":"send","msg_name":"action","round":210}
+{"kind":"recv","msg_name":"inquire","round":211}
+{"kind":"decision","round":211,"actions":[{"action":"MOVE","targetNodeId":"S07"}],"reason":"continue moving to S07"}
+{"kind":"send","msg_name":"action","round":211}
+{"kind":"recv","msg_name":"inquire","round":212}
+{"kind":"decision","round":212,"actions":[{"action":"MOVE","targetNodeId":"S07"}],"reason":"continue moving to S07"}
+{"kind":"send","msg_name":"action","round":212}
+{"kind":"recv","msg_name":"inquire","round":213}
+{"kind":"decision","round":213,"actions":[{"action":"MOVE","targetNodeId":"S07"}],"reason":"continue moving to S07"}
+{"kind":"send","msg_name":"action","round":213}
+{"kind":"recv","msg_name":"inquire","round":214}
+{"kind":"decision","round":214,"actions":[{"action":"MOVE","targetNodeId":"S07"}],"reason":"continue moving to S07"}
+{"kind":"send","msg_name":"action","round":214}
+{"kind":"recv","msg_name":"inquire","round":215}
+{"kind":"decision","round":215,"actions":[{"action":"MOVE","targetNodeId":"S07"}],"reason":"continue moving to S07"}
+{"kind":"send","msg_name":"action","round":215}
+{"kind":"recv","msg_name":"inquire","round":216}
+{"kind":"decision","round":216,"actions":[{"action":"MOVE","targetNodeId":"S07"}],"reason":"continue moving to S07"}
+{"kind":"send","msg_name":"action","round":216}
+{"kind":"recv","msg_name":"inquire","round":217}
+{"kind":"decision","round":217,"actions":[{"action":"MOVE","targetNodeId":"S07"}],"reason":"continue moving to S07"}
+{"kind":"send","msg_name":"action","round":217}
+{"kind":"recv","msg_name":"inquire","round":218}
+{"kind":"decision","round":218,"actions":[{"action":"MOVE","targetNodeId":"S07"}],"reason":"continue moving to S07"}
+{"kind":"send","msg_name":"action","round":218}
+{"kind":"recv","msg_name":"inquire","round":219}
+{"kind":"decision","round":219,"actions":[{"action":"MOVE","targetNodeId":"S07"}],"reason":"continue moving to S07"}
+{"kind":"send","msg_name":"action","round":219}
+{"kind":"recv","msg_name":"inquire","round":220}
+{"kind":"decision","round":220,"actions":[{"action":"MOVE","targetNodeId":"S07"}],"reason":"continue moving to S07"}
+{"kind":"send","msg_name":"action","round":220}
+{"kind":"recv","msg_name":"inquire","round":221}
+{"kind":"decision","round":221,"actions":[{"action":"MOVE","targetNodeId":"S07"}],"reason":"continue moving to S07"}
+{"kind":"send","msg_name":"action","round":221}
+{"kind":"recv","msg_name":"inquire","round":222}
+{"kind":"decision","round":222,"actions":[{"action":"MOVE","targetNodeId":"S07"}],"reason":"continue moving to S07"}
+{"kind":"send","msg_name":"action","round":222}
+{"kind":"recv","msg_name":"inquire","round":223}
+{"kind":"decision","round":223,"actions":[{"action":"CLAIM_TASK","taskId":"T02_002"}],"reason":"claim current task T02_002"}
+{"kind":"send","msg_name":"action","round":223}
+{"kind":"recv","msg_name":"inquire","round":224}
+{"kind":"decision","round":224,"actions":[],"reason":"state PROCESSING should continue without main action"}
+{"kind":"send","msg_name":"action","round":224}
+{"kind":"recv","msg_name":"inquire","round":225}
+{"kind":"decision","round":225,"actions":[],"reason":"state PROCESSING should continue without main action"}
+{"kind":"send","msg_name":"action","round":225}
+{"kind":"recv","msg_name":"inquire","round":226}
+{"kind":"decision","round":226,"actions":[],"reason":"state PROCESSING should continue without main action"}
+{"kind":"send","msg_name":"action","round":226}
+{"kind":"recv","msg_name":"inquire","round":227}
+{"kind":"decision","round":227,"actions":[{"action":"CLAIM_RESOURCE","targetNodeId":"S07","resourceType":"SHORT_HORSE"}],"reason":"claim resource SHORT_HORSE at S07"}
+{"kind":"send","msg_name":"action","round":227}
+{"kind":"recv","msg_name":"inquire","round":228}
+{"kind":"decision","round":228,"actions":[],"reason":"state PROCESSING should continue without main action"}
+{"kind":"send","msg_name":"action","round":228}
+{"kind":"recv","msg_name":"inquire","round":229}
+{"kind":"decision","round":229,"actions":[{"action":"CLAIM_RESOURCE","targetNodeId":"S07","resourceType":"ICE_BOX"}],"reason":"claim resource ICE_BOX at S07"}
+{"kind":"send","msg_name":"action","round":229}
+{"kind":"recv","msg_name":"inquire","round":230}
+{"kind":"decision","round":230,"actions":[],"reason":"state PROCESSING should continue without main action"}
+{"kind":"send","msg_name":"action","round":230}
+{"kind":"recv","msg_name":"inquire","round":231}
+{"kind":"decision","round":231,"actions":[{"action":"USE_RESOURCE","resourceType":"SHORT_HORSE"}],"reason":"use SHORT_HORSE before long movement"}
+{"kind":"send","msg_name":"action","round":231}
+{"kind":"recv","msg_name":"inquire","round":232}
+{"kind":"decision","round":232,"actions":[{"action":"MOVE","targetNodeId":"S09"}],"reason":"go to task node S11; move from S07 to S09 toward S11"}
+{"kind":"send","msg_name":"action","round":232}
+{"kind":"recv","msg_name":"inquire","round":233}
+{"kind":"decision","round":233,"actions":[{"action":"MOVE","targetNodeId":"S09"}],"reason":"continue moving to S09"}
+{"kind":"send","msg_name":"action","round":233}
+{"kind":"recv","msg_name":"inquire","round":234}
+{"kind":"decision","round":234,"actions":[{"action":"MOVE","targetNodeId":"S09"}],"reason":"continue moving to S09"}
+{"kind":"send","msg_name":"action","round":234}
+{"kind":"recv","msg_name":"inquire","round":235}
+{"kind":"decision","round":235,"actions":[{"action":"MOVE","targetNodeId":"S09"}],"reason":"continue moving to S09"}
+{"kind":"send","msg_name":"action","round":235}
+{"kind":"recv","msg_name":"inquire","round":236}
+{"kind":"decision","round":236,"actions":[{"action":"MOVE","targetNodeId":"S09"}],"reason":"continue moving to S09"}
+{"kind":"send","msg_name":"action","round":236}
+{"kind":"recv","msg_name":"inquire","round":237}
+{"kind":"decision","round":237,"actions":[{"action":"MOVE","targetNodeId":"S09"}],"reason":"continue moving to S09"}
+{"kind":"send","msg_name":"action","round":237}
+{"kind":"recv","msg_name":"inquire","round":238}
+{"kind":"decision","round":238,"actions":[{"action":"MOVE","targetNodeId":"S09"}],"reason":"continue moving to S09"}
+{"kind":"send","msg_name":"action","round":238}
+{"kind":"recv","msg_name":"inquire","round":239}
+{"kind":"decision","round":239,"actions":[{"action":"MOVE","targetNodeId":"S09"}],"reason":"continue moving to S09"}
+{"kind":"send","msg_name":"action","round":239}
+{"kind":"recv","msg_name":"inquire","round":240}
+{"kind":"decision","round":240,"actions":[{"action":"MOVE","targetNodeId":"S09"}],"reason":"continue moving to S09"}
+{"kind":"send","msg_name":"action","round":240}
+{"kind":"recv","msg_name":"inquire","round":241}
+{"kind":"decision","round":241,"actions":[{"action":"MOVE","targetNodeId":"S09"}],"reason":"continue moving to S09"}
+{"kind":"send","msg_name":"action","round":241}
+{"kind":"recv","msg_name":"inquire","round":242}
+{"kind":"decision","round":242,"actions":[{"action":"MOVE","targetNodeId":"S09"}],"reason":"continue moving to S09"}
+{"kind":"send","msg_name":"action","round":242}
+{"kind":"recv","msg_name":"inquire","round":243}
+{"kind":"decision","round":243,"actions":[{"action":"MOVE","targetNodeId":"S09"}],"reason":"continue moving to S09"}
+{"kind":"send","msg_name":"action","round":243}
+{"kind":"recv","msg_name":"inquire","round":244}
+{"kind":"decision","round":244,"actions":[{"action":"MOVE","targetNodeId":"S09"}],"reason":"continue moving to S09"}
+{"kind":"send","msg_name":"action","round":244}
+{"kind":"recv","msg_name":"inquire","round":245}
+{"kind":"decision","round":245,"actions":[{"action":"MOVE","targetNodeId":"S09"}],"reason":"continue moving to S09"}
+{"kind":"send","msg_name":"action","round":245}
+{"kind":"recv","msg_name":"inquire","round":246}
+{"kind":"decision","round":246,"actions":[{"action":"MOVE","targetNodeId":"S09"}],"reason":"continue moving to S09"}
+{"kind":"send","msg_name":"action","round":246}
+{"kind":"recv","msg_name":"inquire","round":247}
+{"kind":"decision","round":247,"actions":[{"action":"MOVE","targetNodeId":"S09"}],"reason":"continue moving to S09"}
+{"kind":"send","msg_name":"action","round":247}
+{"kind":"recv","msg_name":"inquire","round":248}
+{"kind":"decision","round":248,"actions":[{"action":"MOVE","targetNodeId":"S09"}],"reason":"continue moving to S09"}
+{"kind":"send","msg_name":"action","round":248}
+{"kind":"recv","msg_name":"inquire","round":249}
+{"kind":"decision","round":249,"actions":[{"action":"MOVE","targetNodeId":"S09"}],"reason":"continue moving to S09"}
+{"kind":"send","msg_name":"action","round":249}
+{"kind":"recv","msg_name":"inquire","round":250}
+{"kind":"decision","round":250,"actions":[{"action":"MOVE","targetNodeId":"S09"}],"reason":"continue moving to S09"}
+{"kind":"send","msg_name":"action","round":250}
+{"kind":"recv","msg_name":"inquire","round":251}
+{"kind":"decision","round":251,"actions":[{"action":"MOVE","targetNodeId":"S09"}],"reason":"continue moving to S09"}
+{"kind":"send","msg_name":"action","round":251}
+{"kind":"recv","msg_name":"inquire","round":252}
+{"kind":"decision","round":252,"actions":[{"action":"MOVE","targetNodeId":"S09"}],"reason":"continue moving to S09"}
+{"kind":"send","msg_name":"action","round":252}
+{"kind":"recv","msg_name":"inquire","round":253}
+{"kind":"decision","round":253,"actions":[{"action":"MOVE","targetNodeId":"S09"}],"reason":"continue moving to S09"}
+{"kind":"send","msg_name":"action","round":253}
+{"kind":"recv","msg_name":"inquire","round":254}
+{"kind":"decision","round":254,"actions":[{"action":"MOVE","targetNodeId":"S09"}],"reason":"continue moving to S09"}
+{"kind":"send","msg_name":"action","round":254}
+{"kind":"recv","msg_name":"inquire","round":255}
+{"kind":"decision","round":255,"actions":[{"action":"MOVE","targetNodeId":"S09"}],"reason":"continue moving to S09"}
+{"kind":"send","msg_name":"action","round":255}
+{"kind":"recv","msg_name":"inquire","round":256}
+{"kind":"decision","round":256,"actions":[{"action":"MOVE","targetNodeId":"S09"}],"reason":"continue moving to S09"}
+{"kind":"send","msg_name":"action","round":256}
+{"kind":"recv","msg_name":"inquire","round":257}
+{"kind":"decision","round":257,"actions":[{"action":"MOVE","targetNodeId":"S09"}],"reason":"continue moving to S09"}
+{"kind":"send","msg_name":"action","round":257}
+{"kind":"recv","msg_name":"inquire","round":258}
+{"kind":"decision","round":258,"actions":[{"action":"MOVE","targetNodeId":"S09"}],"reason":"continue moving to S09"}
+{"kind":"send","msg_name":"action","round":258}
+{"kind":"recv","msg_name":"inquire","round":259}
+{"kind":"decision","round":259,"actions":[{"action":"MOVE","targetNodeId":"S09"}],"reason":"continue moving to S09"}
+{"kind":"send","msg_name":"action","round":259}
+{"kind":"recv","msg_name":"inquire","round":260}
+{"kind":"decision","round":260,"actions":[{"action":"MOVE","targetNodeId":"S09"}],"reason":"continue moving to S09"}
+{"kind":"send","msg_name":"action","round":260}
+{"kind":"recv","msg_name":"inquire","round":261}
+{"kind":"decision","round":261,"actions":[{"action":"MOVE","targetNodeId":"S09"}],"reason":"continue moving to S09"}
+{"kind":"send","msg_name":"action","round":261}
+{"kind":"recv","msg_name":"inquire","round":262}
+{"kind":"decision","round":262,"actions":[{"action":"MOVE","targetNodeId":"S09"}],"reason":"continue moving to S09"}
+{"kind":"send","msg_name":"action","round":262}
+{"kind":"recv","msg_name":"inquire","round":263}
+{"kind":"decision","round":263,"actions":[{"action":"MOVE","targetNodeId":"S09"}],"reason":"continue moving to S09"}
+{"kind":"send","msg_name":"action","round":263}
+{"kind":"recv","msg_name":"inquire","round":264}
+{"kind":"decision","round":264,"actions":[{"action":"MOVE","targetNodeId":"S09"}],"reason":"continue moving to S09"}
+{"kind":"send","msg_name":"action","round":264}
+{"kind":"recv","msg_name":"inquire","round":265}
+{"kind":"decision","round":265,"actions":[{"action":"MOVE","targetNodeId":"S09"}],"reason":"continue moving to S09"}
+{"kind":"send","msg_name":"action","round":265}
+{"kind":"recv","msg_name":"inquire","round":266}
+{"kind":"decision","round":266,"actions":[{"action":"MOVE","targetNodeId":"S09"}],"reason":"continue moving to S09"}
+{"kind":"send","msg_name":"action","round":266}
+{"kind":"recv","msg_name":"inquire","round":267}
+{"kind":"decision","round":267,"actions":[{"action":"MOVE","targetNodeId":"S09"}],"reason":"continue moving to S09"}
+{"kind":"send","msg_name":"action","round":267}
+{"kind":"recv","msg_name":"inquire","round":268}
+{"kind":"decision","round":268,"actions":[{"action":"MOVE","targetNodeId":"S09"}],"reason":"continue moving to S09"}
+{"kind":"send","msg_name":"action","round":268}
+{"kind":"recv","msg_name":"inquire","round":269}
+{"kind":"decision","round":269,"actions":[{"action":"MOVE","targetNodeId":"S09"}],"reason":"continue moving to S09"}
+{"kind":"send","msg_name":"action","round":269}
+{"kind":"recv","msg_name":"inquire","round":270}
+{"kind":"decision","round":270,"actions":[{"action":"MOVE","targetNodeId":"S09"}],"reason":"continue moving to S09"}
+{"kind":"send","msg_name":"action","round":270}
+{"kind":"recv","msg_name":"inquire","round":271}
+{"kind":"decision","round":271,"actions":[{"action":"MOVE","targetNodeId":"S09"}],"reason":"continue moving to S09"}
+{"kind":"send","msg_name":"action","round":271}
+{"kind":"recv","msg_name":"inquire","round":272}
+{"kind":"decision","round":272,"actions":[{"action":"MOVE","targetNodeId":"S09"}],"reason":"continue moving to S09"}
+{"kind":"send","msg_name":"action","round":272}
+{"kind":"recv","msg_name":"inquire","round":273}
+{"kind":"decision","round":273,"actions":[{"action":"MOVE","targetNodeId":"S09"}],"reason":"continue moving to S09"}
+{"kind":"send","msg_name":"action","round":273}
+{"kind":"recv","msg_name":"inquire","round":274}
+{"kind":"decision","round":274,"actions":[{"action":"MOVE","targetNodeId":"S09"}],"reason":"continue moving to S09"}
+{"kind":"send","msg_name":"action","round":274}
+{"kind":"recv","msg_name":"inquire","round":275}
+{"kind":"decision","round":275,"actions":[{"action":"MOVE","targetNodeId":"S09"}],"reason":"continue moving to S09"}
+{"kind":"send","msg_name":"action","round":275}
+{"kind":"recv","msg_name":"inquire","round":276}
+{"kind":"decision","round":276,"actions":[{"action":"MOVE","targetNodeId":"S09"}],"reason":"continue moving to S09"}
+{"kind":"send","msg_name":"action","round":276}
+{"kind":"recv","msg_name":"inquire","round":277}
+{"kind":"decision","round":277,"actions":[{"action":"MOVE","targetNodeId":"S09"}],"reason":"continue moving to S09"}
+{"kind":"send","msg_name":"action","round":277}
+{"kind":"recv","msg_name":"inquire","round":278}
+{"kind":"decision","round":278,"actions":[{"action":"MOVE","targetNodeId":"S09"}],"reason":"continue moving to S09"}
+{"kind":"send","msg_name":"action","round":278}
+{"kind":"recv","msg_name":"inquire","round":279}
+{"kind":"decision","round":279,"actions":[{"action":"MOVE","targetNodeId":"S09"}],"reason":"continue moving to S09"}
+{"kind":"send","msg_name":"action","round":279}
+{"kind":"recv","msg_name":"inquire","round":280}
+{"kind":"decision","round":280,"actions":[{"action":"MOVE","targetNodeId":"S09"}],"reason":"continue moving to S09"}
+{"kind":"send","msg_name":"action","round":280}
+{"kind":"recv","msg_name":"inquire","round":281}
+{"kind":"decision","round":281,"actions":[{"action":"MOVE","targetNodeId":"S09"}],"reason":"continue moving to S09"}
+{"kind":"send","msg_name":"action","round":281}
+{"kind":"recv","msg_name":"inquire","round":282}
+{"kind":"decision","round":282,"actions":[{"action":"MOVE","targetNodeId":"S09"}],"reason":"continue moving to S09"}
+{"kind":"send","msg_name":"action","round":282}
+{"kind":"recv","msg_name":"inquire","round":283}
+{"kind":"decision","round":283,"actions":[{"action":"MOVE","targetNodeId":"S09"}],"reason":"continue moving to S09"}
+{"kind":"send","msg_name":"action","round":283}
+{"kind":"recv","msg_name":"inquire","round":284}
+{"kind":"decision","round":284,"actions":[{"action":"MOVE","targetNodeId":"S09"}],"reason":"continue moving to S09"}
+{"kind":"send","msg_name":"action","round":284}
+{"kind":"recv","msg_name":"inquire","round":285}
+{"kind":"decision","round":285,"actions":[{"action":"MOVE","targetNodeId":"S09"}],"reason":"continue moving to S09"}
+{"kind":"send","msg_name":"action","round":285}
+{"kind":"recv","msg_name":"inquire","round":286}
+{"kind":"decision","round":286,"actions":[{"action":"MOVE","targetNodeId":"S09"}],"reason":"continue moving to S09"}
+{"kind":"send","msg_name":"action","round":286}
+{"kind":"recv","msg_name":"inquire","round":287}
+{"kind":"decision","round":287,"actions":[{"action":"MOVE","targetNodeId":"S09"}],"reason":"continue moving to S09"}
+{"kind":"send","msg_name":"action","round":287}
+{"kind":"recv","msg_name":"inquire","round":288}
+{"kind":"decision","round":288,"actions":[{"action":"MOVE","targetNodeId":"S09"}],"reason":"continue moving to S09"}
+{"kind":"send","msg_name":"action","round":288}
+{"kind":"recv","msg_name":"inquire","round":289}
+{"kind":"decision","round":289,"actions":[{"action":"MOVE","targetNodeId":"S09"}],"reason":"continue moving to S09"}
+{"kind":"send","msg_name":"action","round":289}
+{"kind":"recv","msg_name":"inquire","round":290}
+{"kind":"decision","round":290,"actions":[{"action":"MOVE","targetNodeId":"S09"}],"reason":"continue moving to S09"}
+{"kind":"send","msg_name":"action","round":290}
+{"kind":"recv","msg_name":"inquire","round":291}
+{"kind":"decision","round":291,"actions":[{"action":"MOVE","targetNodeId":"S09"}],"reason":"continue moving to S09"}
+{"kind":"send","msg_name":"action","round":291}
+{"kind":"recv","msg_name":"inquire","round":292}
+{"kind":"decision","round":292,"actions":[{"action":"MOVE","targetNodeId":"S09"}],"reason":"continue moving to S09"}
+{"kind":"send","msg_name":"action","round":292}
+{"kind":"recv","msg_name":"inquire","round":293}
+{"kind":"decision","round":293,"actions":[{"action":"MOVE","targetNodeId":"S09"}],"reason":"continue moving to S09"}
+{"kind":"send","msg_name":"action","round":293}
+{"kind":"recv","msg_name":"inquire","round":294}
+{"kind":"decision","round":294,"actions":[{"action":"MOVE","targetNodeId":"S10"}],"reason":"go to task node S11; move from S09 to S10 toward S11"}
+{"kind":"send","msg_name":"action","round":294}
+{"kind":"recv","msg_name":"inquire","round":295}
+{"kind":"decision","round":295,"actions":[{"action":"MOVE","targetNodeId":"S10"}],"reason":"continue moving to S10"}
+{"kind":"send","msg_name":"action","round":295}
+{"kind":"recv","msg_name":"inquire","round":296}
+{"kind":"decision","round":296,"actions":[{"action":"MOVE","targetNodeId":"S10"}],"reason":"continue moving to S10"}
+{"kind":"send","msg_name":"action","round":296}
+{"kind":"recv","msg_name":"inquire","round":297}
+{"kind":"decision","round":297,"actions":[{"action":"MOVE","targetNodeId":"S10"}],"reason":"continue moving to S10"}
+{"kind":"send","msg_name":"action","round":297}
+{"kind":"recv","msg_name":"inquire","round":298}
+{"kind":"decision","round":298,"actions":[{"action":"MOVE","targetNodeId":"S10"}],"reason":"continue moving to S10"}
+{"kind":"send","msg_name":"action","round":298}
+{"kind":"recv","msg_name":"inquire","round":299}
+{"kind":"decision","round":299,"actions":[{"action":"MOVE","targetNodeId":"S10"}],"reason":"continue moving to S10"}
+{"kind":"send","msg_name":"action","round":299}
+{"kind":"recv","msg_name":"inquire","round":300}
+{"kind":"decision","round":300,"actions":[{"action":"MOVE","targetNodeId":"S10"}],"reason":"continue moving to S10"}
+{"kind":"send","msg_name":"action","round":300}
+{"kind":"recv","msg_name":"inquire","round":301}
+{"kind":"decision","round":301,"actions":[{"action":"MOVE","targetNodeId":"S10"}],"reason":"continue moving to S10"}
+{"kind":"send","msg_name":"action","round":301}
+{"kind":"recv","msg_name":"inquire","round":302}
+{"kind":"decision","round":302,"actions":[{"action":"MOVE","targetNodeId":"S10"}],"reason":"continue moving to S10"}
+{"kind":"send","msg_name":"action","round":302}
+{"kind":"recv","msg_name":"inquire","round":303}
+{"kind":"decision","round":303,"actions":[{"action":"MOVE","targetNodeId":"S10"}],"reason":"continue moving to S10"}
+{"kind":"send","msg_name":"action","round":303}
+{"kind":"recv","msg_name":"inquire","round":304}
+{"kind":"decision","round":304,"actions":[{"action":"MOVE","targetNodeId":"S10"}],"reason":"continue moving to S10"}
+{"kind":"send","msg_name":"action","round":304}
+{"kind":"recv","msg_name":"inquire","round":305}
+{"kind":"decision","round":305,"actions":[{"action":"MOVE","targetNodeId":"S10"}],"reason":"continue moving to S10"}
+{"kind":"send","msg_name":"action","round":305}
+{"kind":"recv","msg_name":"inquire","round":306}
+{"kind":"decision","round":306,"actions":[{"action":"MOVE","targetNodeId":"S10"}],"reason":"continue moving to S10"}
+{"kind":"send","msg_name":"action","round":306}
+{"kind":"recv","msg_name":"inquire","round":307}
+{"kind":"decision","round":307,"actions":[{"action":"MOVE","targetNodeId":"S10"}],"reason":"continue moving to S10"}
+{"kind":"send","msg_name":"action","round":307}
+{"kind":"recv","msg_name":"inquire","round":308}
+{"kind":"decision","round":308,"actions":[{"action":"MOVE","targetNodeId":"S10"}],"reason":"continue moving to S10"}
+{"kind":"send","msg_name":"action","round":308}
+{"kind":"recv","msg_name":"inquire","round":309}
+{"kind":"decision","round":309,"actions":[{"action":"MOVE","targetNodeId":"S10"}],"reason":"continue moving to S10"}
+{"kind":"send","msg_name":"action","round":309}
+{"kind":"recv","msg_name":"inquire","round":310}
+{"kind":"decision","round":310,"actions":[{"action":"MOVE","targetNodeId":"S10"}],"reason":"continue moving to S10"}
+{"kind":"send","msg_name":"action","round":310}
+{"kind":"recv","msg_name":"inquire","round":311}
+{"kind":"decision","round":311,"actions":[{"action":"MOVE","targetNodeId":"S10"}],"reason":"continue moving to S10"}
+{"kind":"send","msg_name":"action","round":311}
+{"kind":"recv","msg_name":"inquire","round":312}
+{"kind":"decision","round":312,"actions":[{"action":"MOVE","targetNodeId":"S10"}],"reason":"continue moving to S10"}
+{"kind":"send","msg_name":"action","round":312}
+{"kind":"recv","msg_name":"inquire","round":313}
+{"kind":"decision","round":313,"actions":[{"action":"MOVE","targetNodeId":"S10"}],"reason":"continue moving to S10"}
+{"kind":"send","msg_name":"action","round":313}
+{"kind":"recv","msg_name":"inquire","round":314}
+{"kind":"decision","round":314,"actions":[{"action":"MOVE","targetNodeId":"S10"}],"reason":"continue moving to S10"}
+{"kind":"send","msg_name":"action","round":314}
+{"kind":"recv","msg_name":"inquire","round":315}
+{"kind":"decision","round":315,"actions":[{"action":"MOVE","targetNodeId":"S10"}],"reason":"continue moving to S10"}
+{"kind":"send","msg_name":"action","round":315}
+{"kind":"recv","msg_name":"inquire","round":316}
+{"kind":"decision","round":316,"actions":[{"action":"MOVE","targetNodeId":"S10"}],"reason":"continue moving to S10"}
+{"kind":"send","msg_name":"action","round":316}
+{"kind":"recv","msg_name":"inquire","round":317}
+{"kind":"decision","round":317,"actions":[{"action":"MOVE","targetNodeId":"S10"}],"reason":"continue moving to S10"}
+{"kind":"send","msg_name":"action","round":317}
+{"kind":"recv","msg_name":"inquire","round":318}
+{"kind":"decision","round":318,"actions":[{"action":"MOVE","targetNodeId":"S10"}],"reason":"continue moving to S10"}
+{"kind":"send","msg_name":"action","round":318}
+{"kind":"recv","msg_name":"inquire","round":319}
+{"kind":"decision","round":319,"actions":[{"action":"MOVE","targetNodeId":"S10"}],"reason":"continue moving to S10"}
+{"kind":"send","msg_name":"action","round":319}
+{"kind":"recv","msg_name":"inquire","round":320}
+{"kind":"decision","round":320,"actions":[{"action":"MOVE","targetNodeId":"S10"}],"reason":"continue moving to S10"}
+{"kind":"send","msg_name":"action","round":320}
+{"kind":"recv","msg_name":"inquire","round":321}
+{"kind":"decision","round":321,"actions":[{"action":"MOVE","targetNodeId":"S10"}],"reason":"continue moving to S10"}
+{"kind":"send","msg_name":"action","round":321}
+{"kind":"recv","msg_name":"inquire","round":322}
+{"kind":"decision","round":322,"actions":[{"action":"MOVE","targetNodeId":"S10"}],"reason":"continue moving to S10"}
+{"kind":"send","msg_name":"action","round":322}
+{"kind":"recv","msg_name":"inquire","round":323}
+{"kind":"decision","round":323,"actions":[{"action":"MOVE","targetNodeId":"S10"}],"reason":"continue moving to S10"}
+{"kind":"send","msg_name":"action","round":323}
+{"kind":"recv","msg_name":"inquire","round":324}
+{"kind":"decision","round":324,"actions":[{"action":"MOVE","targetNodeId":"S10"}],"reason":"continue moving to S10"}
+{"kind":"send","msg_name":"action","round":324}
+{"kind":"recv","msg_name":"inquire","round":325}
+{"kind":"decision","round":325,"actions":[{"action":"MOVE","targetNodeId":"S10"}],"reason":"continue moving to S10"}
+{"kind":"send","msg_name":"action","round":325}
+{"kind":"recv","msg_name":"inquire","round":326}
+{"kind":"decision","round":326,"actions":[{"action":"MOVE","targetNodeId":"S10"}],"reason":"continue moving to S10"}
+{"kind":"send","msg_name":"action","round":326}
+{"kind":"recv","msg_name":"inquire","round":327}
+{"kind":"decision","round":327,"actions":[{"action":"MOVE","targetNodeId":"S10"}],"reason":"continue moving to S10"}
+{"kind":"send","msg_name":"action","round":327}
+{"kind":"recv","msg_name":"inquire","round":328}
+{"kind":"decision","round":328,"actions":[{"action":"MOVE","targetNodeId":"S10"}],"reason":"continue moving to S10"}
+{"kind":"send","msg_name":"action","round":328}
+{"kind":"recv","msg_name":"inquire","round":329}
+{"kind":"decision","round":329,"actions":[{"action":"MOVE","targetNodeId":"S10"}],"reason":"continue moving to S10"}
+{"kind":"send","msg_name":"action","round":329}
+{"kind":"recv","msg_name":"inquire","round":330}
+{"kind":"decision","round":330,"actions":[{"action":"MOVE","targetNodeId":"S10"}],"reason":"continue moving to S10"}
+{"kind":"send","msg_name":"action","round":330}
+{"kind":"recv","msg_name":"inquire","round":331}
+{"kind":"decision","round":331,"actions":[{"action":"MOVE","targetNodeId":"S10"}],"reason":"continue moving to S10"}
+{"kind":"send","msg_name":"action","round":331}
+{"kind":"recv","msg_name":"inquire","round":332}
+{"kind":"decision","round":332,"actions":[{"action":"MOVE","targetNodeId":"S10"}],"reason":"continue moving to S10"}
+{"kind":"send","msg_name":"action","round":332}
+{"kind":"recv","msg_name":"inquire","round":333}
+{"kind":"decision","round":333,"actions":[{"action":"MOVE","targetNodeId":"S10"}],"reason":"continue moving to S10"}
+{"kind":"send","msg_name":"action","round":333}
+{"kind":"recv","msg_name":"inquire","round":334}
+{"kind":"decision","round":334,"actions":[{"action":"MOVE","targetNodeId":"S10"}],"reason":"continue moving to S10"}
+{"kind":"send","msg_name":"action","round":334}
+{"kind":"recv","msg_name":"inquire","round":335}
+{"kind":"decision","round":335,"actions":[{"action":"MOVE","targetNodeId":"S10"}],"reason":"continue moving to S10"}
+{"kind":"send","msg_name":"action","round":335}
+{"kind":"recv","msg_name":"inquire","round":336}
+{"kind":"decision","round":336,"actions":[{"action":"MOVE","targetNodeId":"S10"}],"reason":"continue moving to S10"}
+{"kind":"send","msg_name":"action","round":336}
+{"kind":"recv","msg_name":"inquire","round":337}
+{"kind":"decision","round":337,"actions":[{"action":"MOVE","targetNodeId":"S10"}],"reason":"continue moving to S10"}
+{"kind":"send","msg_name":"action","round":337}
+{"kind":"recv","msg_name":"inquire","round":338}
+{"kind":"decision","round":338,"actions":[{"action":"MOVE","targetNodeId":"S10"}],"reason":"continue moving to S10"}
+{"kind":"send","msg_name":"action","round":338}
+{"kind":"recv","msg_name":"inquire","round":339}
+{"kind":"decision","round":339,"actions":[{"action":"MOVE","targetNodeId":"S10"}],"reason":"continue moving to S10"}
+{"kind":"send","msg_name":"action","round":339}
+{"kind":"recv","msg_name":"inquire","round":340}
+{"kind":"decision","round":340,"actions":[{"action":"MOVE","targetNodeId":"S10"}],"reason":"continue moving to S10"}
+{"kind":"send","msg_name":"action","round":340}
+{"kind":"recv","msg_name":"inquire","round":341}
+{"kind":"decision","round":341,"actions":[{"action":"MOVE","targetNodeId":"S10"}],"reason":"continue moving to S10"}
+{"kind":"send","msg_name":"action","round":341}
+{"kind":"recv","msg_name":"inquire","round":342}
+{"kind":"decision","round":342,"actions":[{"action":"MOVE","targetNodeId":"S10"}],"reason":"continue moving to S10"}
+{"kind":"send","msg_name":"action","round":342}
+{"kind":"recv","msg_name":"inquire","round":343}
+{"kind":"decision","round":343,"actions":[{"action":"MOVE","targetNodeId":"S10"}],"reason":"continue moving to S10"}
+{"kind":"send","msg_name":"action","round":343}
+{"kind":"recv","msg_name":"inquire","round":344}
+{"kind":"decision","round":344,"actions":[{"action":"MOVE","targetNodeId":"S10"}],"reason":"continue moving to S10"}
+{"kind":"send","msg_name":"action","round":344}
+{"kind":"recv","msg_name":"inquire","round":345}
+{"kind":"decision","round":345,"actions":[{"action":"MOVE","targetNodeId":"S10"}],"reason":"continue moving to S10"}
+{"kind":"send","msg_name":"action","round":345}
+{"kind":"recv","msg_name":"inquire","round":346}
+{"kind":"decision","round":346,"actions":[{"action":"MOVE","targetNodeId":"S10"}],"reason":"continue moving to S10"}
+{"kind":"send","msg_name":"action","round":346}
+{"kind":"recv","msg_name":"inquire","round":347}
+{"kind":"decision","round":347,"actions":[{"action":"MOVE","targetNodeId":"S10"}],"reason":"continue moving to S10"}
+{"kind":"send","msg_name":"action","round":347}
+{"kind":"recv","msg_name":"inquire","round":348}
+{"kind":"decision","round":348,"actions":[{"action":"MOVE","targetNodeId":"S10"}],"reason":"continue moving to S10"}
+{"kind":"send","msg_name":"action","round":348}
+{"kind":"recv","msg_name":"inquire","round":349}
+{"kind":"decision","round":349,"actions":[{"action":"MOVE","targetNodeId":"S10"}],"reason":"continue moving to S10"}
+{"kind":"send","msg_name":"action","round":349}
+{"kind":"recv","msg_name":"inquire","round":350}
+{"kind":"decision","round":350,"actions":[{"action":"MOVE","targetNodeId":"S11"}],"reason":"go to task node S13; move from S10 to S11 toward S13"}
+{"kind":"send","msg_name":"action","round":350}
+{"kind":"recv","msg_name":"inquire","round":351}
+{"kind":"decision","round":351,"actions":[{"action":"MOVE","targetNodeId":"S11"}],"reason":"continue moving to S11"}
+{"kind":"send","msg_name":"action","round":351}
+{"kind":"recv","msg_name":"inquire","round":352}
+{"kind":"decision","round":352,"actions":[{"action":"MOVE","targetNodeId":"S11"}],"reason":"continue moving to S11"}
+{"kind":"send","msg_name":"action","round":352}
+{"kind":"recv","msg_name":"inquire","round":353}
+{"kind":"decision","round":353,"actions":[{"action":"MOVE","targetNodeId":"S11"}],"reason":"continue moving to S11"}
+{"kind":"send","msg_name":"action","round":353}
+{"kind":"recv","msg_name":"inquire","round":354}
+{"kind":"decision","round":354,"actions":[{"action":"MOVE","targetNodeId":"S11"}],"reason":"continue moving to S11"}
+{"kind":"send","msg_name":"action","round":354}
+{"kind":"recv","msg_name":"inquire","round":355}
+{"kind":"decision","round":355,"actions":[{"action":"MOVE","targetNodeId":"S11"}],"reason":"continue moving to S11"}
+{"kind":"send","msg_name":"action","round":355}
+{"kind":"recv","msg_name":"inquire","round":356}
+{"kind":"decision","round":356,"actions":[{"action":"MOVE","targetNodeId":"S11"}],"reason":"continue moving to S11"}
+{"kind":"send","msg_name":"action","round":356}
+{"kind":"recv","msg_name":"inquire","round":357}
+{"kind":"decision","round":357,"actions":[{"action":"MOVE","targetNodeId":"S11"}],"reason":"continue moving to S11"}
+{"kind":"send","msg_name":"action","round":357}
+{"kind":"recv","msg_name":"inquire","round":358}
+{"kind":"decision","round":358,"actions":[{"action":"MOVE","targetNodeId":"S11"}],"reason":"continue moving to S11"}
+{"kind":"send","msg_name":"action","round":358}
+{"kind":"recv","msg_name":"inquire","round":359}
+{"kind":"decision","round":359,"actions":[{"action":"MOVE","targetNodeId":"S11"}],"reason":"continue moving to S11"}
+{"kind":"send","msg_name":"action","round":359}
+{"kind":"recv","msg_name":"inquire","round":360}
+{"kind":"decision","round":360,"actions":[{"action":"MOVE","targetNodeId":"S11"}],"reason":"continue moving to S11"}
+{"kind":"send","msg_name":"action","round":360}
+{"kind":"recv","msg_name":"inquire","round":361}
+{"kind":"decision","round":361,"actions":[{"action":"MOVE","targetNodeId":"S11"}],"reason":"continue moving to S11"}
+{"kind":"send","msg_name":"action","round":361}
+{"kind":"recv","msg_name":"inquire","round":362}
+{"kind":"decision","round":362,"actions":[{"action":"MOVE","targetNodeId":"S11"}],"reason":"continue moving to S11"}
+{"kind":"send","msg_name":"action","round":362}
+{"kind":"recv","msg_name":"inquire","round":363}
+{"kind":"decision","round":363,"actions":[{"action":"MOVE","targetNodeId":"S11"}],"reason":"continue moving to S11"}
+{"kind":"send","msg_name":"action","round":363}
+{"kind":"recv","msg_name":"inquire","round":364}
+{"kind":"decision","round":364,"actions":[{"action":"MOVE","targetNodeId":"S11"}],"reason":"continue moving to S11"}
+{"kind":"send","msg_name":"action","round":364}
+{"kind":"recv","msg_name":"inquire","round":365}
+{"kind":"decision","round":365,"actions":[{"action":"MOVE","targetNodeId":"S11"}],"reason":"continue moving to S11"}
+{"kind":"send","msg_name":"action","round":365}
+{"kind":"recv","msg_name":"inquire","round":366}
+{"kind":"decision","round":366,"actions":[{"action":"MOVE","targetNodeId":"S11"}],"reason":"continue moving to S11"}
+{"kind":"send","msg_name":"action","round":366}
+{"kind":"recv","msg_name":"inquire","round":367}
+{"kind":"decision","round":367,"actions":[{"action":"MOVE","targetNodeId":"S11"}],"reason":"continue moving to S11"}
+{"kind":"send","msg_name":"action","round":367}
+{"kind":"recv","msg_name":"inquire","round":368}
+{"kind":"decision","round":368,"actions":[{"action":"MOVE","targetNodeId":"S11"}],"reason":"continue moving to S11"}
+{"kind":"send","msg_name":"action","round":368}
+{"kind":"recv","msg_name":"inquire","round":369}
+{"kind":"decision","round":369,"actions":[{"action":"MOVE","targetNodeId":"S11"}],"reason":"continue moving to S11"}
+{"kind":"send","msg_name":"action","round":369}
+{"kind":"recv","msg_name":"inquire","round":370}
+{"kind":"decision","round":370,"actions":[{"action":"MOVE","targetNodeId":"S11"}],"reason":"continue moving to S11"}
+{"kind":"send","msg_name":"action","round":370}
+{"kind":"recv","msg_name":"inquire","round":371}
+{"kind":"decision","round":371,"actions":[{"action":"MOVE","targetNodeId":"S11"}],"reason":"continue moving to S11"}
+{"kind":"send","msg_name":"action","round":371}
+{"kind":"recv","msg_name":"inquire","round":372}
+{"kind":"decision","round":372,"actions":[{"action":"MOVE","targetNodeId":"S11"}],"reason":"continue moving to S11"}
+{"kind":"send","msg_name":"action","round":372}
+{"kind":"recv","msg_name":"inquire","round":373}
+{"kind":"decision","round":373,"actions":[{"action":"MOVE","targetNodeId":"S11"}],"reason":"continue moving to S11"}
+{"kind":"send","msg_name":"action","round":373}
+{"kind":"recv","msg_name":"inquire","round":374}
+{"kind":"decision","round":374,"actions":[{"action":"MOVE","targetNodeId":"S11"}],"reason":"continue moving to S11"}
+{"kind":"send","msg_name":"action","round":374}
+{"kind":"recv","msg_name":"inquire","round":375}
+{"kind":"decision","round":375,"actions":[{"action":"MOVE","targetNodeId":"S11"}],"reason":"continue moving to S11"}
+{"kind":"send","msg_name":"action","round":375}
+{"kind":"recv","msg_name":"inquire","round":376}
+{"kind":"decision","round":376,"actions":[{"action":"MOVE","targetNodeId":"S11"}],"reason":"continue moving to S11"}
+{"kind":"send","msg_name":"action","round":376}
+{"kind":"recv","msg_name":"inquire","round":377}
+{"kind":"decision","round":377,"actions":[{"action":"MOVE","targetNodeId":"S11"}],"reason":"continue moving to S11"}
+{"kind":"send","msg_name":"action","round":377}
+{"kind":"recv","msg_name":"inquire","round":378}
+{"kind":"decision","round":378,"actions":[{"action":"MOVE","targetNodeId":"S11"}],"reason":"continue moving to S11"}
+{"kind":"send","msg_name":"action","round":378}
+{"kind":"recv","msg_name":"inquire","round":379}
+{"kind":"decision","round":379,"actions":[{"action":"MOVE","targetNodeId":"S11"}],"reason":"continue moving to S11"}
+{"kind":"send","msg_name":"action","round":379}
+{"kind":"recv","msg_name":"inquire","round":380}
+{"kind":"decision","round":380,"actions":[{"action":"MOVE","targetNodeId":"S11"}],"reason":"continue moving to S11"}
+{"kind":"send","msg_name":"action","round":380}
+{"kind":"recv","msg_name":"inquire","round":381}
+{"kind":"decision","round":381,"actions":[{"action":"MOVE","targetNodeId":"S11"}],"reason":"continue moving to S11"}
+{"kind":"send","msg_name":"action","round":381}
+{"kind":"recv","msg_name":"inquire","round":382}
+{"kind":"decision","round":382,"actions":[{"action":"MOVE","targetNodeId":"S11"}],"reason":"continue moving to S11"}
+{"kind":"send","msg_name":"action","round":382}
+{"kind":"recv","msg_name":"inquire","round":383}
+{"kind":"decision","round":383,"actions":[{"action":"MOVE","targetNodeId":"S11"}],"reason":"continue moving to S11"}
+{"kind":"send","msg_name":"action","round":383}
+{"kind":"recv","msg_name":"inquire","round":384}
+{"kind":"decision","round":384,"actions":[{"action":"MOVE","targetNodeId":"S11"}],"reason":"continue moving to S11"}
+{"kind":"send","msg_name":"action","round":384}
+{"kind":"recv","msg_name":"inquire","round":385}
+{"kind":"decision","round":385,"actions":[{"action":"MOVE","targetNodeId":"S11"}],"reason":"continue moving to S11"}
+{"kind":"send","msg_name":"action","round":385}
+{"kind":"recv","msg_name":"inquire","round":386}
+{"kind":"decision","round":386,"actions":[{"action":"MOVE","targetNodeId":"S11"}],"reason":"continue moving to S11"}
+{"kind":"send","msg_name":"action","round":386}
+{"kind":"recv","msg_name":"inquire","round":387}
+{"kind":"decision","round":387,"actions":[{"action":"MOVE","targetNodeId":"S11"}],"reason":"continue moving to S11"}
+{"kind":"send","msg_name":"action","round":387}
+{"kind":"recv","msg_name":"inquire","round":388}
+{"kind":"decision","round":388,"actions":[{"action":"MOVE","targetNodeId":"S11"}],"reason":"continue moving to S11"}
+{"kind":"send","msg_name":"action","round":388}
+{"kind":"recv","msg_name":"inquire","round":389}
+{"kind":"decision","round":389,"actions":[{"action":"MOVE","targetNodeId":"S11"}],"reason":"continue moving to S11"}
+{"kind":"send","msg_name":"action","round":389}
+{"kind":"recv","msg_name":"inquire","round":390}
+{"kind":"decision","round":390,"actions":[{"action":"MOVE","targetNodeId":"S11"}],"reason":"continue moving to S11"}
+{"kind":"send","msg_name":"action","round":390}
+{"kind":"recv","msg_name":"inquire","round":391}
+{"kind":"decision","round":391,"actions":[{"action":"MOVE","targetNodeId":"S11"}],"reason":"continue moving to S11"}
+{"kind":"send","msg_name":"action","round":391}
+{"kind":"recv","msg_name":"inquire","round":392}
+{"kind":"decision","round":392,"actions":[{"action":"MOVE","targetNodeId":"S11"}],"reason":"continue moving to S11"}
+{"kind":"send","msg_name":"action","round":392}
+{"kind":"recv","msg_name":"inquire","round":393}
+{"kind":"decision","round":393,"actions":[{"action":"MOVE","targetNodeId":"S11"}],"reason":"continue moving to S11"}
+{"kind":"send","msg_name":"action","round":393}
+{"kind":"recv","msg_name":"inquire","round":394}
+{"kind":"decision","round":394,"actions":[{"action":"MOVE","targetNodeId":"S11"}],"reason":"continue moving to S11"}
+{"kind":"send","msg_name":"action","round":394}
+{"kind":"recv","msg_name":"inquire","round":395}
+{"kind":"decision","round":395,"actions":[{"action":"MOVE","targetNodeId":"S11"}],"reason":"continue moving to S11"}
+{"kind":"send","msg_name":"action","round":395}
+{"kind":"recv","msg_name":"inquire","round":396}
+{"kind":"decision","round":396,"actions":[{"action":"MOVE","targetNodeId":"S11"}],"reason":"continue moving to S11"}
+{"kind":"send","msg_name":"action","round":396}
+{"kind":"recv","msg_name":"inquire","round":397}
+{"kind":"decision","round":397,"actions":[{"action":"MOVE","targetNodeId":"S11"}],"reason":"continue moving to S11"}
+{"kind":"send","msg_name":"action","round":397}
+{"kind":"recv","msg_name":"inquire","round":398}
+{"kind":"decision","round":398,"actions":[{"action":"MOVE","targetNodeId":"S11"}],"reason":"continue moving to S11"}
+{"kind":"send","msg_name":"action","round":398}
+{"kind":"recv","msg_name":"inquire","round":399}
+{"kind":"decision","round":399,"actions":[{"action":"MOVE","targetNodeId":"S11"}],"reason":"continue moving to S11"}
+{"kind":"send","msg_name":"action","round":399}
+{"kind":"recv","msg_name":"inquire","round":400}
+{"kind":"decision","round":400,"actions":[{"action":"PROCESS","targetNodeId":"S11"}],"reason":"process node S11"}
+{"kind":"send","msg_name":"action","round":400}
+{"kind":"recv","msg_name":"inquire","round":401}
+{"kind":"decision","round":401,"actions":[],"reason":"state PROCESSING should continue without main action"}
+{"kind":"send","msg_name":"action","round":401}
+{"kind":"recv","msg_name":"inquire","round":402}
+{"kind":"decision","round":402,"actions":[],"reason":"state PROCESSING should continue without main action"}
+{"kind":"send","msg_name":"action","round":402}
+{"kind":"recv","msg_name":"inquire","round":403}
+{"kind":"decision","round":403,"actions":[],"reason":"state PROCESSING should continue without main action"}
+{"kind":"send","msg_name":"action","round":403}
+{"kind":"recv","msg_name":"inquire","round":404}
+{"kind":"decision","round":404,"actions":[],"reason":"state PROCESSING should continue without main action"}
+{"kind":"send","msg_name":"action","round":404}
+{"kind":"recv","msg_name":"inquire","round":405}
+{"kind":"decision","round":405,"actions":[{"action":"MOVE","targetNodeId":"S12"}],"reason":"go to task node S13; move from S11 to S12 toward S13"}
+{"kind":"send","msg_name":"action","round":405}
+{"kind":"recv","msg_name":"inquire","round":406}
+{"kind":"decision","round":406,"actions":[{"action":"MOVE","targetNodeId":"S12"}],"reason":"continue moving to S12"}
+{"kind":"send","msg_name":"action","round":406}
+{"kind":"recv","msg_name":"inquire","round":407}
+{"kind":"decision","round":407,"actions":[{"action":"MOVE","targetNodeId":"S12"}],"reason":"continue moving to S12"}
+{"kind":"send","msg_name":"action","round":407}
+{"kind":"recv","msg_name":"inquire","round":408}
+{"kind":"decision","round":408,"actions":[{"action":"MOVE","targetNodeId":"S12"}],"reason":"continue moving to S12"}
+{"kind":"send","msg_name":"action","round":408}
+{"kind":"recv","msg_name":"inquire","round":409}
+{"kind":"decision","round":409,"actions":[{"action":"MOVE","targetNodeId":"S12"}],"reason":"continue moving to S12"}
+{"kind":"send","msg_name":"action","round":409}
+{"kind":"recv","msg_name":"inquire","round":410}
+{"kind":"decision","round":410,"actions":[{"action":"MOVE","targetNodeId":"S12"}],"reason":"continue moving to S12"}
+{"kind":"send","msg_name":"action","round":410}
+{"kind":"recv","msg_name":"inquire","round":411}
+{"kind":"decision","round":411,"actions":[{"action":"MOVE","targetNodeId":"S12"}],"reason":"continue moving to S12"}
+{"kind":"send","msg_name":"action","round":411}
+{"kind":"recv","msg_name":"inquire","round":412}
+{"kind":"decision","round":412,"actions":[{"action":"MOVE","targetNodeId":"S12"}],"reason":"continue moving to S12"}
+{"kind":"send","msg_name":"action","round":412}
+{"kind":"recv","msg_name":"inquire","round":413}
+{"kind":"decision","round":413,"actions":[{"action":"MOVE","targetNodeId":"S12"}],"reason":"continue moving to S12"}
+{"kind":"send","msg_name":"action","round":413}
+{"kind":"recv","msg_name":"inquire","round":414}
+{"kind":"decision","round":414,"actions":[{"action":"MOVE","targetNodeId":"S12"}],"reason":"continue moving to S12"}
+{"kind":"send","msg_name":"action","round":414}
+{"kind":"recv","msg_name":"inquire","round":415}
+{"kind":"decision","round":415,"actions":[{"action":"MOVE","targetNodeId":"S12"}],"reason":"continue moving to S12"}
+{"kind":"send","msg_name":"action","round":415}
+{"kind":"recv","msg_name":"inquire","round":416}
+{"kind":"decision","round":416,"actions":[{"action":"MOVE","targetNodeId":"S12"}],"reason":"continue moving to S12"}
+{"kind":"send","msg_name":"action","round":416}
+{"kind":"recv","msg_name":"inquire","round":417}
+{"kind":"decision","round":417,"actions":[{"action":"MOVE","targetNodeId":"S12"}],"reason":"continue moving to S12"}
+{"kind":"send","msg_name":"action","round":417}
+{"kind":"recv","msg_name":"inquire","round":418}
+{"kind":"decision","round":418,"actions":[{"action":"MOVE","targetNodeId":"S12"}],"reason":"continue moving to S12"}
+{"kind":"send","msg_name":"action","round":418}
+{"kind":"recv","msg_name":"inquire","round":419}
+{"kind":"decision","round":419,"actions":[{"action":"MOVE","targetNodeId":"S12"}],"reason":"continue moving to S12"}
+{"kind":"send","msg_name":"action","round":419}
+{"kind":"recv","msg_name":"inquire","round":420}
+{"kind":"decision","round":420,"actions":[{"action":"MOVE","targetNodeId":"S12"}],"reason":"continue moving to S12"}
+{"kind":"send","msg_name":"action","round":420}
+{"kind":"recv","msg_name":"inquire","round":421}
+{"kind":"decision","round":421,"actions":[{"action":"MOVE","targetNodeId":"S12"}],"reason":"continue moving to S12"}
+{"kind":"send","msg_name":"action","round":421}
+{"kind":"recv","msg_name":"inquire","round":422}
+{"kind":"decision","round":422,"actions":[{"action":"MOVE","targetNodeId":"S12"}],"reason":"continue moving to S12"}
+{"kind":"send","msg_name":"action","round":422}
+{"kind":"recv","msg_name":"inquire","round":423}
+{"kind":"decision","round":423,"actions":[{"action":"MOVE","targetNodeId":"S12"}],"reason":"continue moving to S12"}
+{"kind":"send","msg_name":"action","round":423}
+{"kind":"recv","msg_name":"inquire","round":424}
+{"kind":"decision","round":424,"actions":[{"action":"MOVE","targetNodeId":"S12"}],"reason":"continue moving to S12"}
+{"kind":"send","msg_name":"action","round":424}
+{"kind":"recv","msg_name":"inquire","round":425}
+{"kind":"decision","round":425,"actions":[{"action":"MOVE","targetNodeId":"S12"}],"reason":"continue moving to S12"}
+{"kind":"send","msg_name":"action","round":425}
+{"kind":"recv","msg_name":"inquire","round":426}
+{"kind":"decision","round":426,"actions":[{"action":"MOVE","targetNodeId":"S12"}],"reason":"continue moving to S12"}
+{"kind":"send","msg_name":"action","round":426}
+{"kind":"recv","msg_name":"inquire","round":427}
+{"kind":"decision","round":427,"actions":[{"action":"MOVE","targetNodeId":"S12"}],"reason":"continue moving to S12"}
+{"kind":"send","msg_name":"action","round":427}
+{"kind":"recv","msg_name":"inquire","round":428}
+{"kind":"decision","round":428,"actions":[{"action":"MOVE","targetNodeId":"S12"}],"reason":"continue moving to S12"}
+{"kind":"send","msg_name":"action","round":428}
+{"kind":"recv","msg_name":"inquire","round":429}
+{"kind":"decision","round":429,"actions":[{"action":"MOVE","targetNodeId":"S12"}],"reason":"continue moving to S12"}
+{"kind":"send","msg_name":"action","round":429}
+{"kind":"recv","msg_name":"inquire","round":430}
+{"kind":"decision","round":430,"actions":[{"action":"MOVE","targetNodeId":"S12"}],"reason":"continue moving to S12"}
+{"kind":"send","msg_name":"action","round":430}
+{"kind":"recv","msg_name":"inquire","round":431}
+{"kind":"decision","round":431,"actions":[{"action":"MOVE","targetNodeId":"S12"}],"reason":"continue moving to S12"}
+{"kind":"send","msg_name":"action","round":431}
+{"kind":"recv","msg_name":"inquire","round":432}
+{"kind":"decision","round":432,"actions":[{"action":"MOVE","targetNodeId":"S12"}],"reason":"continue moving to S12"}
+{"kind":"send","msg_name":"action","round":432}
+{"kind":"recv","msg_name":"inquire","round":433}
+{"kind":"decision","round":433,"actions":[{"action":"USE_RESOURCE","resourceType":"ICE_BOX"}],"reason":"use ICE_BOX before endgame at freshness 74.8"}
+{"kind":"send","msg_name":"action","round":433}
+{"kind":"recv","msg_name":"inquire","round":434}
+{"kind":"decision","round":434,"actions":[{"action":"MOVE","targetNodeId":"S13"}],"reason":"move from S12 to S13 toward S14"}
+{"kind":"send","msg_name":"action","round":434}
+{"kind":"recv","msg_name":"inquire","round":435}
+{"kind":"decision","round":435,"actions":[{"action":"MOVE","targetNodeId":"S13"}],"reason":"continue moving to S13"}
+{"kind":"send","msg_name":"action","round":435}
+{"kind":"recv","msg_name":"inquire","round":436}
+{"kind":"decision","round":436,"actions":[{"action":"MOVE","targetNodeId":"S13"}],"reason":"continue moving to S13"}
+{"kind":"send","msg_name":"action","round":436}
+{"kind":"recv","msg_name":"inquire","round":437}
+{"kind":"decision","round":437,"actions":[{"action":"MOVE","targetNodeId":"S13"}],"reason":"continue moving to S13"}
+{"kind":"send","msg_name":"action","round":437}
+{"kind":"recv","msg_name":"inquire","round":438}
+{"kind":"decision","round":438,"actions":[{"action":"MOVE","targetNodeId":"S13"}],"reason":"continue moving to S13"}
+{"kind":"send","msg_name":"action","round":438}
+{"kind":"recv","msg_name":"inquire","round":439}
+{"kind":"decision","round":439,"actions":[{"action":"MOVE","targetNodeId":"S13"}],"reason":"continue moving to S13"}
+{"kind":"send","msg_name":"action","round":439}
+{"kind":"recv","msg_name":"inquire","round":440}
+{"kind":"decision","round":440,"actions":[{"action":"MOVE","targetNodeId":"S13"}],"reason":"continue moving to S13"}
+{"kind":"send","msg_name":"action","round":440}
+{"kind":"recv","msg_name":"inquire","round":441}
+{"kind":"decision","round":441,"actions":[{"action":"MOVE","targetNodeId":"S13"}],"reason":"continue moving to S13"}
+{"kind":"send","msg_name":"action","round":441}
+{"kind":"recv","msg_name":"inquire","round":442}
+{"kind":"decision","round":442,"actions":[{"action":"MOVE","targetNodeId":"S13"}],"reason":"continue moving to S13"}
+{"kind":"send","msg_name":"action","round":442}
+{"kind":"recv","msg_name":"inquire","round":443}
+{"kind":"decision","round":443,"actions":[{"action":"MOVE","targetNodeId":"S13"}],"reason":"continue moving to S13"}
+{"kind":"send","msg_name":"action","round":443}
+{"kind":"recv","msg_name":"inquire","round":444}
+{"kind":"decision","round":444,"actions":[{"action":"MOVE","targetNodeId":"S13"}],"reason":"continue moving to S13"}
+{"kind":"send","msg_name":"action","round":444}
+{"kind":"recv","msg_name":"inquire","round":445}
+{"kind":"decision","round":445,"actions":[{"action":"MOVE","targetNodeId":"S13"}],"reason":"continue moving to S13"}
+{"kind":"send","msg_name":"action","round":445}
+{"kind":"recv","msg_name":"inquire","round":446}
+{"kind":"decision","round":446,"actions":[{"action":"MOVE","targetNodeId":"S13"}],"reason":"continue moving to S13"}
+{"kind":"send","msg_name":"action","round":446}
+{"kind":"recv","msg_name":"inquire","round":447}
+{"kind":"decision","round":447,"actions":[{"action":"MOVE","targetNodeId":"S13"}],"reason":"continue moving to S13"}
+{"kind":"send","msg_name":"action","round":447}
+{"kind":"recv","msg_name":"inquire","round":448}
+{"kind":"decision","round":448,"actions":[{"action":"MOVE","targetNodeId":"S13"}],"reason":"continue moving to S13"}
+{"kind":"send","msg_name":"action","round":448}
+{"kind":"recv","msg_name":"inquire","round":449}
+{"kind":"decision","round":449,"actions":[{"action":"MOVE","targetNodeId":"S13"}],"reason":"continue moving to S13"}
+{"kind":"send","msg_name":"action","round":449}
+{"kind":"recv","msg_name":"inquire","round":450}
+{"kind":"decision","round":450,"actions":[{"action":"MOVE","targetNodeId":"S13"}],"reason":"continue moving to S13"}
+{"kind":"send","msg_name":"action","round":450}
+{"kind":"recv","msg_name":"inquire","round":451}
+{"kind":"decision","round":451,"actions":[{"action":"MOVE","targetNodeId":"S13"}],"reason":"continue moving to S13"}
+{"kind":"send","msg_name":"action","round":451}
+{"kind":"recv","msg_name":"inquire","round":452}
+{"kind":"decision","round":452,"actions":[{"action":"MOVE","targetNodeId":"S13"}],"reason":"continue moving to S13"}
+{"kind":"send","msg_name":"action","round":452}
+{"kind":"recv","msg_name":"inquire","round":453}
+{"kind":"decision","round":453,"actions":[{"action":"MOVE","targetNodeId":"S13"}],"reason":"continue moving to S13"}
+{"kind":"send","msg_name":"action","round":453}
+{"kind":"recv","msg_name":"inquire","round":454}
+{"kind":"decision","round":454,"actions":[{"action":"MOVE","targetNodeId":"S13"}],"reason":"continue moving to S13"}
+{"kind":"send","msg_name":"action","round":454}
+{"kind":"recv","msg_name":"inquire","round":455}
+{"kind":"decision","round":455,"actions":[{"action":"MOVE","targetNodeId":"S13"}],"reason":"continue moving to S13"}
+{"kind":"send","msg_name":"action","round":455}
+{"kind":"recv","msg_name":"inquire","round":456}
+{"kind":"decision","round":456,"actions":[{"action":"MOVE","targetNodeId":"S13"}],"reason":"continue moving to S13"}
+{"kind":"send","msg_name":"action","round":456}
+{"kind":"recv","msg_name":"inquire","round":457}
+{"kind":"decision","round":457,"actions":[{"action":"MOVE","targetNodeId":"S13"}],"reason":"continue moving to S13"}
+{"kind":"send","msg_name":"action","round":457}
+{"kind":"recv","msg_name":"inquire","round":458}
+{"kind":"decision","round":458,"actions":[{"action":"MOVE","targetNodeId":"S13"}],"reason":"continue moving to S13"}
+{"kind":"send","msg_name":"action","round":458}
+{"kind":"recv","msg_name":"inquire","round":459}
+{"kind":"decision","round":459,"actions":[{"action":"MOVE","targetNodeId":"S13"}],"reason":"continue moving to S13"}
+{"kind":"send","msg_name":"action","round":459}
+{"kind":"recv","msg_name":"inquire","round":460}
+{"kind":"decision","round":460,"actions":[{"action":"MOVE","targetNodeId":"S13"}],"reason":"continue moving to S13"}
+{"kind":"send","msg_name":"action","round":460}
+{"kind":"recv","msg_name":"inquire","round":461}
+{"kind":"decision","round":461,"actions":[{"action":"MOVE","targetNodeId":"S13"}],"reason":"continue moving to S13"}
+{"kind":"send","msg_name":"action","round":461}
+{"kind":"recv","msg_name":"inquire","round":462}
+{"kind":"decision","round":462,"actions":[{"action":"MOVE","targetNodeId":"S13"}],"reason":"continue moving to S13"}
+{"kind":"send","msg_name":"action","round":462}
+{"kind":"recv","msg_name":"inquire","round":463}
+{"kind":"decision","round":463,"actions":[{"action":"MOVE","targetNodeId":"S13"}],"reason":"continue moving to S13"}
+{"kind":"send","msg_name":"action","round":463}
+{"kind":"recv","msg_name":"inquire","round":464}
+{"kind":"decision","round":464,"actions":[{"action":"MOVE","targetNodeId":"S13"}],"reason":"continue moving to S13"}
+{"kind":"send","msg_name":"action","round":464}
+{"kind":"recv","msg_name":"inquire","round":465}
+{"kind":"decision","round":465,"actions":[{"action":"MOVE","targetNodeId":"S13"}],"reason":"continue moving to S13"}
+{"kind":"send","msg_name":"action","round":465}
+{"kind":"recv","msg_name":"inquire","round":466}
+{"kind":"decision","round":466,"actions":[{"action":"MOVE","targetNodeId":"S13"}],"reason":"continue moving to S13"}
+{"kind":"send","msg_name":"action","round":466}
+{"kind":"recv","msg_name":"inquire","round":467}
+{"kind":"decision","round":467,"actions":[{"action":"MOVE","targetNodeId":"S13"}],"reason":"continue moving to S13"}
+{"kind":"send","msg_name":"action","round":467}
+{"kind":"recv","msg_name":"inquire","round":468}
+{"kind":"decision","round":468,"actions":[{"action":"MOVE","targetNodeId":"S13"}],"reason":"continue moving to S13"}
+{"kind":"send","msg_name":"action","round":468}
+{"kind":"recv","msg_name":"inquire","round":469}
+{"kind":"decision","round":469,"actions":[{"action":"PROCESS","targetNodeId":"S13"}],"reason":"process node S13"}
+{"kind":"send","msg_name":"action","round":469}
+{"kind":"recv","msg_name":"inquire","round":470}
+{"kind":"decision","round":470,"actions":[],"reason":"state PROCESSING should continue without main action"}
+{"kind":"send","msg_name":"action","round":470}
+{"kind":"recv","msg_name":"inquire","round":471}
+{"kind":"decision","round":471,"actions":[],"reason":"state PROCESSING should continue without main action"}
+{"kind":"send","msg_name":"action","round":471}
+{"kind":"recv","msg_name":"inquire","round":472}
+{"kind":"decision","round":472,"actions":[],"reason":"state PROCESSING should continue without main action"}
+{"kind":"send","msg_name":"action","round":472}
+{"kind":"recv","msg_name":"inquire","round":473}
+{"kind":"decision","round":473,"actions":[],"reason":"state PROCESSING should continue without main action"}
+{"kind":"send","msg_name":"action","round":473}
+{"kind":"recv","msg_name":"inquire","round":474}
+{"kind":"decision","round":474,"actions":[{"action":"MOVE","targetNodeId":"S14"}],"reason":"move from S13 to S14 toward S14"}
+{"kind":"send","msg_name":"action","round":474}
+{"kind":"recv","msg_name":"inquire","round":475}
+{"kind":"decision","round":475,"actions":[{"action":"MOVE","targetNodeId":"S14"}],"reason":"continue moving to S14"}
+{"kind":"send","msg_name":"action","round":475}
+{"kind":"recv","msg_name":"inquire","round":476}
+{"kind":"decision","round":476,"actions":[{"action":"MOVE","targetNodeId":"S14"}],"reason":"continue moving to S14"}
+{"kind":"send","msg_name":"action","round":476}
+{"kind":"recv","msg_name":"inquire","round":477}
+{"kind":"decision","round":477,"actions":[{"action":"MOVE","targetNodeId":"S14"}],"reason":"continue moving to S14"}
+{"kind":"send","msg_name":"action","round":477}
+{"kind":"recv","msg_name":"inquire","round":478}
+{"kind":"decision","round":478,"actions":[{"action":"MOVE","targetNodeId":"S14"}],"reason":"continue moving to S14"}
+{"kind":"send","msg_name":"action","round":478}
+{"kind":"recv","msg_name":"inquire","round":479}
+{"kind":"decision","round":479,"actions":[{"action":"MOVE","targetNodeId":"S14"}],"reason":"continue moving to S14"}
+{"kind":"send","msg_name":"action","round":479}
+{"kind":"recv","msg_name":"inquire","round":480}
+{"kind":"decision","round":480,"actions":[{"action":"MOVE","targetNodeId":"S14"}],"reason":"continue moving to S14"}
+{"kind":"send","msg_name":"action","round":480}
+{"kind":"recv","msg_name":"inquire","round":481}
+{"kind":"decision","round":481,"actions":[{"action":"MOVE","targetNodeId":"S14"}],"reason":"continue moving to S14"}
+{"kind":"send","msg_name":"action","round":481}
+{"kind":"recv","msg_name":"inquire","round":482}
+{"kind":"decision","round":482,"actions":[{"action":"MOVE","targetNodeId":"S14"}],"reason":"continue moving to S14"}
+{"kind":"send","msg_name":"action","round":482}
+{"kind":"recv","msg_name":"inquire","round":483}
+{"kind":"decision","round":483,"actions":[{"action":"MOVE","targetNodeId":"S14"}],"reason":"continue moving to S14"}
+{"kind":"send","msg_name":"action","round":483}
+{"kind":"recv","msg_name":"inquire","round":484}
+{"kind":"decision","round":484,"actions":[{"action":"MOVE","targetNodeId":"S14"}],"reason":"continue moving to S14"}
+{"kind":"send","msg_name":"action","round":484}
+{"kind":"recv","msg_name":"inquire","round":485}
+{"kind":"decision","round":485,"actions":[{"action":"MOVE","targetNodeId":"S14"}],"reason":"continue moving to S14"}
+{"kind":"send","msg_name":"action","round":485}
+{"kind":"recv","msg_name":"inquire","round":486}
+{"kind":"decision","round":486,"actions":[{"action":"MOVE","targetNodeId":"S14"}],"reason":"continue moving to S14"}
+{"kind":"send","msg_name":"action","round":486}
+{"kind":"recv","msg_name":"inquire","round":487}
+{"kind":"decision","round":487,"actions":[{"action":"MOVE","targetNodeId":"S14"}],"reason":"continue moving to S14"}
+{"kind":"send","msg_name":"action","round":487}
+{"kind":"recv","msg_name":"inquire","round":488}
+{"kind":"decision","round":488,"actions":[{"action":"MOVE","targetNodeId":"S14"}],"reason":"continue moving to S14"}
+{"kind":"send","msg_name":"action","round":488}
+{"kind":"recv","msg_name":"inquire","round":489}
+{"kind":"decision","round":489,"actions":[{"action":"MOVE","targetNodeId":"S14"}],"reason":"continue moving to S14"}
+{"kind":"send","msg_name":"action","round":489}
+{"kind":"recv","msg_name":"inquire","round":490}
+{"kind":"decision","round":490,"actions":[{"action":"MOVE","targetNodeId":"S14"}],"reason":"continue moving to S14"}
+{"kind":"send","msg_name":"action","round":490}
+{"kind":"recv","msg_name":"inquire","round":491}
+{"kind":"decision","round":491,"actions":[{"action":"MOVE","targetNodeId":"S14"}],"reason":"continue moving to S14"}
+{"kind":"send","msg_name":"action","round":491}
+{"kind":"recv","msg_name":"inquire","round":492}
+{"kind":"decision","round":492,"actions":[{"action":"MOVE","targetNodeId":"S14"}],"reason":"continue moving to S14"}
+{"kind":"send","msg_name":"action","round":492}
+{"kind":"recv","msg_name":"inquire","round":493}
+{"kind":"decision","round":493,"actions":[{"action":"MOVE","targetNodeId":"S14"}],"reason":"continue moving to S14"}
+{"kind":"send","msg_name":"action","round":493}
+{"kind":"recv","msg_name":"inquire","round":494}
+{"kind":"decision","round":494,"actions":[{"action":"MOVE","targetNodeId":"S14"}],"reason":"continue moving to S14"}
+{"kind":"send","msg_name":"action","round":494}
+{"kind":"recv","msg_name":"inquire","round":495}
+{"kind":"decision","round":495,"actions":[{"action":"MOVE","targetNodeId":"S14"}],"reason":"continue moving to S14"}
+{"kind":"send","msg_name":"action","round":495}
+{"kind":"recv","msg_name":"inquire","round":496}
+{"kind":"decision","round":496,"actions":[{"action":"MOVE","targetNodeId":"S14"}],"reason":"continue moving to S14"}
+{"kind":"send","msg_name":"action","round":496}
+{"kind":"recv","msg_name":"inquire","round":497}
+{"kind":"decision","round":497,"actions":[{"action":"MOVE","targetNodeId":"S14"}],"reason":"continue moving to S14"}
+{"kind":"send","msg_name":"action","round":497}
+{"kind":"recv","msg_name":"inquire","round":498}
+{"kind":"decision","round":498,"actions":[{"action":"MOVE","targetNodeId":"S14"}],"reason":"continue moving to S14"}
+{"kind":"send","msg_name":"action","round":498}
+{"kind":"recv","msg_name":"inquire","round":499}
+{"kind":"decision","round":499,"actions":[{"action":"VERIFY_GATE"}],"reason":"rush gate verification"}
+{"kind":"send","msg_name":"action","round":499}
+{"kind":"recv","msg_name":"inquire","round":500}
+{"kind":"decision","round":500,"actions":[],"reason":"state VERIFYING should continue without main action"}
+{"kind":"send","msg_name":"action","round":500}
+{"kind":"recv","msg_name":"inquire","round":501}
+{"kind":"decision","round":501,"actions":[],"reason":"state VERIFYING should continue without main action"}
+{"kind":"send","msg_name":"action","round":501}
+{"kind":"recv","msg_name":"inquire","round":502}
+{"kind":"decision","round":502,"actions":[],"reason":"state VERIFYING should continue without main action"}
+{"kind":"send","msg_name":"action","round":502}
+{"kind":"recv","msg_name":"inquire","round":503}
+{"kind":"decision","round":503,"actions":[],"reason":"state VERIFYING should continue without main action"}
+{"kind":"send","msg_name":"action","round":503}
+{"kind":"recv","msg_name":"inquire","round":504}
+{"kind":"decision","round":504,"actions":[],"reason":"state VERIFYING should continue without main action"}
+{"kind":"send","msg_name":"action","round":504}
+{"kind":"recv","msg_name":"inquire","round":505}
+{"kind":"decision","round":505,"actions":[{"action":"MOVE","targetNodeId":"S15"}],"reason":"move from S14 to S15 toward S15"}
+{"kind":"send","msg_name":"action","round":505}
+{"kind":"recv","msg_name":"inquire","round":506}
+{"kind":"decision","round":506,"actions":[{"action":"MOVE","targetNodeId":"S15"}],"reason":"continue moving to S15"}
+{"kind":"send","msg_name":"action","round":506}
+{"kind":"recv","msg_name":"inquire","round":507}
+{"kind":"decision","round":507,"actions":[{"action":"MOVE","targetNodeId":"S15"}],"reason":"continue moving to S15"}
+{"kind":"send","msg_name":"action","round":507}
+{"kind":"recv","msg_name":"inquire","round":508}
+{"kind":"decision","round":508,"actions":[{"action":"MOVE","targetNodeId":"S15"}],"reason":"continue moving to S15"}
+{"kind":"send","msg_name":"action","round":508}
+{"kind":"recv","msg_name":"inquire","round":509}
+{"kind":"decision","round":509,"actions":[{"action":"MOVE","targetNodeId":"S15"}],"reason":"continue moving to S15"}
+{"kind":"send","msg_name":"action","round":509}
+{"kind":"recv","msg_name":"inquire","round":510}
+{"kind":"decision","round":510,"actions":[{"action":"MOVE","targetNodeId":"S15"}],"reason":"continue moving to S15"}
+{"kind":"send","msg_name":"action","round":510}
+{"kind":"recv","msg_name":"inquire","round":511}
+{"kind":"decision","round":511,"actions":[{"action":"MOVE","targetNodeId":"S15"}],"reason":"continue moving to S15"}
+{"kind":"send","msg_name":"action","round":511}
+{"kind":"recv","msg_name":"inquire","round":512}
+{"kind":"decision","round":512,"actions":[{"action":"MOVE","targetNodeId":"S15"}],"reason":"continue moving to S15"}
+{"kind":"send","msg_name":"action","round":512}
+{"kind":"recv","msg_name":"inquire","round":513}
+{"kind":"decision","round":513,"actions":[{"action":"MOVE","targetNodeId":"S15"}],"reason":"continue moving to S15"}
+{"kind":"send","msg_name":"action","round":513}
+{"kind":"recv","msg_name":"inquire","round":514}
+{"kind":"decision","round":514,"actions":[{"action":"MOVE","targetNodeId":"S15"}],"reason":"continue moving to S15"}
+{"kind":"send","msg_name":"action","round":514}
+{"kind":"recv","msg_name":"inquire","round":515}
+{"kind":"decision","round":515,"actions":[{"action":"MOVE","targetNodeId":"S15"}],"reason":"continue moving to S15"}
+{"kind":"send","msg_name":"action","round":515}
+{"kind":"recv","msg_name":"inquire","round":516}
+{"kind":"decision","round":516,"actions":[{"action":"MOVE","targetNodeId":"S15"}],"reason":"continue moving to S15"}
+{"kind":"send","msg_name":"action","round":516}
+{"kind":"recv","msg_name":"inquire","round":517}
+{"kind":"decision","round":517,"actions":[{"action":"MOVE","targetNodeId":"S15"}],"reason":"continue moving to S15"}
+{"kind":"send","msg_name":"action","round":517}
+{"kind":"recv","msg_name":"inquire","round":518}
+{"kind":"decision","round":518,"actions":[{"action":"MOVE","targetNodeId":"S15"}],"reason":"continue moving to S15"}
+{"kind":"send","msg_name":"action","round":518}
+{"kind":"recv","msg_name":"inquire","round":519}
+{"kind":"decision","round":519,"actions":[{"action":"DELIVER"}],"reason":"verified at terminal, deliver"}
+{"kind":"send","msg_name":"action","round":519}
+{"kind":"recv","msg_name":"over","round":null}
+{"kind":"over","data":{"matchId":"match_20260703_063207_f1f144","overRound":519,"resultType":"NORMAL","overReason":"ALL_DELIVERED","winnerPlayerId":1001,"players":[{"playerId":1001,"playerName":"litchi-python","camp":0,"teamId":"RED","delivered":true,"deliverRound":461,"retired":false,"retiredRound":0,"goodFruit":98,"badFruit":2,"freshness":74.792,"taskScore":180,"bountyScore":0,"penaltyScore":0,"totalScore":746,"totalGold":746,"scoreDetail":{"delivery":240,"goodFruit":176,"freshness":134,"time":16,"tasks":180,"bounty":0,"penalty":0,"total":746},"roadRounds":278,"waterRounds":115,"mountainRounds":0,"branchRounds":0,"routeSwitchCount":0,"routeTaskScore":"{\"ROAD\": 135, \"WATER\": 30, \"MOUNTAIN\": 0, \"BRANCH\": 0}","routeResourceCount":"{\"ROAD\": 1, \"WATER\": 1, \"MOUNTAIN\": 0, \"BRANCH\": 0}","illegalActionCount":0,"missingActionRounds":0},{"playerId":1002,"playerName":"litchi-python","camp":1,"teamId":"BLUE","delivered":true,"deliverRound":519,"retired":false,"retiredRound":0,"goodFruit":98,"badFruit":2,"freshness":78.535,"taskScore":125,"bountyScore":0,"penaltyScore":0,"totalScore":691,"totalGold":691,"scoreDetail":{"delivery":240,"goodFruit":176,"freshness":141,"time":9,"tasks":125,"bounty":0,"penalty":0,"total":691},"roadRounds":340,"waterRounds":55,"mountainRounds":0,"branchRounds":72,"routeSwitchCount":0,"routeTaskScore":"{\"ROAD\": 30, \"WATER\": 60, \"MOUNTAIN\": 0, \"BRANCH\": 0}","routeResourceCount":"{\"ROAD\": 2, \"WATER\": 0, \"MOUNTAIN\": 0, \"BRANCH\": 0}","illegalActionCount":0,"missingActionRounds":0}]}}

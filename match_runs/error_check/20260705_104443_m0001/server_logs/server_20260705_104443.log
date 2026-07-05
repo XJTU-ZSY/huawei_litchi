@@ -1,0 +1,22 @@
+2026-07-05 10:44:43,362 INFO server listening on ('127.0.0.1', 10926)
+2026-07-05 10:44:43,362 INFO matchId=match_20260705_104443_f4e577 audit=match_runs\error_check\20260705_104443_m0001\server_logs\match_20260705_104443_f4e577.audit.jsonl replay=match_runs\error_check\20260705_104443_m0001\server_logs\match_20260705_104443_f4e577.replay.jsonl
+2026-07-05 10:44:44,300 INFO client connected address=('127.0.0.1', 10929)
+2026-07-05 10:44:44,300 INFO registered playerId=1001 team=RED name=idle-1001 version=idle-client-1.0
+2026-07-05 10:44:44,613 INFO client connected address=('127.0.0.1', 10930)
+2026-07-05 10:44:44,615 INFO registered playerId=1002 team=BLUE name=idle-1002 version=idle-client-1.0
+2026-07-05 10:44:44,615 INFO both players registered; sending start
+2026-07-05 10:44:44,617 INFO ready playerId=1001
+2026-07-05 10:44:44,618 INFO ready playerId=1002
+2026-07-05 10:44:44,618 INFO both players ready; starting round loop tick_ms=50
+2026-07-05 10:44:44,619 DEBUG action received round=1 playerId=1001 actions=[]
+2026-07-05 10:44:44,620 DEBUG action received round=1 playerId=1002 actions=[]
+2026-07-05 10:44:44,620 INFO round=1 events=2 results=[{'playerId': 1001, 'action': 'WAIT', 'accepted': True, 'errorCode': None}, {'playerId': 1002, 'action': 'WAIT', 'accepted': True, 'errorCode': None}] scores={'RED': 0, 'BLUE': 0}
+2026-07-05 10:44:44,622 DEBUG action received round=2 playerId=1001 actions=[]
+2026-07-05 10:44:44,622 DEBUG action received round=2 playerId=1002 actions=[]
+2026-07-05 10:44:44,622 INFO round=2 events=2 results=[{'playerId': 1001, 'action': 'WAIT', 'accepted': True, 'errorCode': None}, {'playerId': 1002, 'action': 'WAIT', 'accepted': True, 'errorCode': None}] scores={'RED': 0, 'BLUE': 0}
+2026-07-05 10:44:44,624 DEBUG action received round=3 playerId=1001 actions=[]
+2026-07-05 10:44:44,624 DEBUG action received round=3 playerId=1002 actions=[]
+2026-07-05 10:44:44,624 INFO round=3 events=2 results=[{'playerId': 1001, 'action': 'WAIT', 'accepted': True, 'errorCode': None}, {'playerId': 1002, 'action': 'WAIT', 'accepted': True, 'errorCode': None}] scores={'RED': 0, 'BLUE': 0}
+2026-07-05 10:44:44,624 INFO match over result=DRAW winner=None reason=ROUND_LIMIT
+2026-07-05 10:44:44,625 INFO client disconnected label=P1001
+2026-07-05 10:44:44,625 INFO client disconnected label=P1002

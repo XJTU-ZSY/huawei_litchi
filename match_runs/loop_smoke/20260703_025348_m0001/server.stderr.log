@@ -1,0 +1,15 @@
+02:53:48 INFO server listening on ('127.0.0.1', 6665)
+02:53:48 INFO matchId=match_20260703_025348_53782b audit=match_runs\loop_smoke\20260703_025348_m0001\server_logs\match_20260703_025348_53782b.audit.jsonl replay=match_runs\loop_smoke\20260703_025348_m0001\server_logs\match_20260703_025348_53782b.replay.jsonl
+02:53:49 INFO client connected address=('127.0.0.1', 6668)
+02:53:49 INFO registered playerId=1001 team=RED name=idle-1001 version=idle-client-1.0
+02:53:49 INFO client connected address=('127.0.0.1', 6669)
+02:53:49 INFO registered playerId=1002 team=BLUE name=idle-1002 version=idle-client-1.0
+02:53:49 INFO both players registered; sending start
+02:53:49 INFO ready playerId=1001
+02:53:49 INFO ready playerId=1002
+02:53:49 INFO both players ready; starting round loop tick_ms=50
+02:53:49 INFO round=1 events=2 results=[{'playerId': 1001, 'action': 'WAIT', 'accepted': True, 'errorCode': None}, {'playerId': 1002, 'action': 'WAIT', 'accepted': True, 'errorCode': None}] scores={'RED': 0, 'BLUE': 0}
+02:53:49 INFO round=2 events=2 results=[{'playerId': 1001, 'action': 'WAIT', 'accepted': True, 'errorCode': None}, {'playerId': 1002, 'action': 'WAIT', 'accepted': True, 'errorCode': None}] scores={'RED': 0, 'BLUE': 0}
+02:53:49 INFO match over result=DRAW winner=None reason=ROUND_LIMIT
+02:53:49 INFO client disconnected label=P1001
+02:53:49 INFO client disconnected label=P1002

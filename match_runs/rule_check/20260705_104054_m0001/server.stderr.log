@@ -1,0 +1,16 @@
+10:40:54 INFO server listening on ('127.0.0.1', 14556)
+10:40:54 INFO matchId=match_20260705_104054_86da6b audit=match_runs\rule_check\20260705_104054_m0001\server_logs\match_20260705_104054_86da6b.audit.jsonl replay=match_runs\rule_check\20260705_104054_m0001\server_logs\match_20260705_104054_86da6b.replay.jsonl
+10:40:55 INFO client connected address=('127.0.0.1', 13156)
+10:40:55 INFO registered playerId=1001 team=RED name=idle-1001 version=idle-client-1.0
+10:40:56 INFO client connected address=('127.0.0.1', 13157)
+10:40:56 INFO registered playerId=1002 team=BLUE name=idle-1002 version=idle-client-1.0
+10:40:56 INFO both players registered; sending start
+10:40:56 INFO ready playerId=1001
+10:40:56 INFO ready playerId=1002
+10:40:56 INFO both players ready; starting round loop tick_ms=50
+10:40:56 INFO round=1 events=2 results=[{'playerId': 1001, 'action': 'WAIT', 'accepted': True, 'errorCode': None}, {'playerId': 1002, 'action': 'WAIT', 'accepted': True, 'errorCode': None}] scores={'RED': 0, 'BLUE': 0}
+10:40:56 INFO round=2 events=2 results=[{'playerId': 1001, 'action': 'WAIT', 'accepted': True, 'errorCode': None}, {'playerId': 1002, 'action': 'WAIT', 'accepted': True, 'errorCode': None}] scores={'RED': 0, 'BLUE': 0}
+10:40:56 INFO round=3 events=2 results=[{'playerId': 1001, 'action': 'WAIT', 'accepted': True, 'errorCode': None}, {'playerId': 1002, 'action': 'WAIT', 'accepted': True, 'errorCode': None}] scores={'RED': 0, 'BLUE': 0}
+10:40:56 INFO match over result=DRAW winner=None reason=ROUND_LIMIT
+10:40:56 INFO client disconnected label=P1001
+10:40:56 INFO client disconnected label=P1002

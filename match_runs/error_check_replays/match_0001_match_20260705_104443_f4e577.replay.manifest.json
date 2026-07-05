@@ -1,0 +1,16 @@
+{
+  "matchIndex": 1,
+  "runId": "20260705_104443_m0001",
+  "port": 10926,
+  "runDir": "match_runs\\error_check\\20260705_104443_m0001",
+  "replay": "match_runs\\error_check_replays\\match_0001_match_20260705_104443_f4e577.replay.jsonl",
+  "clientA": {
+    "playerId": "1001",
+    "doneFile": "match_runs\\error_check_replays\\match_0001_match_20260705_104443_f4e577.replay.client_a.done"
+  },
+  "clientB": {
+    "playerId": "1002",
+    "doneFile": "match_runs\\error_check_replays\\match_0001_match_20260705_104443_f4e577.replay.client_b.done"
+  },
+  "createdAt": "2026-07-05T10:44:45"
+}

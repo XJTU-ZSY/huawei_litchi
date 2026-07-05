@@ -1,0 +1,12 @@
+﻿{
+    "runId":  "20260703_015049",
+    "runDir":  "D:\\software\\chrome\\the-6th-software-competition-master\\the-6th-software-competition-master\\match_runs\\20260703_015049",
+    "port":  5430,
+    "serverPid":  15540,
+    "normalPid":  34640,
+    "idlePid":  7780,
+    "startedAt":  "2026-07-03T01:50:51.2787501+08:00",
+    "serverCommand":  "python -B server.py --host 127.0.0.1 --port 5430 --tick-ms 500 --duration-round 600 --log-dir D:\\software\\chrome\\the-6th-software-competition-master\\the-6th-software-competition-master\\match_runs\\20260703_015049\\server_logs \u003e D:\\software\\chrome\\the-6th-software-competition-master\\the-6th-software-competition-master\\match_runs\\20260703_015049\\server.stdout.log 2\u003e D:\\software\\chrome\\the-6th-software-competition-master\\the-6th-software-competition-master\\match_runs\\20260703_015049\\server.stderr.log",
+    "normalCommand":  "python3 -B -m litchi_bot.main 1001 127.0.0.1 5430 \u003e D:\\software\\chrome\\the-6th-software-competition-master\\the-6th-software-competition-master\\match_runs\\20260703_015049\\normal_client.stdout.log 2\u003e D:\\software\\chrome\\the-6th-software-competition-master\\the-6th-software-competition-master\\match_runs\\20260703_015049\\normal_client.stderr.log",
+    "idleCommand":  "python -B idle_client.py 1002 127.0.0.1 5430 --name idle-client --log-dir D:\\software\\chrome\\the-6th-software-competition-master\\the-6th-software-competition-master\\match_runs\\20260703_015049\\client_logs \u003e D:\\software\\chrome\\the-6th-software-competition-master\\the-6th-software-competition-master\\match_runs\\20260703_015049\\idle_client.stdout.log 2\u003e D:\\software\\chrome\\the-6th-software-competition-master\\the-6th-software-competition-master\\match_runs\\20260703_015049\\idle_client.stderr.log"
+}

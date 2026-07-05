@@ -1,0 +1,2 @@
+2026-07-05 10:50:26,109 INFO server listening on ('0.0.0.0', 8081)
+2026-07-05 10:50:26,109 INFO matchId=match_20260705_105026_d9cfc6 audit=logs\match_20260705_105026_d9cfc6.audit.jsonl replay=logs\match_20260705_105026_d9cfc6.replay.jsonl

@@ -1,0 +1,20 @@
+2026-07-03 01:48:23,127 INFO client connected address=('127.0.0.1', 13065)
+2026-07-03 01:48:23,127 INFO client connected address=('127.0.0.1', 13066)
+2026-07-03 01:48:23,128 INFO registered playerId=3002 team=RED name=p3002 version=replay-check
+2026-07-03 01:48:23,129 INFO registered playerId=3001 team=BLUE name=p3001 version=replay-check
+2026-07-03 01:48:23,129 INFO both players registered; sending start
+2026-07-03 01:48:23,131 INFO ready playerId=3002
+2026-07-03 01:48:23,132 INFO ready playerId=3001
+2026-07-03 01:48:23,132 INFO both players ready; starting round loop tick_ms=20
+2026-07-03 01:48:23,134 DEBUG action received round=1 playerId=3002 actions=[]
+2026-07-03 01:48:23,134 DEBUG action received round=1 playerId=3001 actions=[]
+2026-07-03 01:48:23,135 INFO round=1 events=2 results=[{'playerId': 3002, 'action': 'WAIT', 'accepted': True, 'errorCode': None}, {'playerId': 3001, 'action': 'WAIT', 'accepted': True, 'errorCode': None}] scores={'RED': 0, 'BLUE': 0}
+2026-07-03 01:48:23,137 DEBUG action received round=2 playerId=3002 actions=[]
+2026-07-03 01:48:23,137 DEBUG action received round=2 playerId=3001 actions=[]
+2026-07-03 01:48:23,137 INFO round=2 events=2 results=[{'playerId': 3002, 'action': 'WAIT', 'accepted': True, 'errorCode': None}, {'playerId': 3001, 'action': 'WAIT', 'accepted': True, 'errorCode': None}] scores={'RED': 0, 'BLUE': 0}
+2026-07-03 01:48:23,139 DEBUG action received round=3 playerId=3002 actions=[]
+2026-07-03 01:48:23,139 DEBUG action received round=3 playerId=3001 actions=[]
+2026-07-03 01:48:23,139 INFO round=3 events=2 results=[{'playerId': 3002, 'action': 'WAIT', 'accepted': True, 'errorCode': None}, {'playerId': 3001, 'action': 'WAIT', 'accepted': True, 'errorCode': None}] scores={'RED': 0, 'BLUE': 0}
+2026-07-03 01:48:23,140 INFO match over result=DRAW winner=None reason=ROUND_LIMIT
+2026-07-03 01:48:23,140 INFO client disconnected label=P3002
+2026-07-03 01:48:23,140 INFO client disconnected label=P3001

@@ -1,0 +1,7 @@
+02:54:19 INFO connecting host=127.0.0.1 port=5285 playerId=1001
+02:54:19 INFO registration sent playerName=idle-1001 version=idle-client-1.0
+02:54:19 INFO start received matchId=match_20260703_025418_9bf567 round=1 team=RED
+02:54:19 INFO ready sent round=1
+02:54:19 INFO empty action sent round=1 total=1
+02:54:19 INFO empty action sent round=2 total=2
+02:54:19 INFO match over result=DRAW winner=None overRound=2 actionsSent=2

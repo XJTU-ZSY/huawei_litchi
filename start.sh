@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e
+set -euo pipefail
 
 if [ "$#" -ne 3 ]; then
   echo "Usage: $0 <playerId> <host> <port>" >&2
@@ -10,5 +10,4 @@ PLAYER_ID="$1"
 HOST="$2"
 PORT="$3"
 
-export PYTHONPATH="${PYTHONPATH:+${PYTHONPATH}:}."
-exec python3 -m litchi_bot.main "${PLAYER_ID}" "${HOST}" "${PORT}"
+exec python3 idle_client.py "${PLAYER_ID}" "${HOST}" "${PORT}"
